@@ -9,8 +9,8 @@ export const dynamic = 'force-dynamic'
 // Only runs if no ADMIN user exists yet. Use once, then delete this file.
 export async function GET(req: Request) {
   const url = new URL(req.url)
-  const token = url.searchParams.get('token') || ''
-  const expected = process.env.SEED_TOKEN
+  const token = (url.searchParams.get('token') || '').trim()
+  const expected = (process.env.SEED_TOKEN || '').trim()
   if (!expected) return NextResponse.json({ error: 'SEED_TOKEN not set on server' }, { status: 500 })
   if (token !== expected) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
