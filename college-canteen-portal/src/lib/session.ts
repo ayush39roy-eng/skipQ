@@ -23,7 +23,8 @@ export async function getSession() {
 export async function requireRole(roles: ('USER'|'VENDOR'|'ADMIN')[]) {
   const session = await getSession()
   if (!session) return null
-  if (!roles.includes(session.role)) return null
+  const allowed: readonly string[] = roles
+  if (!allowed.includes(session.role as any)) return null
   return session
 }
 

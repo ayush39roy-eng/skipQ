@@ -99,6 +99,7 @@ async function AdminCanteenManager() {
 export default async function AdminPage() {
   const session = await requireRole(['ADMIN'])
   if (!session) return <p>Unauthorized</p>
+  const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
   const stats = await prisma.order.aggregate({ _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true }, _count: true })
   const orders = await prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } })
   return (

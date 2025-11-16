@@ -1,6 +1,6 @@
 # College Canteen Portal
 
-A minimal full-stack Next.js app for college users to order from canteens, with vendor and admin portals, stubbed payment link, and 2.5% commission handling.
+A minimal full-stack Next.js app for college users to order from canteens, with vendor and admin portals, stubbed payment link, 2.5% commission handling, and optional WhatsApp vendor notifications.
 
 ## Features
 - User login (credentials), browse canteens, view menu, create orders
@@ -11,16 +11,22 @@ A minimal full-stack Next.js app for college users to order from canteens, with 
 
 ## Stack
 - Next.js 14 (App Router) + TypeScript
-- Prisma ORM + SQLite
+- Prisma ORM (MongoDB provider)
+- MongoDB (Atlas or self-hosted)
 - Tailwind CSS
 - Vitest (unit tests)
 
-## Setup
+## Setup (MongoDB)
+1. Create a MongoDB database (Atlas recommended).
+2. Copy `.env.example` to `.env` and set `DATABASE_URL`.
+3. Install and generate client.
+4. Seed demo data.
+
 ```powershell
 # From the project root
+cp .env.example .env  # or copy manually on Windows
 npm install
 npx prisma generate
-npx prisma migrate dev --name init
 npm run db:seed
 npm run dev
 ```
@@ -33,8 +39,10 @@ Demo logins:
 - admin@college.local / admin123 (ADMIN)
 
 ## Notes
+- MongoDB provider does not use SQL migrations; schema changes are applied directly via the Prisma client. Remove old `prisma/migrations` if present.
 - Payments are simulated via a local stub. Replace with a real provider (e.g., Stripe Checkout) and mark `commissionCents` via your payout flow.
 - Commission is set to 2.5% of order total and stored per-order.
+- Optional WhatsApp integration (Meta API or Twilio) can notify vendors on new orders.
 
 ## Tests
 ```powershell
@@ -45,4 +53,16 @@ npm test
 - `npm run dev` — start dev server
 - `npm run build && npm start` — production build and start
 - `npm run db:seed` — seed demo data
-- `npm run prisma:migrate` — create and apply migrations
+- (MongoDB) migrations script no longer required; remove references.
+
+## Environment Variables
+See `.env.example` for required and optional variables:
+- `DATABASE_URL` — MongoDB connection string
+- WhatsApp / Twilio variables (optional) for messaging
+ - Cashfree payment gateway:
+	 - `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY` — credentials
+	 - `CASHFREE_ENV` — `sandbox` or `production`
+	 - `APP_BASE_URL` — base URL for return/notify callbacks
+
+## Payments (Cashfree)
+If Cashfree credentials are present, the payment link route creates a Cashfree order (`/api/payment/create-link?orderId=...`) and redirects to the hosted payment page. Webhook updates payment status via `/api/payment/webhook` (ensure this URL is reachable publicly and configured in the Cashfree dashboard). Without credentials, a stub local payment page is used.
