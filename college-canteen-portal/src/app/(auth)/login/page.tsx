@@ -28,6 +28,7 @@ export default function LoginPage() {
       </form>
       {message && <p className="mt-3 text-sm text-red-600">{message}</p>}
       <p className="mt-4 text-sm text-gray-600">Demo users: student@college.local/user123, vendor@college.local/vendor123, admin@college.local/admin123</p>
+      <p className="mt-2 text-sm">New here? <a href="/register" className="text-indigo-600 hover:underline">Create an account</a></p>
     </div>
   )
 }
