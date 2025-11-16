@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Env files
+.env
+.env.*
+
+# Prisma local DB files
+prisma/dev.db
+prisma/dev.db-journal
+
+# Misc
+.vercel/
+.turbo/
+coverage/
+dist/
+*.log
+

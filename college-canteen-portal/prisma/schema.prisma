@@ -1,0 +1,103 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         String    @default("USER")
+  vendor       Vendor?   @relation(fields: [vendorId], references: [id])
+  vendorId     String?
+  sessions     Session[]
+  orders       Order[]
+  createdAt    DateTime  @default(now())
+}
+
+model Vendor {
+  id        String    @id @default(cuid())
+  name      String
+  phone     String?
+  whatsappEnabled Boolean @default(false)
+  users     User[]
+  canteens  Canteen[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+}
+
+model Canteen {
+  id        String     @id @default(cuid())
+  name      String
+  location  String
+  vendor    Vendor     @relation(fields: [vendorId], references: [id])
+  vendorId  String
+  menuItems MenuItem[]
+  orders    Order[]
+}
+
+model MenuItem {
+  id         String      @id @default(cuid())
+  canteen    Canteen     @relation(fields: [canteenId], references: [id])
+  canteenId  String
+  name       String
+  priceCents Int
+  available  Boolean     @default(true)
+  imageUrl   String?
+  orderItems OrderItem[]
+}
+
+model Order {
+  id               String        @id @default(cuid())
+  user             User          @relation(fields: [userId], references: [id])
+  userId           String
+  canteen          Canteen       @relation(fields: [canteenId], references: [id])
+  canteenId        String
+  vendor           Vendor?       @relation(fields: [vendorId], references: [id])
+  vendorId         String?
+  items            OrderItem[]
+  status           String        @default("PENDING")
+  totalCents       Int           @default(0)
+  commissionCents  Int           @default(0)
+  vendorTakeCents  Int           @default(0)
+  prepMinutes      Int?
+  payment          Payment?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  order       Order    @relation(fields: [orderId], references: [id])
+  orderId     String
+  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId  String
+  quantity    Int
+  priceCents  Int
+}
+
+model Payment {
+  id           String   @id @default(cuid())
+  order        Order    @relation(fields: [orderId], references: [id])
+  orderId      String   @unique
+  amountCents  Int
+  status       String   @default("PENDING")
+  provider     String   @default("stub")
+  paymentLink  String
+  paidAt       DateTime?
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  token     String   @unique
+  role      String
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+}
