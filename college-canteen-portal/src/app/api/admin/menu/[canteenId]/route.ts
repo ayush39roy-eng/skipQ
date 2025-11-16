@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 
+// Prevent Next.js from attempting static data collection (depends on cookies/session)
+export const dynamic = 'force-dynamic'
+
 export async function GET(_: Request, { params }: { params: { canteenId: string } }) {
   const session = await requireRole(['ADMIN'])
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

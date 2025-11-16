@@ -20,3 +20,18 @@ coverage/
 dist/
 *.log
 
+# Monorepo-safe ignores for nested project folders
+**/node_modules/
+**/.next/
+**/out/
+**/.turbo/
+**/.vercel/
+**/coverage/
+**/dist/
+**/*.log
+
+# Prisma local SQLite in nested folders
+**/prisma/dev.db*
+**/prisma/*.db*
+**/prisma/*.sqlite
+
