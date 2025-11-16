@@ -4,6 +4,8 @@ import { requireRole } from '@/lib/session'
 import { calculateCommissionSplit } from '@/lib/billing'
 import { sendWhatsApp, buildOrderButtons } from '@/lib/whatsapp'
 
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   const session = await requireRole(['USER'])
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -15,7 +17,7 @@ export async function POST(req: Request) {
 
   let total = 0
   const orderItems = items.map((i:any) => {
-    const mi = menuItems.find(m=>m.id===i.menuItemId)
+    const mi = menuItems.find((m: typeof menuItems[number]) => m.id === i.menuItemId)
     if (!mi) return null
     total += mi.priceCents * i.quantity
     return { menuItemId: mi.id, quantity: i.quantity, priceCents: mi.priceCents }
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
   if (waEnabled && vendorPhone) {
     try {
       const lines = orderItems.map(oi => {
-        const mi = menuItems.find(m=>m.id===oi.menuItemId)!
+        const mi = menuItems.find((m: typeof menuItems[number]) => m.id === oi.menuItemId)!
         return `- ${oi.quantity} x ${mi.name}`
       }).join('\n')
       const amount = `₹${(total/100).toFixed(2)}`

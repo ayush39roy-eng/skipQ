@@ -7,7 +7,8 @@ export async function createSession(userId: string, role: 'USER'|'VENDOR'|'ADMIN
   const token = crypto.randomBytes(24).toString('hex')
   const expiresAt = addHours(new Date(), 24)
   await prisma.session.create({ data: { userId, token, role, expiresAt } })
-  cookies().set('session', token, { httpOnly: true, sameSite: 'lax', secure: false, path: '/', maxAge: 60*60*24 })
+  const secure = process.env.NODE_ENV === 'production'
+  cookies().set('session', token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60*60*24 })
   return token
 }
 

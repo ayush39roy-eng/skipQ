@@ -3,6 +3,10 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createSession } from '@/lib/session'
 
+export const dynamic = 'force-dynamic'
+
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: Request) {
   try {
     const { email, password } = await req.json()
