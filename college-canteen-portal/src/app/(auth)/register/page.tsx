@@ -1,5 +1,8 @@
 "use client"
 import { useState } from 'react'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function RegisterPage() {
   const [name, setName] = useState('')
@@ -42,18 +45,21 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="max-w-sm">
-      <h1 className="mb-4 text-xl font-semibold">Create account</h1>
-      <form onSubmit={submit} className="space-y-3">
-        <input className="w-full rounded border p-2" placeholder="Full name" value={name} onChange={e=>setName(e.target.value)} required />
-        <input className="w-full rounded border p-2" type="email" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} required />
-        <input className="w-full rounded border p-2" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} required />
-        <button className="btn w-full" type="submit" disabled={loading}>{loading ? 'Creating…' : 'Sign up'}</button>
-      </form>
-      {message && <p className="mt-3 text-sm text-red-600">{message}</p>}
-      <p className="mt-4 text-sm text-gray-600">
-        Already have an account? <a href="/login" className="text-indigo-600 hover:underline">Log in</a>
-      </p>
+    <div className="mx-auto max-w-md">
+      <Card className="space-y-6">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold tracking-tight">Create account</h1>
+          <p className="text-sm text-muted">Start ordering from your canteen.</p>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <Input label="Full name" value={name} onChange={e=>setName(e.target.value)} required />
+          <Input label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} required />
+          <Input label="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          <Button type="submit" className="w-full" loading={loading}>{loading ? 'Creating…' : 'Sign up'}</Button>
+        </form>
+        {message && <p className="text-sm text-red-600">{message}</p>}
+        <p className="text-sm">Already have an account? <a href="/login" className="text-indigo-600 hover:underline">Log in</a></p>
+      </Card>
     </div>
   )
 }

@@ -1,5 +1,8 @@
 "use client"
 import { useState } from 'react'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { Card } from '@/components/ui/Card'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('student@college.local')
@@ -19,16 +22,25 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="max-w-sm">
-      <h1 className="mb-4 text-xl font-semibold">Login</h1>
-      <form onSubmit={submit} className="space-y-3">
-        <input className="w-full rounded border p-2" placeholder="Email" value={email} onChange={e=>setEmail(e.target.value)} />
-        <input className="w-full rounded border p-2" type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} />
-        <button className="btn w-full" type="submit">Login</button>
-      </form>
-      {message && <p className="mt-3 text-sm text-red-600">{message}</p>}
-      <p className="mt-4 text-sm text-gray-600">Demo users: student@college.local/user123, vendor@college.local/vendor123, admin@college.local/admin123</p>
-      <p className="mt-2 text-sm">New here? <a href="/register" className="text-indigo-600 hover:underline">Create an account</a></p>
+    <div className="mx-auto max-w-md">
+      <Card className="space-y-6">
+        <div>
+          <h1 className="mb-1 text-2xl font-semibold tracking-tight">Welcome back</h1>
+          <p className="text-sm text-muted">Sign in to continue ordering.</p>
+        </div>
+        <form onSubmit={submit} className="space-y-4">
+          <Input label="Email" type="email" value={email} onChange={e=>setEmail(e.target.value)} required />
+          <Input label="Password" type="password" value={password} onChange={e=>setPassword(e.target.value)} required />
+          <Button type="submit" className="w-full" variant="primary">Login</Button>
+        </form>
+        {message && <p className="text-sm text-red-600">{message}</p>}
+        <div className="space-y-2 text-xs text-muted">
+          <p>Demo: student@college.local / user123</p>
+          <p>Vendor: vendor@college.local / vendor123</p>
+          <p>Admin: admin@college.local / admin123</p>
+        </div>
+        <p className="text-sm">New here? <a href="/register" className="text-indigo-600 hover:underline">Create an account</a></p>
+      </Card>
     </div>
   )
 }
