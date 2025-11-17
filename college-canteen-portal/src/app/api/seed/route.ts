@@ -54,7 +54,9 @@ export async function GET(req: Request) {
       },
       canteen: { id: canteen.id, name: canteen.name },
     })
-  } catch (e: any) {
-    return NextResponse.json({ error: 'Seed failed', detail: e.message }, { status: 500 })
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : 'Unknown seed error'
+    console.error('Seed endpoint failed', error)
+    return NextResponse.json({ error: 'Seed failed', detail }, { status: 500 })
   }
 }

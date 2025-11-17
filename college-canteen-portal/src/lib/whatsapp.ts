@@ -1,4 +1,31 @@
+import { Buffer } from 'node:buffer'
+
 type Provider = 'meta' | 'twilio'
+
+type MetaTextMessage = {
+  type: 'text'
+  text: {
+    body: string
+  }
+}
+
+type MetaInteractiveButtonMessage = {
+  type: 'interactive'
+  interactive: {
+    type: 'button'
+    header?: { type: 'text'; text: string }
+    body: { text: string }
+    action: {
+      buttons: { type: 'reply'; reply: { id: string; title: string } }[]
+    }
+  }
+}
+
+type MetaPayload = MetaTextMessage | MetaInteractiveButtonMessage
+
+type TwilioPayload = {
+  text: { body: string }
+}
 
 function envRequired(name: string) {
   const v = process.env[name]
@@ -6,7 +33,7 @@ function envRequired(name: string) {
   return v
 }
 
-async function sendViaMeta(to: string, body: any) {
+async function sendViaMeta(to: string, body: MetaPayload) {
   const token = envRequired('WHATSAPP_META_TOKEN')
   const phoneNumberId = envRequired('WHATSAPP_META_PHONE_NUMBER_ID')
   const url = `https://graph.facebook.com/v20.0/${phoneNumberId}/messages`
@@ -21,7 +48,7 @@ async function sendViaMeta(to: string, body: any) {
   }
 }
 
-async function sendViaTwilio(to: string, body: any) {
+async function sendViaTwilio(to: string, body: TwilioPayload) {
   const sid = envRequired('TWILIO_ACCOUNT_SID')
   const token = envRequired('TWILIO_AUTH_TOKEN')
   const from = envRequired('TWILIO_WHATSAPP_FROM')
@@ -29,10 +56,9 @@ async function sendViaTwilio(to: string, body: any) {
   const params = new URLSearchParams()
   params.set('From', `whatsapp:${from}`)
   params.set('To', `whatsapp:${to}`)
-  params.set('Body', body.text?.body ?? body.body ?? '')
-  const g: any = globalThis as any
-  const base64 = g.Buffer ? g.Buffer.from(`${sid}:${token}`).toString('base64') : (g.btoa ? g.btoa(`${sid}:${token}`) : '')
-  const res = await fetch(url, { method: 'POST', headers: { Authorization: 'Basic ' + base64 }, body: params as any })
+  params.set('Body', body.text.body)
+  const base64 = Buffer.from(`${sid}:${token}`).toString('base64')
+  const res = await fetch(url, { method: 'POST', headers: { Authorization: 'Basic ' + base64 }, body: params })
   if (!res.ok) {
     const t = await res.text()
     console.error('Twilio WhatsApp send failed:', t)
@@ -51,7 +77,7 @@ export async function sendWhatsApp(to: string, payload: { text?: string, buttons
             type: 'button',
             header: payload.header ? { type: 'text', text: payload.header } : undefined,
             body: { text: payload.text ?? '' },
-            action: { buttons: payload.buttons.map(b=> ({ type: 'reply', reply: { id: b.id, title: b.title } })) }
+            action: { buttons: payload.buttons.map((b) => ({ type: 'reply', reply: { id: b.id, title: b.title } })) }
           }
         })
       } else {
@@ -60,8 +86,8 @@ export async function sendWhatsApp(to: string, payload: { text?: string, buttons
     } else if (provider === 'twilio') {
       await sendViaTwilio(to, { text: { body: payload.text ?? '' } })
     }
-  } catch (e) {
-    console.warn('WhatsApp not configured, falling back to log:', payload)
+  } catch (error) {
+    console.warn('WhatsApp not configured, falling back to log:', payload, error)
   }
 }
 
@@ -73,5 +99,6 @@ export function buildOrderButtons(orderId: string) {
 }
 
 export function buildPrepButtons(orderId: string) {
-  return [5,10,15,20,30].map(m => ({ id: `PREP:${orderId}:${m}`, title: `${m} min` }))
+  // Updated prep time options per new requirement
+  return [20,30,40].map(m => ({ id: `PREP:${orderId}:${m}`, title: `${m} min` }))
 }

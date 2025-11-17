@@ -4,20 +4,30 @@ import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import Image from 'next/image'
 import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
-const fetcher = (url: string) => fetch(url).then(r => r.json())
+type CanteenSummary = {
+  id: string
+  name: string
+  location?: string | null
+  imageUrl?: string | null
+}
+
+const fetcher = async <T,>(url: string): Promise<T> => {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error('Request failed')
+  return res.json()
+}
 
 export default function CanteensPage() {
-  const { data, error } = useSWR('/api/canteens', fetcher)
+  const { data, error } = useSWR<CanteenSummary[]>('/api/canteens', (url: string) => fetcher<CanteenSummary[]>(url))
   const [q, setQ] = useState('')
 
   const list = useMemo(() => {
-    if (!data) return []
+    if (!data) return [] as CanteenSummary[]
     const query = q.trim().toLowerCase()
     if (!query) return data
-    return data.filter((c: any) =>
+    return data.filter((c) =>
       c.name.toLowerCase().includes(query) ||
       (c.location?.toLowerCase() || '').includes(query)
     )
@@ -36,10 +46,10 @@ export default function CanteensPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {list.map((c: any) => (
+        {list.map((c) => (
           <Card key={c.id} className="transition-all hover:border-[rgb(var(--accent))]/70 hover:shadow-md">
             <div className="relative aspect-video w-full overflow-hidden rounded-md bg-[rgb(var(--surface-muted))]">
-              <Image src={c.imageUrl || '/placeholder.png'} alt="Canteen cover" fill priority={false} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+              <Image src={c.imageUrl || '/placeholder.svg'} alt="Canteen cover" fill priority={false} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
             </div>
             <div className="mt-4 space-y-1">
               <h3 className="text-lg font-semibold">{c.name}</h3>

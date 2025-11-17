@@ -3,6 +3,13 @@ import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
 import { createSession } from '@/lib/session'
 
+const allowedRoles = ['ADMIN', 'VENDOR', 'USER'] as const
+type Role = typeof allowedRoles[number]
+
+function isRole(value: unknown): value is Role {
+  return typeof value === 'string' && allowedRoles.includes(value as Role)
+}
+
 // Force dynamic to avoid prerender issues (session cookie access)
 export const dynamic = 'force-dynamic'
 
@@ -14,11 +21,11 @@ export async function POST(req: Request) {
     if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     const ok = await bcrypt.compare(password, user.passwordHash)
     if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
-    const allowedRoles = ['ADMIN','VENDOR','USER'] as const
-    const role: 'ADMIN'|'VENDOR'|'USER' = allowedRoles.includes(user.role as any) ? (user.role as 'ADMIN'|'VENDOR'|'USER') : 'USER'
+    const role: Role = isRole(user.role) ? user.role : 'USER'
     await createSession(user.id, role)
     return NextResponse.json({ ok: true })
-  } catch (e) {
+  } catch (error) {
+    console.error('Login failed', error)
     return NextResponse.json({ error: 'Failed to login' }, { status: 500 })
   }
 }

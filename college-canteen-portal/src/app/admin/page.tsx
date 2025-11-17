@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
+import { revalidatePath } from 'next/cache'
 
 async function AdminCanteenManager() {
   const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
-  const canteens = await prisma.canteen.findMany({ select: { id: true, name: true, location: true } })
+  const canteens = await prisma.canteen.findMany({ select: { id: true, name: true, location: true, notificationPhones: true } })
   const menuByCanteen = await Promise.all(
     canteens.map(async c => ({
       canteen: c,
@@ -39,7 +40,19 @@ async function AdminCanteenManager() {
 
       {menuByCanteen.map(({ canteen, items }) => (
         <div key={canteen.id} className="card space-y-3">
-          <div className="font-medium">{canteen.name} — {canteen.location}</div>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="font-medium">{canteen.name} — {canteen.location}</div>
+            <form className="flex items-center gap-2" action={async (formData: FormData) => {
+              'use server'
+              const raw = String(formData.get('phones') || '')
+              const arr = raw.split(',').map(p=>p.trim()).filter(Boolean)
+              await prisma.canteen.update({ where: { id: canteen.id }, data: { notificationPhones: arr } })
+              revalidatePath('/admin')
+            }}>
+              <input name="phones" defaultValue={canteen.notificationPhones?.join(',') ?? ''} placeholder="Notif phones (+1555..., comma sep)" className="w-64 rounded border p-2 text-xs" />
+              <button type="submit" className="btn-secondary px-3 py-1 text-xs">Save Phones</button>
+            </form>
+          </div>
 
           <form className="flex flex-wrap items-end gap-2" action={async (formData: FormData) => {
             'use server'

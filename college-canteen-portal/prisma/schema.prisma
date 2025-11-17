@@ -37,6 +37,8 @@ model Canteen {
   location  String
   vendor    Vendor     @relation(fields: [vendorId], references: [id])
   vendorId  String
+  // Optional additional notification phone numbers (E.164) for WhatsApp alerts.
+  notificationPhones String[] @default([])
   menuItems MenuItem[]
   orders    Order[]
 }

@@ -36,8 +36,9 @@ export async function GET(req: Request) {
         update: { paymentLink, amountCents: order.totalCents, provider: 'cashfree', externalOrderId },
         create: { orderId: order.id, amountCents: order.totalCents, paymentLink, provider: 'cashfree', externalOrderId }
       })
-    } catch (e:any) {
-      return NextResponse.json({ error: 'Cashfree order failed', detail: e.message }, { status: 500 })
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : 'Unknown Cashfree error'
+      return NextResponse.json({ error: 'Cashfree order failed', detail }, { status: 500 })
     }
   } else {
     paymentLink = `/pay/${order.id}`

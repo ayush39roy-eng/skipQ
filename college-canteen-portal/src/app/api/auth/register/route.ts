@@ -11,7 +11,8 @@ export async function POST(req: Request) {
     const passwordHash = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({ data: { email, name, passwordHash, role: role === 'VENDOR' || role === 'ADMIN' ? role : 'USER' } })
     return NextResponse.json({ id: user.id })
-  } catch (e) {
+  } catch (error) {
+    console.error('Registration failed', error)
     return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
   }
 }

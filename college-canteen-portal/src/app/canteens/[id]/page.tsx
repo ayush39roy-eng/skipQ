@@ -63,7 +63,7 @@ export default function CanteenMenuPage() {
           {filtered.map((it) => (
             <Card key={it.id} className="group overflow-hidden transition hover:border-[rgb(var(--accent))]/70 hover:shadow-md">
               <div className="relative h-44 w-full overflow-hidden rounded-md">
-                <Image src={it.imageUrl || '/placeholder.png'} alt={it.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+                <Image src={it.imageUrl || '/placeholder.svg'} alt={it.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
               </div>
               <div className="mt-3 flex items-start justify-between gap-3">
                 <div>
@@ -99,7 +99,7 @@ export default function CanteenMenuPage() {
               return (
                 <div key={id} className="flex items-start gap-3">
                   <div className="relative h-16 w-16 overflow-hidden rounded-md">
-                    <Image src={it?.imageUrl || '/placeholder.png'} alt="Item" fill sizes="64px" className="object-cover" />
+                    <Image src={it?.imageUrl || '/placeholder.svg'} alt="Item" fill sizes="64px" className="object-cover" />
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{it?.name}</p>

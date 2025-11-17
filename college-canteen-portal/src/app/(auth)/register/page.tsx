@@ -37,7 +37,8 @@ export default function RegisterPage() {
       } else {
         setMessage('Registered, but auto-login failed. Please login manually.')
       }
-    } catch (e) {
+    } catch (error) {
+      console.error('Registration request failed', error)
       setMessage('Something went wrong')
     } finally {
       setLoading(false)
