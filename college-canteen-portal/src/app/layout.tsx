@@ -1,6 +1,7 @@
 import './globals.css'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
+import { Analytics } from '@vercel/analytics/react'
 
 export const metadata = { title: 'College Canteen Portal' }
 
@@ -28,6 +29,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </div>
         </header>
         <div className="mx-auto w-full max-w-[1400px] px-6 py-8">{children}</div>
+        <Analytics />
       </body>
     </html>
   )
