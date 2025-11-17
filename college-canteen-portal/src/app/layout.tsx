@@ -2,6 +2,7 @@ import './globals.css'
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { Analytics } from '@vercel/analytics/react'
+import { ThemeToggle } from '@/components/ThemeToggle'
 
 export const metadata = { title: 'College Canteen Portal' }
 
@@ -20,6 +21,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link className="btn-secondary px-3 py-1.5" href="/canteens">Canteens</Link>
               {session?.role === 'VENDOR' && <Link className="btn-secondary px-3 py-1.5" href="/vendor">Vendor</Link>}
               {session?.role === 'ADMIN' && <Link className="btn-secondary px-3 py-1.5" href="/admin">Admin</Link>}
+              <ThemeToggle />
               {!session ? (
                 <Link href="/login" className="btn px-4 py-2">Login</Link>
               ) : (

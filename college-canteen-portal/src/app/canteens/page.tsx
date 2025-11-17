@@ -2,6 +2,10 @@
 import useSWR from 'swr'
 import Link from 'next/link'
 import { useMemo, useState } from 'react'
+import Image from 'next/image'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 
 const fetcher = (url: string) => fetch(url).then(r => r.json())
 
@@ -23,41 +27,33 @@ export default function CanteensPage() {
   if (!data) return <div className="space-y-3"><div className="h-8 w-40 skeleton" /><div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{Array.from({length:6}).map((_,i)=>(<div key={i} className="card h-48 skeleton" />))}</div></div>
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200">
-      <div className="mx-auto w-full max-w-5xl px-4 py-6">
-        <main className="mt-8 space-y-6">
-          <div className="flex flex-wrap justify-between gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Canteens & Eateries</h1>
-          </div>
-
-          <div className="">
-            <label className="block">
-              <div className="flex items-center gap-2 rounded-lg border border-gray-800 bg-gray-900 px-3 py-2.5 focus-within:ring-2 focus-within:ring-blue-500">
-                <span className="text-blue-400">🔎</span>
-                <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search for your favorite canteen..." className="w-full bg-transparent outline-none placeholder:text-gray-500" />
-              </div>
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((c: any) => (
-              <div key={c.id} className="rounded-xl border border-gray-800 bg-gray-900 p-4 transition-all hover:border-blue-500/60 hover:shadow-2xl hover:shadow-blue-500/10">
-                <div className="aspect-video w-full rounded-lg bg-gray-800/60" />
-                <div className="mt-4 space-y-1">
-                  <h3 className="text-lg font-semibold text-white">{c.name}</h3>
-                  <p className="text-sm text-gray-400">{c.location ?? 'On campus'}</p>
-                </div>
-                <Link className="mt-4 inline-flex h-10 w-full items-center justify-center rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-500" href={`/canteens/${c.id}`}>
-                  View Menu
-                </Link>
-              </div>
-            ))}
-            {list.length === 0 && (
-              <div className="col-span-full text-center text-sm text-gray-400">No canteens match “{q}”.</div>
-            )}
-          </div>
-        </main>
+    <main className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Canteens & Eateries</h1>
+        <div className="w-full sm:w-80">
+          <Input label="Search" placeholder="Find a canteen..." value={q} onChange={e=>setQ((e.target as HTMLInputElement).value)} />
+        </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {list.map((c: any) => (
+          <Card key={c.id} className="transition-all hover:border-[rgb(var(--accent))]/70 hover:shadow-md">
+            <div className="relative aspect-video w-full overflow-hidden rounded-md bg-[rgb(var(--surface-muted))]">
+              <Image src={c.imageUrl || '/placeholder.png'} alt="Canteen cover" fill priority={false} sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
+            </div>
+            <div className="mt-4 space-y-1">
+              <h3 className="text-lg font-semibold">{c.name}</h3>
+              <p className="text-sm text-muted">{c.location ?? 'On campus'}</p>
+            </div>
+            <div className="mt-4">
+              <Link href={`/canteens/${c.id}`} className="btn block w-full text-center">View Menu</Link>
+            </div>
+          </Card>
+        ))}
+        {list.length === 0 && (
+          <div className="col-span-full text-center text-sm text-muted">No canteens match “{q}”.</div>
+        )}
+      </div>
+    </main>
   )
 }

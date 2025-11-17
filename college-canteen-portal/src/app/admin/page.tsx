@@ -1,5 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
+import { Input } from '@/components/ui/Input'
+import { Button } from '@/components/ui/Button'
+import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table'
+import { Badge } from '@/components/ui/Badge'
 
 async function AdminCanteenManager() {
   const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
@@ -23,8 +27,8 @@ async function AdminCanteenManager() {
           if (!name || !location || !vendorId) return
           await prisma.canteen.create({ data: { name, location, vendorId } })
         }}>
-          <input name="name" placeholder="Name" className="rounded border p-2" />
-          <input name="location" placeholder="Location" className="rounded border p-2" />
+          <Input name="name" placeholder="Name" />
+          <Input name="location" placeholder="Location" />
           <select name="vendorId" className="rounded border p-2">
             <option value="">Select Vendor</option>
             {vendors.map(v=> <option key={v.id} value={v.id}>{v.name}</option>)}
@@ -45,31 +49,31 @@ async function AdminCanteenManager() {
             if (!name || !priceCents) return
             await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null } })
           }}>
-            <input name="name" placeholder="Item name" className="w-48 rounded border p-2" />
-            <input name="priceCents" placeholder="Price (in cents)" className="w-48 rounded border p-2" />
-            <input name="imageUrl" placeholder="Image URL (optional)" className="w-64 rounded border p-2" />
-            <button className="btn" type="submit">Add Item</button>
+            <Input name="name" placeholder="Item name" className="w-48" />
+            <Input name="priceCents" placeholder="Price (in cents)" className="w-48" />
+            <Input name="imageUrl" placeholder="Image URL (optional)" className="w-64" />
+            <Button type="submit">Add Item</Button>
           </form>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="text-gray-600">
-                  <th className="p-2">Image</th>
-                  <th className="p-2">Name</th>
-                  <th className="p-2">Price</th>
-                  <th className="p-2">Available</th>
-                  <th className="p-2">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <THead>
+                <TR>
+                  <TH>Image</TH>
+                  <TH>Name</TH>
+                  <TH>Price</TH>
+                  <TH>Available</TH>
+                  <TH>Actions</TH>
+                </TR>
+              </THead>
+              <TBody>
                 {items.map(it => (
-                  <tr key={it.id} className="border-t">
-                    <td className="p-2">{it.imageUrl && <img src={it.imageUrl} className="h-10 w-14 rounded object-cover" />}</td>
-                    <td className="p-2">{it.name}</td>
-                    <td className="p-2">₹{(it.priceCents/100).toFixed(2)}</td>
-                    <td className="p-2">{it.available ? 'Yes' : 'No'}</td>
-                    <td className="p-2">
+                  <TR key={it.id}>
+                    <TD>{it.imageUrl && <img src={it.imageUrl} alt="Item" className="h-10 w-14 rounded object-cover" />}</TD>
+                    <TD>{it.name}</TD>
+                    <TD>₹{(it.priceCents/100).toFixed(2)}</TD>
+                    <TD>{it.available ? <Badge variant="success">Yes</Badge> : <Badge variant="warning">No</Badge>}</TD>
+                    <TD>
                       <form className="flex flex-wrap items-center gap-2" action={async (formData: FormData) => {
                         'use server'
                         const name = String(formData.get('name') || it.name)
@@ -78,17 +82,17 @@ async function AdminCanteenManager() {
                         const available = formData.get('available') ? true : false
                         await prisma.menuItem.update({ where: { id: it.id }, data: { name, priceCents, imageUrl: imageUrl || null, available } })
                       }}>
-                        <input name="name" defaultValue={it.name} className="w-40 rounded border p-2" />
-                        <input name="priceCents" defaultValue={it.priceCents} className="w-36 rounded border p-2" />
-                        <input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-64 rounded border p-2" />
+                        <Input name="name" defaultValue={it.name} className="w-40" />
+                        <Input name="priceCents" defaultValue={String(it.priceCents)} className="w-36" />
+                        <Input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-64" />
                         <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="available" defaultChecked={it.available} /> Available</label>
-                        <button className="btn" type="submit">Update</button>
+                        <Button type="submit">Update</Button>
                       </form>
-                    </td>
-                  </tr>
+                    </TD>
+                  </TR>
                 ))}
-              </tbody>
-            </table>
+              </TBody>
+            </Table>
           </div>
         </div>
       ))}
@@ -115,9 +119,9 @@ export default async function AdminPage() {
               await prisma.vendor.update({ where: { id: v.id }, data: { phone: phone || null, whatsappEnabled } })
             }}>
               <div className="w-40 text-sm font-medium">{v.name}</div>
-              <input name="phone" defaultValue={v.phone ?? ''} placeholder="WhatsApp phone (e.g. 9198...)" className="w-72 rounded border p-2" />
+              <Input name="phone" defaultValue={v.phone ?? ''} placeholder="WhatsApp phone (e.g. +9198...)" className="w-72" />
               <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="whatsappEnabled" defaultChecked={v.whatsappEnabled} /> Enable WhatsApp</label>
-              <button className="btn" type="submit">Save</button>
+              <Button type="submit">Save</Button>
             </form>
           ))}
         </div>
@@ -132,7 +136,10 @@ export default async function AdminPage() {
         <div className="mb-2 font-medium">Recent Orders</div>
         <ul className="list-disc pl-5 text-sm">
           {orders.map(o => (
-            <li key={o.id}>{o.id.slice(0,8)} — {o.canteen.name} — {o.user.email} — ₹{(o.totalCents/100).toFixed(2)} — {o.status}</li>
+            <li key={o.id}>
+              {o.id.slice(0,8)} — {o.canteen.name} — {o.user.email} — ₹{(o.totalCents/100).toFixed(2)} — {o.status}
+              {typeof o.prepMinutes === 'number' ? ` — Prep: ${o.prepMinutes} min` : ''}
+            </li>
           ))}
         </ul>
       </div>

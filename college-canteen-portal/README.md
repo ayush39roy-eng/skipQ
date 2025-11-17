@@ -64,5 +64,19 @@ See `.env.example` for required and optional variables:
 	 - `CASHFREE_ENV` — `sandbox` or `production`
 	 - `APP_BASE_URL` — base URL for return/notify callbacks
 
+### WhatsApp Vendor Notifications
+- `WHATSAPP_PROVIDER` — `meta` (default) or `twilio`.
+- If `meta`:
+	- `WHATSAPP_META_TOKEN` — Meta WhatsApp API token
+	- `WHATSAPP_META_PHONE_NUMBER_ID` — Business phone number ID
+	- Configure inbound webhook to `POST /api/webhooks/whatsapp` and verify `GET /api/webhooks/whatsapp` for challenge.
+- If `twilio`:
+	- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`
+	- `TWILIO_WHATSAPP_FROM` — your Twilio WhatsApp-enabled number (E.164 format, e.g. `+1415...` or `1415...`)
+	- Set the Twilio WhatsApp sandbox/number webhook to `POST /api/webhooks/whatsapp`.
+- Store each vendor’s WhatsApp phone in Admin → Vendor Settings in E.164 format to match inbound webhook `From` values.
+
+On successful payment, the vendor receives a WhatsApp message with Confirm/Cancel buttons. Upon confirmation, they are prompted to choose a prep time. The chosen time appears on the user’s order page and in the Admin recent orders list.
+
 ## Payments (Cashfree)
 If Cashfree credentials are present, the payment link route creates a Cashfree order (`/api/payment/create-link?orderId=...`) and redirects to the hosted payment page. Webhook updates payment status via `/api/payment/webhook` (ensure this URL is reachable publicly and configured in the Cashfree dashboard). Without credentials, a stub local payment page is used.

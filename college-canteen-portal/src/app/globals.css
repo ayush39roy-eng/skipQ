@@ -46,6 +46,10 @@ body {
   min-height: 100vh;
 }
 
+/* Text utility for muted content used across components */
+.text-muted { color: rgb(var(--text-muted)); }
+.muted { color: rgb(var(--text-muted)); }
+
 .btn {
   @apply inline-flex items-center justify-center font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:opacity-50 disabled:cursor-not-allowed;
   background-color: rgb(var(--accent));

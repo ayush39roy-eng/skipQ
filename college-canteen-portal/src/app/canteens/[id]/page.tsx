@@ -1,6 +1,10 @@
 "use client"
 import { useEffect, useMemo, useState } from 'react'
 import { useParams } from 'next/navigation'
+import Image from 'next/image'
+import { Card } from '@/components/ui/Card'
+import { Button } from '@/components/ui/Button'
+import { Stepper } from '@/components/ui/Stepper'
 
 type Item = { id: string; name: string; priceCents: number; imageUrl?: string | null; description?: string | null }
 
@@ -43,84 +47,80 @@ export default function CanteenMenuPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-200">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-4 py-6 lg:flex-row">
-        <section className="flex-1">
-          <div className="mb-6">
-            <h1 className="text-3xl font-bold tracking-tight text-white">Menu</h1>
-          </div>
-          <div className="sticky top-0 z-10 bg-gray-950/80 backdrop-blur-sm py-3">
-            <label className="block">
-              <div className="relative h-12">
-                <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for food items..." className="form-input h-12 w-full rounded-lg border border-gray-800 bg-gray-900 pl-12 text-gray-100 placeholder:text-gray-500 focus:border-blue-500 focus:ring-blue-500" />
-                <span className="absolute inset-y-0 left-0 grid w-12 place-items-center text-blue-400">🔎</span>
-              </div>
-            </label>
-          </div>
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 lg:flex-row">
+      <section className="flex-1">
+        <div className="mb-4">
+          <h1 className="text-2xl font-semibold">Menu</h1>
+        </div>
+        <div className="sticky top-16 z-10 bg-[rgb(var(--bg))]/80 py-2 backdrop-blur supports-[backdrop-filter]:bg-[rgb(var(--bg))]/50">
+          <label className="block">
+            <span className="sr-only">Search items</span>
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search for food items..." className="input" />
+          </label>
+        </div>
 
-          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((it) => (
-              <div key={it.id} className="group flex flex-col overflow-hidden rounded-xl border border-gray-800 bg-gray-900 transition-all duration-300 hover:scale-[1.02] hover:border-blue-500/50 hover:shadow-lg">
-                <div className="h-44 w-full bg-cover bg-center" style={{ backgroundImage: `url('${it.imageUrl || 'https://picsum.photos/600/400?blur=3'}')` }} />
-                <div className="flex flex-1 flex-col p-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-gray-100">{it.name}</h3>
-                    <p className="mt-1 line-clamp-2 text-sm text-gray-400">{it.description || 'Tasty item from the canteen menu.'}</p>
-                  </div>
-                  <div className="mt-4 flex items-center justify-between">
-                    <p className="text-lg font-bold text-white">₹{(it.priceCents / 100).toFixed(2)}</p>
-                    {(cart[it.id] ?? 0) === 0 ? (
-                      <button className="flex h-9 w-28 items-center justify-center rounded-lg bg-blue-600 text-white hover:bg-blue-500" onClick={() => setCart(c => ({ ...c, [it.id]: 1 }))}>Add</button>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700" onClick={() => setCart(c => ({ ...c, [it.id]: Math.max((c[it.id] ?? 0) - 1, 0) }))}>-</button>
-                        <span className="text-lg font-bold text-white">{cart[it.id] ?? 0}</span>
-                        <button className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-800 text-gray-300 hover:bg-gray-700" onClick={() => setCart(c => ({ ...c, [it.id]: (c[it.id] ?? 0) + 1 }))}>+</button>
-                      </div>
-                    )}
-                  </div>
-                </div>
+        <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((it) => (
+            <Card key={it.id} className="group overflow-hidden transition hover:border-[rgb(var(--accent))]/70 hover:shadow-md">
+              <div className="relative h-44 w-full overflow-hidden rounded-md">
+                <Image src={it.imageUrl || '/placeholder.png'} alt={it.name} fill sizes="(max-width: 768px) 100vw, 33vw" className="object-cover" />
               </div>
-            ))}
-            {filtered.length === 0 && (
-              <div className="col-span-full text-center text-sm text-gray-400">No items match “{q}”.</div>
+              <div className="mt-3 flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold">{it.name}</h3>
+                  <p className="mt-0.5 line-clamp-2 text-sm text-muted">{it.description || 'Delicious item from the canteen menu.'}</p>
+                </div>
+                <p className="text-right text-base font-semibold">₹{(it.priceCents / 100).toFixed(2)}</p>
+              </div>
+              <div className="mt-3 flex justify-end">
+                {(cart[it.id] ?? 0) === 0 ? (
+                  <button className="btn" onClick={() => setCart(c => ({ ...c, [it.id]: 1 }))}>Add</button>
+                ) : (
+                  <Stepper value={cart[it.id] ?? 0} onChange={(v)=> setCart(c=> ({...c, [it.id]: v}))} />
+                )}
+              </div>
+            </Card>
+          ))}
+          {filtered.length === 0 && (
+            <div className="col-span-full text-center text-sm text-muted">No items match “{q}”.</div>
+          )}
+        </div>
+      </section>
+
+      <aside className="w-full lg:w-80 xl:w-96">
+        <Card className="sticky top-24">
+          <div className="flex items-center justify-between pb-4">
+            <h3 className="text-lg font-semibold">My Order</h3>
+            <button className="text-sm text-muted hover:text-[rgb(var(--text))]" onClick={() => setCart({})}>Clear</button>
+          </div>
+          <div className="max-h-64 space-y-4 overflow-y-auto py-2">
+            {Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => {
+              const it = items.find(x => x.id === id)!
+              return (
+                <div key={id} className="flex items-start gap-3">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-md">
+                    <Image src={it?.imageUrl || '/placeholder.png'} alt="Item" fill sizes="64px" className="object-cover" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">{it?.name}</p>
+                    <p className="text-sm text-muted">₹{((it?.priceCents || 0) / 100).toFixed(2)}</p>
+                  </div>
+                  <span className="text-sm font-semibold">x{q}</span>
+                </div>
+              )
+            })}
+            {Object.values(cart).reduce((a, b) => a + b, 0) === 0 && (
+              <p className="text-center text-sm text-muted">No items added yet.</p>
             )}
           </div>
-        </section>
-
-        <aside className="w-full lg:w-80 xl:w-96">
-          <div className="sticky top-8 rounded-xl border border-gray-800 bg-gray-900 p-6">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-4">
-              <h3 className="text-xl font-bold text-gray-100">My Order</h3>
-              <button className="text-sm font-medium text-gray-400 hover:text-red-400" onClick={() => setCart({})}>Clear Cart</button>
-            </div>
-            <div className="max-h-64 space-y-4 overflow-y-auto py-4">
-              {Object.entries(cart).filter(([, q]) => q > 0).map(([id, q]) => {
-                const it = items.find(x => x.id === id)!
-                return (
-                  <div key={id} className="flex items-start gap-4">
-                    <div className="h-16 w-16 rounded-lg bg-cover bg-center" style={{ backgroundImage: `url('${it?.imageUrl || 'https://picsum.photos/200'}')` }} />
-                    <div className="flex-1">
-                      <p className="font-semibold text-gray-100">{it?.name}</p>
-                      <p className="text-sm font-semibold text-blue-400">₹{((it?.priceCents || 0) / 100).toFixed(2)}</p>
-                    </div>
-                    <span className="text-sm font-bold text-white">x{q}</span>
-                  </div>
-                )
-              })}
-              {Object.values(cart).reduce((a, b) => a + b, 0) === 0 && (
-                <p className="text-center text-sm text-gray-500">No items added yet.</p>
-              )}
-            </div>
-            <div className="space-y-2 border-t border-gray-800 pt-4 text-sm">
-              <div className="flex justify-between text-gray-400"><span>Subtotal</span><span>₹{(subtotalCents / 100).toFixed(2)}</span></div>
-              <div className="flex justify-between text-gray-400"><span>Platform fee (2.5%)</span><span>₹{(platformFeeCents / 100).toFixed(2)}</span></div>
-              <div className="flex justify-between text-lg font-bold text-gray-100"><span>Total</span><span>₹{(grandTotalCents / 100).toFixed(2)}</span></div>
-            </div>
-            <button disabled={subtotalCents <= 0} onClick={order} className="mt-6 flex h-12 w-full items-center justify-center rounded-lg bg-blue-600 text-white text-base font-bold hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50">Checkout</button>
+          <div className="space-y-2 border-t border-[rgb(var(--border))] pt-4 text-sm">
+            <div className="flex justify-between text-muted"><span>Subtotal</span><span>₹{(subtotalCents / 100).toFixed(2)}</span></div>
+            <div className="flex justify-between text-muted"><span>Platform fee (2.5%)</span><span>₹{(platformFeeCents / 100).toFixed(2)}</span></div>
+            <div className="flex justify-between text-base font-semibold"><span>Total</span><span>₹{(grandTotalCents / 100).toFixed(2)}</span></div>
           </div>
-        </aside>
-      </div>
+          <Button disabled={subtotalCents <= 0} onClick={order} className="mt-4 w-full">Checkout</Button>
+        </Card>
+      </aside>
     </div>
   )
 }

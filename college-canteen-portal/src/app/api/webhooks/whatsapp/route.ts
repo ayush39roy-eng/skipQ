@@ -82,8 +82,11 @@ export async function POST(req: NextRequest) {
   // Simple Twilio-compatible fallback
   const body = await req.formData().catch(() => null)
   if (body) {
-    const from = (body.get('From') as string || '').replace('whatsapp:', '')
-    const text = (body.get('Body') as string) || ''
+    const waId = (body.get('WaId') as string) || ''
+    const fromRaw = (body.get('From') as string || '')
+    const from = waId || fromRaw.replace('whatsapp:', '')
+    const buttonPayload = (body.get('ButtonPayload') as string) || ''
+    const text = buttonPayload || (body.get('Body') as string) || ''
     await routeMessage(from, text)
   }
   return ok()
