@@ -61,7 +61,7 @@ const sections = [
   {
     title: 'CANCELLATION & REFUND POLICY',
     body: ['Orders can be cancelled only before the vendor starts processing them. Once the vendor confirms preparation or dispatch, cancellation may not be possible. Service/processing fees are non-refundable, as they cover platform and operational costs. If an order is cancelled before vendor confirmation, the product amount may be refunded to the customer as per the vendor’s policies. Refund timelines may vary based on the customer’s bank and payment provider. For cancellation or refund assistance, users can contact us at skipq39@gmail.com.']
-  }
+  },
   {
     title: 'CANCELLATION & REFUND POLICY',
     body: ['Orders can be cancelled only before the vendor starts processing them. Once the vendor confirms preparation or dispatch, cancellation may not be possible. Service/processing fees are non-refundable, as they cover platform and operational costs. If an order is cancelled before vendor confirmation, the product amount may be refunded to the customer as per the vendor’s policies. Refund timelines may vary based on the customer’s bank and payment provider. For cancellation or refund assistance, users can contact us at skipq39@gmail.com.']
