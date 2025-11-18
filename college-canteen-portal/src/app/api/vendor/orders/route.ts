@@ -14,14 +14,19 @@ export async function POST(req: Request) {
 
   const order = await prisma.order.findUnique({ where: { id: orderId } })
   if (!order || order.vendorId !== session.user.vendorId) return NextResponse.json({ error: 'Order not found' }, { status: 404 })
+  if (order.status === 'PENDING') {
+    return NextResponse.json({ error: 'Order not paid yet' }, { status: 409 })
+  }
 
   if (action === 'CONFIRM') {
     await prisma.order.update({ where: { id: orderId }, data: { status: 'CONFIRMED' } })
   } else if (action === 'CANCELLED') {
     await prisma.order.update({ where: { id: orderId }, data: { status: 'CANCELLED' } })
+  } else if (action === 'COMPLETED') {
+    await prisma.order.update({ where: { id: orderId }, data: { status: 'COMPLETED' } })
   } else if (action === 'SET_PREP' && typeof prepMinutes === 'number' && !Number.isNaN(prepMinutes)) {
     await prisma.order.update({ where: { id: orderId }, data: { prepMinutes } })
   }
 
-  return NextResponse.redirect(new URL('/vendor', req.url))
+  return NextResponse.json({ ok: true })
 }

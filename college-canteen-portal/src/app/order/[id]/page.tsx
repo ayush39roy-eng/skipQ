@@ -10,7 +10,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
   if (!order) return <p>Order not found.</p>
   const total = (order.totalCents/100).toFixed(2)
   const status = order.status
-  const statusVariant = status === 'PAID' || status === 'CONFIRMED' ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
+  const statusVariant = ['PAID', 'CONFIRMED', 'COMPLETED'].includes(status) ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold flex items-center gap-3">Order #{order.id.slice(0,8)} <Badge variant={statusVariant}>{status}</Badge></h1>

@@ -35,6 +35,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
+    "types/**/*.d.ts",
     "prisma/**/*.ts",
     ".next/types/**/*.ts"
   ],

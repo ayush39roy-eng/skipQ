@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyCashfreeWebhookSignature } from '@/lib/cashfree'
-import { sendWhatsApp, buildOrderButtons } from '@/lib/whatsapp'
+import { markOrderAsPaid } from '@/lib/order-payment'
 
 type CashfreeWebhookOrder = {
   order_id?: string
@@ -35,33 +35,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true })
   }
   if (status === 'PAID' || status === 'SUCCESS' || status === 'COMPLETED') {
-    await prisma.payment.update({ where: { orderId: payment.orderId }, data: { status: 'PAID', paidAt: new Date() } })
-    await prisma.order.update({ where: { id: payment.orderId }, data: { status: 'PAID' } })
-    // Send WhatsApp to vendor with Confirm/Cancel buttons
-    const order = await prisma.order.findUnique({ where: { id: payment.orderId }, include: { items: { include: { menuItem: true } }, canteen: { include: { vendor: true } } } })
-    const vendor = order?.canteen?.vendor
-    const itemSummary = order?.items.slice(0, 3)
-      .map(i => `${i.menuItem?.name ?? 'Unknown item'} x${i.quantity}`)
-      .join(', ') + (order && order.items.length > 3 ? '…' : '')
-    const notificationPhones = order?.canteen?.notificationPhones && order.canteen.notificationPhones.length
-      ? order.canteen.notificationPhones
-      : (vendor?.phone ? [vendor.phone] : [])
-    const validPhones = (notificationPhones || []).map(p => (p || '').trim()).filter(Boolean)
-    if (order && vendor?.whatsappEnabled && validPhones.length) {
-      const total = (order.totalCents / 100).toFixed(2)
-      const shortId = order.id.slice(0, 8)
-      await Promise.allSettled(validPhones.map(async (to) => {
-        try {
-          await sendWhatsApp(to, {
-            header: 'New Paid Order',
-            text: `Order ${shortId} — ₹${total}. ${itemSummary || 'Items'}\nReply CONFIRM:${order.id} or CANCEL:${order.id}`,
-            buttons: buildOrderButtons(order.id)
-          })
-        } catch (err) {
-          console.error(`Failed to notify ${to} for order ${shortId}:`, err)
-        }
-      }))
-    }
+    await markOrderAsPaid(payment.orderId)
   }
   return NextResponse.json({ ok: true })
 }

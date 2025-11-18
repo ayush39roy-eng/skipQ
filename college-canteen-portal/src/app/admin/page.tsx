@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
 import { revalidatePath } from 'next/cache'
+import { FormSubmitButton } from '@/components/ui/FormSubmitButton'
 
 async function AdminCanteenManager() {
   const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
@@ -27,14 +27,15 @@ async function AdminCanteenManager() {
           const vendorId = String(formData.get('vendorId') || '')
           if (!name || !location || !vendorId) return
           await prisma.canteen.create({ data: { name, location, vendorId } })
+          revalidatePath('/admin')
         }}>
-          <Input name="name" placeholder="Name" />
-          <Input name="location" placeholder="Location" />
-          <select name="vendorId" className="rounded border p-2">
+          <Input name="name" placeholder="Name" required />
+          <Input name="location" placeholder="Location" required />
+          <select name="vendorId" className="rounded border p-2" required>
             <option value="">Select Vendor</option>
             {vendors.map(v=> <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
-          <button className="btn w-fit" type="submit">Create</button>
+          <FormSubmitButton pendingLabel="Creating...">Create</FormSubmitButton>
         </form>
       </div>
 
@@ -50,7 +51,7 @@ async function AdminCanteenManager() {
               revalidatePath('/admin')
             }}>
               <input name="phones" defaultValue={canteen.notificationPhones?.join(',') ?? ''} placeholder="Notif phones (+1555..., comma sep)" className="w-64 rounded border p-2 text-xs" />
-              <button type="submit" className="btn-secondary px-3 py-1 text-xs">Save Phones</button>
+              <FormSubmitButton variant="secondary" size="sm" pendingLabel="Saving..." className="px-3 py-1 text-xs">Save Phones</FormSubmitButton>
             </form>
           </div>
 
@@ -61,11 +62,12 @@ async function AdminCanteenManager() {
             const imageUrl = String(formData.get('imageUrl') || '')
             if (!name || !priceCents) return
             await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null } })
+            revalidatePath('/admin')
           }}>
             <Input name="name" placeholder="Item name" className="w-48" />
             <Input name="priceCents" placeholder="Price (in cents)" className="w-48" />
             <Input name="imageUrl" placeholder="Image URL (optional)" className="w-64" />
-            <Button type="submit">Add Item</Button>
+            <FormSubmitButton pendingLabel="Adding...">Add Item</FormSubmitButton>
           </form>
 
           <div className="overflow-x-auto">
@@ -87,20 +89,37 @@ async function AdminCanteenManager() {
                     <TD>₹{(it.priceCents/100).toFixed(2)}</TD>
                     <TD>{it.available ? <Badge variant="success">Yes</Badge> : <Badge variant="warning">No</Badge>}</TD>
                     <TD>
-                      <form className="flex flex-wrap items-center gap-2" action={async (formData: FormData) => {
-                        'use server'
-                        const name = String(formData.get('name') || it.name)
-                        const priceCents = Number(formData.get('priceCents') || it.priceCents)
-                        const imageUrl = String(formData.get('imageUrl') || it.imageUrl || '')
-                        const available = formData.get('available') ? true : false
-                        await prisma.menuItem.update({ where: { id: it.id }, data: { name, priceCents, imageUrl: imageUrl || null, available } })
-                      }}>
-                        <Input name="name" defaultValue={it.name} className="w-40" />
-                        <Input name="priceCents" defaultValue={String(it.priceCents)} className="w-36" />
-                        <Input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-64" />
-                        <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="available" defaultChecked={it.available} /> Available</label>
-                        <Button type="submit">Update</Button>
-                      </form>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <form className="flex flex-wrap items-center gap-2" action={async (formData: FormData) => {
+                          'use server'
+                          const name = String(formData.get('name') || it.name)
+                          const priceCents = Number(formData.get('priceCents') || it.priceCents)
+                          const rawImage = formData.get('imageUrl')
+                          const imageUrl = rawImage === null ? it.imageUrl : (String(rawImage).trim() || null)
+                          const available = formData.get('available') ? true : false
+                          await prisma.menuItem.update({ where: { id: it.id }, data: { name, priceCents, imageUrl, available } })
+                          revalidatePath('/admin')
+                        }}>
+                          <Input name="name" defaultValue={it.name} className="w-40" />
+                          <Input name="priceCents" defaultValue={String(it.priceCents)} className="w-36" />
+                          <Input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-64" />
+                          <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="available" defaultChecked={it.available} /> Available</label>
+                          <FormSubmitButton pendingLabel="Saving...">Update</FormSubmitButton>
+                        </form>
+                        <form action={async () => {
+                          'use server'
+                          await prisma.menuItem.delete({ where: { id: it.id } })
+                          revalidatePath('/admin')
+                        }}>
+                          <FormSubmitButton
+                            pendingLabel="Deleting..."
+                            variant="outline"
+                            className="border-red-600 text-red-600 hover:bg-red-600/10"
+                          >
+                            Delete
+                          </FormSubmitButton>
+                        </form>
+                      </div>
                     </TD>
                   </TR>
                 ))}
@@ -130,11 +149,12 @@ export default async function AdminPage() {
               const phone = String(formData.get('phone') || '')
               const whatsappEnabled = formData.get('whatsappEnabled') ? true : false
               await prisma.vendor.update({ where: { id: v.id }, data: { phone: phone || null, whatsappEnabled } })
+              revalidatePath('/admin')
             }}>
               <div className="w-40 text-sm font-medium">{v.name}</div>
               <Input name="phone" defaultValue={v.phone ?? ''} placeholder="WhatsApp phone (e.g. +9198...)" className="w-72" />
               <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="whatsappEnabled" defaultChecked={v.whatsappEnabled} /> Enable WhatsApp</label>
-              <Button type="submit">Save</Button>
+              <FormSubmitButton pendingLabel="Saving...">Save</FormSubmitButton>
             </form>
           ))}
         </div>

@@ -64,6 +64,7 @@ model Order {
   vendorId         String?
   items            OrderItem[]
   status           String        @default("PENDING")
+  fulfillmentType  String        @default("TAKEAWAY")
   totalCents       Int           @default(0)
   commissionCents  Int           @default(0)
   vendorTakeCents  Int           @default(0)

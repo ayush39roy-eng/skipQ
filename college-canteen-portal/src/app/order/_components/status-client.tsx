@@ -56,7 +56,7 @@ export default function OrderStatusClient({ orderId, initialStatus, initialPrep,
     }
   }, [orderId])
 
-  const variant = status === 'PAID' || status === 'CONFIRMED' ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
+  const variant = ['PAID', 'CONFIRMED', 'COMPLETED'].includes(status) ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
   return (
     <div className="space-y-2 text-sm">
       <div className="flex items-center gap-2">Current Status: <Badge variant={variant}>{status}</Badge></div>
@@ -66,6 +66,9 @@ export default function OrderStatusClient({ orderId, initialStatus, initialPrep,
       )}
       {status === 'CANCELLED' && (
         <div className="text-rose-500 font-medium">This order was cancelled.</div>
+      )}
+      {status === 'COMPLETED' && (
+        <div className="text-emerald-400">Vendor marked this order completed.</div>
       )}
       {error && <div className="text-xs text-amber-500">Update error: {error}</div>}
     </div>
