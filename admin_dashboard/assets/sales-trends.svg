@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 320">
+  <defs>
+    <linearGradient id="grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#007AFF" stop-opacity="0.45" />
+      <stop offset="100%" stop-color="#007AFF" stop-opacity="0" />
+    </linearGradient>
+  </defs>
+  <rect width="800" height="320" rx="24" fill="#10151f" />
+  <path d="M50 240L150 210L250 220L350 190L450 170L550 130L650 160L750 140" fill="none" stroke="#007AFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+  <path d="M50 240L150 210L250 220L350 190L450 170L550 130L650 160L750 140L750 320L50 320Z" fill="url(#grad)" />
+  <g fill="#7D8590" font-family="Inter, sans-serif" font-size="14">
+    <text x="40" y="305">Mon</text>
+    <text x="140" y="305">Tue</text>
+    <text x="240" y="305">Wed</text>
+    <text x="340" y="305">Thu</text>
+    <text x="440" y="305">Fri</text>
+    <text x="540" y="305">Sat</text>
+    <text x="640" y="305">Sun</text>
+  </g>
+</svg>

@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta name="csrf-token" content="{{csrf_token}}" />
+<title>Order Summary</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "skipq-blue": "#009CFF",
+            "dark-bg": "#0D1117",
+            "dark-card": "#161B22",
+            "dark-border": "#30363D",
+          },
+          fontFamily: {
+            display: ["Plus Jakarta Sans", "Noto Sans", "sans-serif"],
+          },
+          borderRadius: {
+            DEFAULT: "0.5rem",
+            lg: "0.75rem",
+            xl: "1rem",
+            full: "9999px",
+          },
+        },
+      },
+    };
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings:
+        "FILL" 0,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+    }
+  </style>
+</head>
+<body class="font-display bg-dark-bg text-gray-300">
+<div class="relative flex min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-dark-border px-4 md:px-10 py-3">
+<div class="flex items-center gap-4 text-gray-200">
+<div class="size-6 text-skipq-blue">
+<svg fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+<path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"></path>
+</svg>
+</div>
+<h2 class="text-gray-200 text-lg font-bold leading-tight tracking-[-0.015em]">SkipQ</h2>
+</div>
+    <div class="flex flex-1 justify-end gap-2 md:gap-4">
+      <nav class="hidden md:flex items-center gap-9">
+<a class="text-gray-300 hover:text-white text-sm font-medium leading-normal" href="#">Menu</a>
+<a class="text-gray-300 hover:text-white text-sm font-medium leading-normal" href="#">My Orders</a>
+<a class="text-gray-300 hover:text-white text-sm font-medium leading-normal" href="#">Profile</a>
+      </nav>
+<button class="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-10 px-4 bg-gray-800 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-gray-700 border border-dark-border">
+<span class="truncate">Logout</span>
+</button>
+      <img class="object-cover rounded-full size-10" alt="User profile picture" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0AznDT7X7tvgqNRhxyEbTmelWI41JoKTieBaS8BCBf7hPec4cFlcxIrdmO_SVOpH6sl-2_goz5IYc4bYw6t8QgVzX3eXckKWhOSbkNrBTQRt1Gzf0W7nai-ZUUuurMf4gv55IxHwnmx0jWbMu41PnhFf6dxs1LoYE7dFbFpCm2qz1V8FBenPApx9W4D2YDuTz-UlbT_o4keiXb7lsHabTNYJ5WhurEt00mydDzBSpWW-_hIdRWOajiRVmZKn3NJ7v1phpXFdkrkY"/>
+</div>
+</header>
+<main class="flex flex-1 justify-center py-5 px-4 sm:px-10 md:px-20 lg:px-40">
+<div class="layout-content-container flex flex-col w-full max-w-6xl flex-1">
+<div class="flex flex-wrap justify-between gap-3 p-4">
+<div class="flex min-w-72 flex-col gap-2">
+<p class="text-white text-4xl font-black leading-tight tracking-[-0.033em]">Review Your Order</p>
+<p class="text-gray-400 text-base font-normal leading-normal">Please confirm the items and proceed to payment.</p>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8 p-4 mt-6">
+<form id="order-form" method="post" action="/api/pay" class="contents">
+<!-- Server must populate csrf_token to guard payment submission -->
+<input type="hidden" name="csrf_token" value="{{csrf_token}}" />
+<div class="lg:col-span-2 bg-dark-card rounded-xl p-6 border border-dark-border">
+<h3 class="text-xl font-bold text-white mb-6">Order Items</h3>
+<div class="flex flex-col divide-y divide-dark-border">
+<div class="flex items-center gap-4 py-4 justify-between order-row" data-item-id="veg-pizza" data-price="120" data-name="Veggie Pizza">
+<div class="flex items-center gap-4">
+            <img class="aspect-square rounded-lg size-16 object-cover object-center" alt="A slice of veggie pizza" loading="lazy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdvk2r3WNbPLFU7ibaW_CfJlFEszRNYuXO_RWAS49Z4A_-VK-weMGN1NZbOsKXdI-prBH34RSFxgRZ4h3uThQ21IhMBgwEdBrs9zmJkRCVBFpb-vB7x41oRfeUjg0foj2SC9t2L06mCG_Ophny9CNtzCYqSWbj4D1SvGUyEaFUKiKD5VU_XJRivgan5H_qLJdYhyL_dp3FuSAxTvjYeUa95EKM6-zP-P3ShA8pZ7eT0997oZ54BvwX2Txu1WXDTKd6qAsINv0_pvE"/>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Veggie Pizza</p>
+<p class="text-gray-400 text-sm font-normal leading-normal line-clamp-2">Canteen A • ₹120.00</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-4">
+<div class="flex items-center gap-2 text-white" role="group" aria-label="Item quantity">
+          <button type="button" data-action="decrement" aria-controls="qty-1" aria-label="Decrease quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">-</button>
+          <input id="qty-1" name="items[veg-pizza][quantity]" data-item-id="veg-pizza" aria-label="Quantity" class="text-base font-medium leading-normal w-6 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required value="1"/>
+          <button type="button" data-action="increment" aria-controls="qty-1" aria-label="Increase quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">+</button>
+</div>
+<button type="button" class="text-gray-500 hover:text-red-400 delete-item" data-item-id="veg-pizza" aria-label="Delete Veggie Pizza from order" onclick="deleteItem('veg-pizza')">
+<span class="material-symbols-outlined" aria-hidden="true">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-4 py-4 justify-between order-row" data-item-id="orange-juice" data-price="40" data-name="Orange Juice">
+<div class="flex items-center gap-4">
+            <img class="aspect-square rounded-lg size-16 object-cover object-center" alt="A glass of fresh orange juice" loading="lazy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDD7LgZyYwVOo8VkACD5UtBuxJ4lcxUx8pWBGX2r4kqrPbruqIukhYhWSf_6qarJvzrH2iky-DaP80K4zn9DkHDXVXITBMVqAyjy_3MSGFTvbzoAZd27QIPPpaDWz4Scwu4brVHubdtZdYfOOyUhHiq-5GyxxEyFCzut14lxZ42beMYWAc5xcj3DL7BhgWuKOM-UBRFVXw9pEyjmHG0pcu7KEa6_DR9Y9ks8Ey0Pldmm-GkXp5z7j3Qo0kMegmc5d6vUFurCt5NI5s"/>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Orange Juice</p>
+<p class="text-gray-400 text-sm font-normal leading-normal line-clamp-2">Canteen A • ₹40.00</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-4">
+<div class="flex items-center gap-2 text-white" role="group" aria-label="Item quantity">
+          <button type="button" data-action="decrement" aria-controls="qty-2" aria-label="Decrease quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">-</button>
+          <input id="qty-2" name="items[orange-juice][quantity]" data-item-id="orange-juice" aria-label="Quantity" class="text-base font-medium leading-normal w-6 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required value="2"/>
+          <button type="button" data-action="increment" aria-controls="qty-2" aria-label="Increase quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">+</button>
+</div>
+<button type="button" class="text-gray-500 hover:text-red-400 delete-item" data-item-id="orange-juice" aria-label="Delete Orange Juice from order" onclick="deleteItem('orange-juice')">
+<span class="material-symbols-outlined" aria-hidden="true">delete</span>
+</button>
+</div>
+</div>
+<div class="flex items-center gap-4 py-4 justify-between order-row" data-item-id="cheeseburger" data-price="75" data-name="Cheeseburger">
+<div class="flex items-center gap-4">
+            <img class="aspect-square rounded-lg size-16 object-cover object-center" alt="A juicy cheeseburger" loading="lazy" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBtCxQFmrf2ZHHBrZYPwD9XCY39gyS6Fi58iidW01zX-g0NivuMPB6uRBPwJWDLMee3Ee-1P2t3xbfMtXPWnezTbHpCGRA4aKXQpFFW51l72VbD4IwxQc49bPtxqbkbMaEf-Gey-BEvycBcINO44F67v128tXJYDsVrngLTaBHpkTdYsbC3y-Qqwium44iAP7sPZxn6wyiA2wH0prdYHIffWmKtqENFR17aGBpi5voSI0X9XxqkTAkTXYBOR5-hmD_BmKRbjbibniY"/>
+<div class="flex flex-col justify-center">
+<p class="text-white text-base font-medium leading-normal line-clamp-1">Cheeseburger</p>
+<p class="text-gray-400 text-sm font-normal leading-normal line-clamp-2">Canteen B • ₹75.00</p>
+</div>
+</div>
+<div class="shrink-0 flex items-center gap-4">
+<div class="flex items-center gap-2 text-white" role="group" aria-label="Item quantity">
+          <button type="button" data-action="decrement" aria-controls="qty-3" aria-label="Decrease quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">-</button>
+          <input id="qty-3" name="items[cheeseburger][quantity]" data-item-id="cheeseburger" aria-label="Quantity" class="text-base font-medium leading-normal w-6 p-0 text-center bg-transparent focus:outline-0 focus:ring-0 focus:border-none border-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1" required value="1"/>
+          <button type="button" data-action="increment" aria-controls="qty-3" aria-label="Increase quantity" class="text-base font-medium leading-normal flex h-8 w-8 items-center justify-center rounded-full bg-gray-700 hover:bg-gray-600 cursor-pointer">+</button>
+</div>
+<button type="button" class="text-gray-500 hover:text-red-400 delete-item" data-item-id="cheeseburger" aria-label="Delete Cheeseburger from order" onclick="deleteItem('cheeseburger')">
+<span class="material-symbols-outlined" aria-hidden="true">delete</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-1">
+<div class="bg-dark-card rounded-xl p-6 border border-dark-border sticky top-10">
+<h3 class="text-xl font-bold text-white mb-6">Cost Summary</h3>
+<div class="space-y-4 text-sm text-gray-300">
+<div class="flex justify-between">
+<span>Subtotal</span>
+  <span class="font-medium text-gray-200" id="subtotal-amount">₹275.00</span>
+</div>
+<div class="flex justify-between items-center">
+            <div class="flex items-center gap-1.5 group relative focus:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue/50 focus-visible:rounded" tabindex="0" aria-describedby="platform-fee-tooltip">
+            <span>Platform Fee (2.5%)</span>
+            <span class="material-symbols-outlined text-base cursor-help text-skipq-blue">info</span>
+            <div id="platform-fee-tooltip" role="tooltip" class="absolute bottom-full mb-2 w-60 bg-gray-800 text-white text-xs rounded py-2 px-3 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none">
+                        This helps us maintain the platform and provide support.
+                        <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-x-4 border-x-transparent border-t-4 border-t-gray-800"></div>
+</div>
+</div>
+  <span class="font-medium text-gray-200" id="platform-fee-amount">₹6.88</span>
+</div>
+</div>
+<div class="my-6 border-t border-dashed border-dark-border"></div>
+<div class="flex justify-between items-center text-white">
+<span class="text-lg font-bold">Grand Total</span>
+  <span class="text-2xl font-black" id="grand-total-amount">₹281.88</span>
+</div>
+<input type="hidden" name="total" id="total-field" value="0"/>
+<button type="submit" id="confirm-button" class="mt-8 w-full flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-12 px-4 bg-skipq-blue text-white text-base font-bold leading-normal tracking-[0.015em] hover:bg-opacity-90 transition-colors">
+  <span class="truncate" id="confirm-pay-label">Confirm & Pay ₹281.88</span>
+ </button>
+<p class="text-xs text-center text-gray-400 mt-3">You will be redirected to our secure payment partner.</p>
+<div class="mt-6">
+<p class="text-center text-xs text-gray-400 mb-2">We Accept</p>
+<div class="flex justify-center items-center gap-4 brightness-0 invert opacity-60">
+<img class="h-6" alt="UPI logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCrnZLHbB_YeztGk70NRl8NxS8SlmeSlBDD7KGDxC5a_PykE4FlKDC_2pJ0FZWA_Kb23ut1PerhoNMqaBDzpik6nus7aPJhsQUcFNuCIckAivVkimUE1XvO8hwE7_k0uWK5Q9-UfN-2_F7LewPbmWrObqmmrJ6vOH8QK9-rj4xyKEMm11m6ieHvv1h7rKvPfjsePCE96jEjNxPlJt211VaJVF274UdcRoKs74WhlI3rQwRmMU9BK_Sl1iB6n8cufxqSauJDb3YKLlo"/>
+<img class="h-4" alt="Visa logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCMZhe_4NCp1f36mNAV4qWdXe_Qv3dPzC7TIK5Wgg1JmnXhuC5EUW3ani_uFoJkXaOzJj_4PAX_oFb_aY29am3WtZLfOuTJw2Qvxr-vcm5kdYYd_Tm9ccQm6mNyFR5fXfsxootvdIcLWy5tmdASiPeA6HenzHpKuVndNVeRcDtuTqduzbObjMr2RuXxkgUk-txJxXflJGYcMnx8Xw4O4JBQcNSCjFxhO_7CqLvWqxmJ3iYeFAMypWjaMDslgpSet3SOvLwhUCTVcxU"/>
+<img class="h-6" alt="Mastercard logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_QqWjv4iLUZZIbKJPfBf0HaN4sU2jtrAKx1C9vBEhcfmkzHpEo4o9B_9zVcoSL_j_1_e6-_1O1KE6W-HpK1RmHjACiLUGgJeHmKOBhXlTBMthOm1JeOLbCTKw-TWKCiUvBE0CHLgEi7gbIJxW2En_sItom-s9yfoDtaKeVtDso0f8mbd-gNsFv10d8_DFlgnEtn2hgEsMZxRUE9-kcRqkgo2CyJ_x1ucPWuQN4PJVtU7YSsA1miYqF-IZrFR2RE1Ve0jNRynKx6U"/>
+<img class="h-6" alt="Rupay logo" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB1k2fA14tNj6QzR69R3TcQE0zgVk5yNsRQDMBb_GYkMuDxvjYvrMtkmA2Yp2srWEgBBKTlUjWX9lEUjh2Thti98X8Qj8hfsoOL7c2Smqenmyquq-ln9CNwONpQab06xQiBGMY2EUga-6Rdz56y3Jr0sAjQrG5jRpku9XhPSwEssFLJoxrCivtNwtB85_20Ct2b57HULpj3RXYuRICB34g7L-hojncUHTy9DgPHF1wm_Vanpu5EacgGf-UQFRTzh0h1X0XwbL3oOjo"/>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<footer class="w-full mt-10 border-t border-solid border-dark-border py-6 px-4 md:px-10">
+<div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
+<p class="text-sm text-gray-400">© 2024 SkipQ. All rights reserved.</p>
+<div class="flex items-center gap-6 text-sm">
+<a class="text-gray-300 hover:text-skipq-blue" href="#">Help Center</a>
+<a class="text-gray-300 hover:text-skipq-blue" href="#">Terms of Service</a>
+<a class="text-gray-300 hover:text-skipq-blue" href="#">Contact Us</a>
+</div>
+</div>
+</footer>
+</div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const PLATFORM_RATE = 0.025;
+  const moneyFmt = n => `₹${n.toFixed(2)}`;
+  const form = document.getElementById('order-form');
+
+  const getCsrfToken = () => {
+    return document.querySelector('meta[name="csrf-token"]')?.content
+      || form?.querySelector('input[name="csrf_token"]')?.value
+      || '';
+  };
+
+  function clamp(input){
+    const min = parseInt(input.min) || 1;
+    const max = isNaN(parseInt(input.max)) ? Infinity : parseInt(input.max);
+    let val = parseInt(input.value);
+    if (isNaN(val)) val = min;
+    val = Math.max(min, Math.min(max, val));
+    input.value = String(val);
+    return val;
+  }
+
+  function rows(){
+    return Array.from(document.querySelectorAll('.order-row'));
+  }
+
+  function calculateSubtotal(rowCollection){
+    const collection = Array.isArray(rowCollection) ? rowCollection : Array.from(rowCollection || []);
+    return collection.reduce((sum, row) => {
+      if (!row) return sum;
+      const price = parseFloat(row.dataset?.price || '0') || 0;
+      const qtyInput = row.querySelector('input[type="number"][name^="items["]');
+      const qty = qtyInput ? clamp(qtyInput) : 1;
+      return sum + price * qty;
+    }, 0);
+  }
+
+  function recalc(){
+    const subtotal = calculateSubtotal(rows());
+    const fee = +(subtotal * PLATFORM_RATE).toFixed(2);
+    const grand = +(subtotal + fee).toFixed(2);
+    const subEl = document.getElementById('subtotal-amount'); if (subEl) subEl.textContent = moneyFmt(subtotal);
+    const feeEl = document.getElementById('platform-fee-amount'); if (feeEl) feeEl.textContent = moneyFmt(fee);
+    const grandEl = document.getElementById('grand-total-amount'); if (grandEl) grandEl.textContent = moneyFmt(grand);
+    const btnLabel = document.getElementById('confirm-pay-label'); if (btnLabel) btnLabel.textContent = `Confirm & Pay ${moneyFmt(grand)}`;
+    const totalField = document.getElementById('total-field'); if (totalField) totalField.value = String(grand);
+  }
+
+  function wireQuantity(group){
+    const input = group.querySelector('input[type="number"][name^="items["]');
+    if (!input) return;
+    const dec = group.querySelector('[data-action="decrement"]');
+    const inc = group.querySelector('[data-action="increment"]');
+    function changeBy(delta){
+      const v = clamp(input) + delta;
+      input.value = String(v);
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    if (dec) dec.addEventListener('click', () => changeBy(-1));
+    if (inc) inc.addEventListener('click', () => changeBy(1));
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowUp') { e.preventDefault(); changeBy(1); }
+      else if (e.key === 'ArrowDown') { e.preventDefault(); changeBy(-1); }
+      else if (e.key === 'Enter') { clamp(input); recalc(); }
+    });
+    input.addEventListener('input', () => { clamp(input); recalc(); });
+    input.addEventListener('change', () => { clamp(input); recalc(); });
+  }
+
+  document.querySelectorAll('div[role="group"]').forEach(wireQuantity);
+
+  function deleteItemById(itemId){
+    if (!itemId) return;
+    const row = rows().find(r => r.dataset.itemId === itemId);
+    if (!row) return;
+    const name = row.dataset.name || 'this item';
+    if (!confirm(`Remove ${name} from your order?`)) return;
+    row.remove();
+    recalc();
+  }
+
+  window.deleteItem = deleteItemById;
+
+  if (form) {
+    const confirmBtn = document.getElementById('confirm-button');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      // Validate items
+      const currentRows = rows();
+      if (currentRows.length === 0) {
+        alert('Your cart is empty. Please add at least one item.');
+        return;
+      }
+      for (const row of currentRows) {
+        const qtyInput = row.querySelector('input[type="number"][name^="items["]');
+        if (!qtyInput || clamp(qtyInput) < 1) {
+          alert('Quantities must be 1 or more.');
+          return;
+        }
+      }
+      recalc();
+
+      const payload = {
+        items: currentRows.map(row => ({
+          id: row.dataset.itemId,
+          name: row.dataset.name,
+          price: parseFloat(row.dataset.price || '0') || 0,
+          quantity: parseInt(row.querySelector('input[type="number"][name^="items["]').value) || 1
+        })),
+        totals: {
+          subtotal: calculateSubtotal(currentRows),
+          platformRate: PLATFORM_RATE
+        }
+      };
+
+      const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        alert('Security token missing. Please refresh the page and try again.');
+        return;
+      }
+      payload.csrfToken = csrfToken;
+
+      try {
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.classList.add('opacity-70'); }
+        const res = await fetch(form.action, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': csrfToken
+          },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(`Payment request failed (${res.status})`);
+        let data;
+        try {
+          data = await res.json();
+        } catch (parseError) {
+          const context = {
+            endpoint: form.action,
+            status: res.status,
+            statusText: res.statusText
+          };
+          console.error('Failed to parse payment response JSON', context, parseError);
+          data = {};
+        }
+        const redirectUrl = data.redirectUrl || data.url;
+        if (redirectUrl) {
+          window.location.href = redirectUrl;
+        } else {
+          alert('Payment created but no redirect URL returned.');
+          if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.classList.remove('opacity-70'); }
+        }
+      } catch (err) {
+        alert(err?.message || 'Failed to create payment. Please try again.');
+        if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.classList.remove('opacity-70'); }
+      }
+    });
+  }
+
+  recalc();
+});
+</script>
+
+</body></html>

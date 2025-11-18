@@ -1,0 +1,8 @@
+{
+	"name": "skipq-portal",
+	"version": "1.0.0",
+	"description": "Campus canteen portals and dashboards for SkipQ",
+	"main": "index.js",
+	"author": "SkipQ Team",
+	"license": "MIT"
+}

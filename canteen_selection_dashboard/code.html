@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Canteen Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#007BFF",
+              "background-light": "#f6f8f6",
+              "background-dark": "#0D1117",
+              "surface-dark": "#161B22",
+            },
+            fontFamily: {
+              "display": ["Sora", "Noto Sans", "sans-serif"]
+            },
+            borderRadius: {"DEFAULT": "0.5rem", "lg": "0.75rem", "xl": "1rem", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background-dark font-display text-gray-300">
+<div class="relative flex h-auto min-h-screen w-full flex-col group/design-root overflow-x-hidden">
+<div class="layout-container flex h-full grow flex-col">
+<div class="px-4 sm:px-8 md:px-16 lg:px-24 xl:px-40 flex flex-1 justify-center py-5">
+<div class="layout-content-container flex flex-col max-w-[960px] flex-1 w-full">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-white/10 px-4 sm:px-6 md:px-10 py-4 text-gray-200">
+<div class="flex items-center gap-4">
+<div class="size-8 text-primary flex items-center justify-center">
+<span class="material-symbols-outlined !text-3xl">fastfood</span>
+</div>
+<h2 class="text-xl font-bold tracking-tight">Canteen Portal</h2>
+</div>
+<div class="flex flex-1 justify-end gap-4 sm:gap-6 items-center">
+<div class="hidden sm:flex items-center gap-6 md:gap-8">
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">My Orders</a>
+<a class="text-sm font-medium leading-normal hover:text-primary transition-colors" href="#">Profile</a>
+</div>
+<button type="button" aria-label="Notifications" title="Notifications" class="flex max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 w-10 bg-surface-dark hover:bg-white/10 text-gray-300 gap-2 text-sm font-bold leading-normal tracking-[0.015em] min-w-0 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+<span class="material-symbols-outlined">notifications</span>
+</button>
+<img src="https://lh3.googleusercontent.com/aida-public/AB6AXuBJ2UUQ43xqkIfYG6WrfoA457vbnOciZuj7OcKAAufk3XTbDoQB3whr32_yY8Hfpgx2-jkYPplXoUghNTQi7ETOpKIfSRqQEDKZd3K4bZ_0okH7HK55lDoYS7SRNBZB1axiufSA1KajGM97h1NnHLaVIfuq6GT1Wdy-2qs4J9BMri5BChudjQFGDo35AwWukqkYbJeovwoMZlPdEnuIwT0_rocwi5iazRdsS0tjFlW23kDyohFiT9-4KJaAdYzZJb_y9dDBKAUPwNY"
+  alt="User avatar image with a colorful gradient" class="rounded-full size-10 object-cover"/>
+</div>
+</header>
+<main class="flex flex-col gap-6 mt-10">
+<div class="flex flex-wrap justify-between gap-3 p-4">
+<h1 class="text-white text-5xl font-bold leading-tight tracking-tighter min-w-72">Canteens &amp; Eateries</h1>
+</div>
+<div class="px-4 py-3">
+  <label for="canteen-search" class="sr-only">Search canteens</label>
+  <div class="flex w-full flex-1 items-stretch rounded-lg h-14 bg-surface-dark border border-white/10 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/50 transition-all">
+    <div class="text-primary flex items-center justify-center pl-4">
+      <span class="material-symbols-outlined">search</span>
+    </div>
+    <input id="canteen-search" type="search" class="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-gray-200 focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-gray-500 px-4 pl-3 text-base font-normal" placeholder="Search for your favorite canteen..." />
+  </div>
+</div>
+<div class="flex gap-3 p-4 overflow-x-auto">
+<button type="button" class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-primary text-white pl-4 pr-3 transition-colors text-sm font-semibold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+All
+</button>
+<button type="button" class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark border border-white/10 hover:border-primary hover:text-primary text-gray-300 px-4 transition-colors text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+North Campus
+</button>
+<button type="button" class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark border border-white/10 hover:border-primary hover:text-primary text-gray-300 px-4 transition-colors text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+Library Building
+</button>
+<button type="button" class="flex h-10 shrink-0 items-center justify-center gap-x-2 rounded-lg bg-surface-dark border border-white/10 hover:border-primary hover:text-primary text-gray-300 px-4 transition-colors text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+Popularity
+</button>
+</div>
+<div id="canteen-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 p-4">
+  <!-- Cards are rendered from JSON via the template below -->
+  <noscript>
+    Enable JavaScript to view canteens.
+  </noscript>
+</div>
+<p data-empty-state class="px-4 text-sm text-gray-400 hidden" role="status" aria-live="polite">No canteens match your search.</p>
+
+<!-- Repeatable card pattern: update template only to change all cards -->
+<template id="canteen-card-template">
+  <div class="flex flex-col gap-4 rounded-xl bg-surface-dark border border-white/10 p-4 transition-all hover:border-primary/80 hover:shadow-2xl hover:shadow-primary/10">
+    <img data-slot="image" class="w-full aspect-video object-cover rounded-lg" loading="lazy"/>
+    <div class="flex flex-col gap-2">
+      <h3 data-slot="name" class="text-white text-xl font-semibold"></h3>
+      <p data-slot="category" class="text-gray-400 text-sm font-normal"></p>
+      <div class="status flex items-center gap-2 text-sm font-medium">
+        <span data-slot="status-icon" class="material-symbols-outlined !text-base"></span>
+        <span data-slot="status-text"></span>
+      </div>
+    </div>
+    <button type="button" data-slot="cta" class="btn mt-2 flex w-full items-center justify-center rounded-lg h-11 gap-2 text-sm font-bold leading-normal tracking-wide transition-all">
+      View Menu
+    </button>
+  </div>
+ </template>
+
+<!-- Source of truth: Canteen cards data -->
+<script type="application/json" id="canteen-data">
+  {
+    "canteens": [
+      {
+        "id": "a",
+        "name": "Canteen A",
+        "category": "Fresh Juices & Snacks",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuBjQrd8QNHjwODbzhLQmSs5XvycLb9GcsKx-G3JUtD6Waakfbp25Gw-M6KrfTRjD6mBHFAs1AkH_zNApSAigoByccA8KlJvXL4U_tmK-B7OGlPFIVzCNpmircwzFHyis_nKo4eOW7k58BrSokC3BopvJm_HkvYHW6cc9otgNsLWSD3en52eHgOkM1IwnP4qUMdgXO2iiQImAbyIYvCbyUWhHl3P0rOm6gyD6lgZzxR0F8Nst2Wxzl6ymqzPQKRhctP9KgNUpd6v6Lo",
+        "imageAlt": "Exterior view of Canteen A",
+        "status": "Open",
+        "isOpen": true
+      },
+      {
+        "id": "b",
+        "name": "Canteen B",
+        "category": "South Indian Cuisine",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuAfKQ1O6ZKk7UKmw8Hgx6a8adJHAYdrsqyrflX6RYvk6t4mYXTh_i4UbKjUPkCLhTvNICugQOJFeQz_y0qTpdwa0Dvs0yW0cRmHdMgGa-oNjOQKBW3Ea2OP3Jh1Jft5Ilp7TxDFRiZR3IsuZXLL6A5PUvxUz592bO0mwXSjT7C_gO309uZI9SYuKOjvhSgOP5CwtNfh2xHnW9ozxQNpIBu7oH53WgdRXtlZa3weFuGfgbPK4Kmufsj29VrkjEenx3RhpZ9f1aDFIWE",
+        "imageAlt": "Display of South Indian food at Canteen B",
+        "status": "Closed",
+        "isOpen": false
+      },
+      {
+        "id": "c",
+        "name": "Canteen C",
+        "category": "Coffee & Pastries",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuCy5eBXqIljpArB7Y7vuS3rHQmR7-OmrivjNWZ-chRYlkQZMPog7Iz1KyYt-4YT2MxBwkfOEJayZIsvDrOacJvtct1i2h9zIOBp2sslBJhhbh-QZD6ePjdc1waZrtFRcLzkzuyntawQHmaO3IMQ_ydRzUY3cHkQ8oeRt8EFEfx1obYoY5Al9QfDF_6Tgb0DO_rJ4eyf5MkxnLxurFFnanWOrSHO6nnbhfEANKujNFVujAeSwJgsM766mcyXKfB7BgXiNyOxyiJ4wP0",
+        "imageAlt": "A coffee and pastry setup at Canteen C",
+        "status": "Open",
+        "isOpen": true
+      },
+      {
+        "id": "d",
+        "name": "Canteen D",
+        "category": "Quick Bites",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuCAKGnEvIzhRUDg0kXGB_wZewLuWpWPusdvM8aHc7taBW4OynQnLCWMFF-BHLjQGT5yEjsrDI7IMgjrQSFfhK8OfKUPdhAHavnpCk53SnGV6IDwJQwX3nIGyZooxnBrFsyvXK-0oVGWOPI5judkhUz30JXzMrfjTmMJzwAuEHienbj2-1T6FRsMphcasAVVTGAh_49JgdUcWQNp5EErBaAlolMh2wGf_DN5N_1QaMCQRkI9u4IvjIBNQGG4ThJRX3DJiVA8wRb98SE",
+        "imageAlt": "A variety of quick bites available at Canteen D",
+        "status": "Open",
+        "isOpen": true
+      },
+      {
+        "id": "e",
+        "name": "Canteen E",
+        "category": "Healthy Salads",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuCDes2wvPCYFFqmBKuZShaHpouMpXSNDU05QtB7ak6JPb3bMV6Lu28y_BLPN4IIuntc-BnmhwL3PUVgtsGk6wP7OjM0WaODRaUX-9slL33sZA2DZsDkX-Ty1HI1xR8b_gne_75_4soPgbXc7pqMPMC0vyfadLiWh6HxkpWR_k_J58-vLQUmJk-0wzmlYyoL6KZ5JASrJGvUHxrh51tlcezpzoF-2ILh52wAAUxpNIdAoi8xaWq2xwVJkz1rakPXhVmYPyU-sOPTgDI",
+        "imageAlt": "Fresh, healthy salads from Canteen E",
+        "status": "Closed",
+        "isOpen": false
+      },
+      {
+        "id": "f",
+        "name": "Canteen F",
+        "category": "Traditional Meals",
+        "imageUrl": "https://lh3.googleusercontent.com/aida-public/AB6AXuB4H0XnyYviI-rwt-JQwKOnqk8SvGPHM4KviCuaisyduQCKIzfsRiun648JMTMn7KyTKaC5PuMTKSna2IQvfKrqQjwWfFlu05gFLfjbqN4zWmLNhzNrp3TgZceKL62L3EM-lJRyIiM4W6EhTJkhzXbEa9cNTQKdDbSSx6iG8mon_FR74xiXWUQBeCLG0At3mgXyYQdHD5XV4AhwI2iC7MzO-AH-soR9ce9D3vT-lkT8wyceEiq7yy5giPW3UZBq_thO9Et9C38dBMU",
+        "imageAlt": "A plate of traditional meals from Canteen F",
+        "status": "Open",
+        "isOpen": true
+      }
+    ]
+  }
+</script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('canteen-grid');
+    const template = document.getElementById('canteen-card-template');
+    const data = readCanteenData('canteen-data');
+    if (!grid || !template) return;
+
+    const fragment = document.createDocumentFragment();
+    (data.canteens || []).forEach((canteen) => {
+      fragment.appendChild(createCard(template, canteen));
+    });
+
+    grid.innerHTML = '';
+    grid.appendChild(fragment);
+    enableMenuNavigation(grid);
+    enableSearchFiltering(grid);
+  });
+
+  function createCard(template, canteen) {
+    const fragment = template.content.cloneNode(true);
+    const cardRoot = fragment.firstElementChild;
+    const imageEl = fragment.querySelector('[data-slot="image"]');
+    const nameEl = fragment.querySelector('[data-slot="name"]');
+    const categoryEl = fragment.querySelector('[data-slot="category"]');
+    const statusTextEl = fragment.querySelector('[data-slot="status-text"]');
+    const statusIconEl = fragment.querySelector('[data-slot="status-icon"]');
+    const statusWrapper = fragment.querySelector('.status');
+    const ctaEl = fragment.querySelector('[data-slot="cta"]');
+
+    if (imageEl) {
+      imageEl.src = canteen.imageUrl || '';
+      imageEl.alt = canteen.imageAlt || canteen.name || '';
+    }
+    if (nameEl) nameEl.textContent = canteen.name || '';
+    if (categoryEl) categoryEl.textContent = canteen.category || '';
+
+    if (statusWrapper && statusTextEl && statusIconEl) {
+      const open = Boolean(canteen.isOpen);
+      statusWrapper.classList.add(open ? 'text-emerald-400' : 'text-red-400');
+      statusIconEl.textContent = open ? 'circle' : 'cancel';
+      statusTextEl.textContent = open ? 'Open' : 'Closed';
+    }
+
+    if (ctaEl) {
+      ctaEl.setAttribute('aria-label', `View Menu - ${canteen.name || 'Canteen'}`);
+      ctaEl.dataset.id = canteen.id || '';
+      ctaEl.dataset.href = buildMenuUrl(canteen);
+      if (canteen.isOpen) {
+        ctaEl.classList.add('bg-primary', 'text-white', 'hover:bg-primary/90');
+        ctaEl.removeAttribute('disabled');
+      } else {
+        ctaEl.classList.add('bg-gray-600', 'text-gray-400', 'cursor-not-allowed');
+        ctaEl.setAttribute('disabled', '');
+      }
+    }
+
+    if (cardRoot) {
+      cardRoot.dataset.canteenCard = 'true';
+      cardRoot.dataset.searchTokens = [canteen.name, canteen.category]
+        .map((value) => (value || '').toLowerCase())
+        .join(' ')
+        .trim();
+    }
+
+    return fragment;
+  }
+
+  function readCanteenData(elementId) {
+    const dataEl = document.getElementById(elementId);
+    if (!dataEl) return { canteens: [] };
+    try {
+      return JSON.parse(dataEl.textContent || '{}');
+    } catch (error) {
+      console.error('Invalid canteen data JSON', error);
+      return { canteens: [] };
+    }
+  }
+
+  function buildMenuUrl(canteen) {
+    const params = new URLSearchParams({
+      canteen: canteen.id || '',
+      name: canteen.name || ''
+    });
+    return `./canteen_menu_display/code.html?${params.toString()}`;
+  }
+
+  function enableMenuNavigation(gridEl) {
+    if (!gridEl) return;
+    gridEl.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const button = target.closest('[data-slot="cta"]');
+      if (!(button instanceof HTMLButtonElement) || button.disabled) return;
+
+      const menuUrl = button.dataset.href;
+      if (menuUrl) {
+        window.location.href = menuUrl;
+      } else {
+        console.warn('Missing menu URL for canteen CTA', button.dataset.id);
+      }
+    });
+  }
+
+  function enableSearchFiltering(gridEl) {
+    if (!gridEl) return;
+    const searchInput = document.getElementById('canteen-search');
+    if (!searchInput) return;
+
+    const emptyState = document.querySelector('[data-empty-state]');
+    const cards = Array.from(gridEl.querySelectorAll('[data-canteen-card]'));
+
+    const applyFilter = () => {
+      const term = (searchInput.value || '').trim().toLowerCase();
+      let matchCount = 0;
+
+      cards.forEach((card) => {
+        const tokens = card.dataset.searchTokens || '';
+        const matches = !term || tokens.includes(term);
+        card.classList.toggle('hidden', !matches);
+        if (matches) matchCount += 1;
+      });
+
+      if (emptyState) {
+        if (matchCount === 0) {
+          emptyState.classList.remove('hidden');
+          emptyState.textContent = term
+            ? `No canteens match “${searchInput.value.trim()}”.`
+            : 'No canteens available right now.';
+        } else {
+          emptyState.classList.add('hidden');
+        }
+      }
+    };
+
+    const debouncedFilter = debounce(applyFilter, 200);
+    searchInput.addEventListener('input', debouncedFilter);
+    applyFilter();
+  }
+
+  function debounce(fn, delay) {
+    let timer;
+    return (...args) => {
+      clearTimeout(timer);
+      timer = setTimeout(() => fn(...args), delay);
+    };
+  }
+</script>
+</main>
+<footer class="mt-20 py-8 border-t border-white/10 text-center">
+<div class="flex justify-center items-center gap-8 text-gray-400 text-sm">
+<a class="hover:text-primary transition-colors" href="#">About Us</a>
+<a class="hover:text-primary transition-colors" href="#">Help</a>
+<a class="hover:text-primary transition-colors" href="#">Contact</a>
+</div>
+<p class="mt-6 text-xs text-gray-500">© 2024 Canteen Portal. All Rights Reserved.</p>
+</footer>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Admin Dashboard - Canteen Portal</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet"/>
+<script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "skipq-blue": "#007AFF",
+            "background-dark": "#0D1117",
+            "card-dark": "#161B22",
+            "text-dark-primary": "#E6EDF3",
+            "text-dark-secondary": "#7D8590",
+            "border-dark": "#30363D",
+          },
+          fontFamily: {
+            "display": ["Inter", "sans-serif"]
+          },
+          borderRadius: {
+            "lg": "0.75rem",
+            "xl": "1rem",
+          },
+        },
+      },
+    }
+  </script>
+<style>
+        .material-symbols-outlined {
+      font-variation-settings:
+        'FILL' 0,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings:
+        'FILL' 1,
+        'wght' 400,
+        'GRAD' 0,
+        'opsz' 24
+    }
+  </style>
+</head>
+<body class="font-display bg-background-dark text-text-dark-primary">
+<div class="flex min-h-screen">
+<aside class="w-64 flex-shrink-0 bg-card-dark p-4 flex flex-col justify-between border-r border-border-dark">
+<div class="flex flex-col gap-8">
+<div class="flex items-center gap-3 px-2">
+<svg class="h-8 w-8 text-skipq-blue" fill="none" height="24" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="m9 18 6-6-6-6"></path></svg>
+<h1 class="text-xl font-bold text-text-dark-primary">SkipQ Admin</h1>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex flex-col">
+<picture class="mx-auto flex items-center justify-center" aria-describedby="admin-avatar-note">
+  <source srcset="/assets/images/admin/avatar.webp" type="image/webp"/>
+  <img
+    src="/assets/images/admin/avatar.png"
+    width="48"
+    height="48"
+    loading="lazy"
+    decoding="async"
+    referrerpolicy="no-referrer"
+    class="size-12 rounded-full object-cover bg-card-dark border border-border-dark"
+    alt="Profile photo for Olivia Rhye"
+    onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'96\' height=\'96\'%3E%3Crect width=\'96\' height=\'96\' rx=\'48\' fill=\'%23161B22\'/%3E%3Ctext x=\'50%25\' y=\'55%25\' dominant-baseline=\'middle\' text-anchor=\'middle\' font-family=\'Inter, sans-serif\' font-size=\'28\' fill=\'%237D8590\'%3EOR%3C/text%3E%3C/svg%3E';"
+  />
+</picture>
+<p id="admin-avatar-note" class="sr-only">Profile image served from SkipQ-controlled storage to avoid third-party tracking.</p>
+<div class="flex flex-col text-center mt-2">
+<h2 class="text-base font-semibold">Olivia Rhye</h2>
+<p class="text-text-dark-secondary text-sm font-normal">Administrator</p>
+</div>
+</div>
+<nav class="flex flex-col gap-2 mt-4">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-skipq-blue/10 text-skipq-blue focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue" href="#">
+<span class="material-symbols-outlined fill">dashboard</span>
+<p class="text-sm font-semibold">Dashboard</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-dark-secondary hover:bg-white/5 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue" href="#">
+<span class="material-symbols-outlined">history</span>
+<p class="text-sm font-medium">Order History</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-dark-secondary hover:bg-white/5 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue" href="#">
+<span class="material-symbols-outlined">storefront</span>
+<p class="text-sm font-medium">Canteen Management</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-dark-secondary hover:bg-white/5 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue" href="#">
+<span class="material-symbols-outlined">group</span>
+<p class="text-sm font-medium">Users</p>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-dark-secondary hover:bg-white/5 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue" href="#">
+<span class="material-symbols-outlined">settings</span>
+<p class="text-sm font-medium">Settings</p>
+</a>
+</nav>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-dark-secondary hover:bg-white/5 hover:text-text-dark-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-skipq-blue" href="#">
+<span class="material-symbols-outlined">logout</span>
+<p class="text-sm font-medium">Logout</p>
+</a>
+</div>
+</aside>
+<main class="flex-1 p-8 overflow-y-auto">
+<div class="max-w-7xl mx-auto">
+<header class="flex flex-wrap justify-between items-center gap-4 mb-8">
+<div class="flex flex-col gap-1">
+<h1 class="text-3xl font-extrabold tracking-tight">Welcome, Olivia!</h1>
+<p class="text-text-dark-secondary text-base font-normal">Here's a summary of the canteen activity today.</p>
+</div>
+<div class="flex items-center gap-3">
+<button type="button" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-border-dark rounded-lg bg-card-dark hover:bg-white/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue">
+<span class="material-symbols-outlined text-base">download</span>
+              Export Data
+            </button>
+<button type="button" class="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-skipq-blue rounded-lg hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue">
+<span class="material-symbols-outlined text-base">add</span>
+              Add New Canteen
+            </button>
+</div>
+</header>
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-card-dark border border-border-dark">
+<p class="text-base font-medium text-text-dark-secondary">Total Sales Today</p>
+<p class="text-3xl font-bold">$1,234</p>
+<p class="text-green-400 text-sm font-medium flex items-center"><span class="material-symbols-outlined text-base mr-1">arrow_upward</span>+5.2% vs yesterday</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-card-dark border border-border-dark">
+<p class="text-base font-medium text-text-dark-secondary">Total Orders</p>
+<p class="text-3xl font-bold">150</p>
+<p class="text-green-400 text-sm font-medium flex items-center"><span class="material-symbols-outlined text-base mr-1">arrow_upward</span>+10% vs yesterday</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-card-dark border border-border-dark">
+<p class="text-base font-medium text-text-dark-secondary">Active Canteens</p>
+<p class="text-3xl font-bold">8 / 10</p>
+<p class="text-text-dark-secondary text-sm font-medium flex items-center"><span class="material-symbols-outlined text-base mr-1">horizontal_rule</span>No change</p>
+</div>
+<div class="flex flex-col gap-2 rounded-xl p-6 bg-card-dark border border-border-dark">
+<p class="text-base font-medium text-text-dark-secondary">Average Order Value</p>
+<p class="text-3xl font-bold">$8.22</p>
+<p class="text-red-400 text-sm font-medium flex items-center"><span class="material-symbols-outlined text-base mr-1">arrow_downward</span>-1.5% vs yesterday</p>
+</div>
+</section>
+<section class="bg-card-dark border border-border-dark rounded-xl p-6 mb-8">
+<div class="flex flex-wrap justify-between items-center gap-4 mb-4">
+<h2 class="text-lg font-bold">Sales Trends</h2>
+<div class="flex items-center gap-2" role="tablist" aria-label="Sales trend range" data-tabs="sales-trends">
+<button type="button" role="tab" aria-selected="true" tabindex="0" aria-controls="sales-trends-weekly" data-tab-target="weekly" class="px-3 py-1.5 text-sm font-semibold rounded-lg bg-skipq-blue text-white shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue">Weekly</button>
+<button type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="sales-trends-monthly" data-tab-target="monthly" class="px-3 py-1.5 text-sm font-medium rounded-lg text-text-dark-secondary hover:bg-white/10 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue">Monthly</button>
+<button type="button" role="tab" aria-selected="false" tabindex="-1" aria-controls="sales-trends-yearly" data-tab-target="yearly" class="px-3 py-1.5 text-sm font-medium rounded-lg text-text-dark-secondary hover:bg-white/10 hover:text-text-dark-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue">Yearly</button>
+</div>
+</div>
+<div>
+<div id="sales-trends-weekly" role="tabpanel" aria-live="polite" data-tab-panel="weekly">
+<img alt="Weekly sales trend line chart showing revenue climbing toward the weekend." loading="lazy" class="w-full h-auto rounded-xl border border-border-dark" src="assets/sales-trends.svg" onerror="this.hidden=true;document.getElementById('sales-trends-fallback-weekly').classList.remove('hidden')"/>
+<div id="sales-trends-fallback-weekly" class="hidden mt-4 rounded-lg border border-border-dark bg-background-dark/40 p-4 text-center text-sm text-text-dark-secondary" role="status">Chart unavailable right now. Please refresh to try again.</div>
+</div>
+<div id="sales-trends-monthly" role="tabpanel" aria-live="polite" data-tab-panel="monthly" hidden>
+<img alt="Monthly sales trend line chart showing revenue across the month." loading="lazy" class="w-full h-auto rounded-xl border border-border-dark" src="assets/sales-trends-monthly.svg" onerror="this.hidden=true;document.getElementById('sales-trends-fallback-monthly').classList.remove('hidden')"/>
+<div id="sales-trends-fallback-monthly" class="hidden mt-4 rounded-lg border border-border-dark bg-background-dark/40 p-4 text-center text-sm text-text-dark-secondary" role="status">Monthly chart unavailable right now. Please refresh to try again.</div>
+</div>
+<div id="sales-trends-yearly" role="tabpanel" aria-live="polite" data-tab-panel="yearly" hidden>
+<img alt="Yearly sales trend line chart comparing overall revenue." loading="lazy" class="w-full h-auto rounded-xl border border-border-dark" src="assets/sales-trends-yearly.svg" onerror="this.hidden=true;document.getElementById('sales-trends-fallback-yearly').classList.remove('hidden')"/>
+<div id="sales-trends-fallback-yearly" class="hidden mt-4 rounded-lg border border-border-dark bg-background-dark/40 p-4 text-center text-sm text-text-dark-secondary" role="status">Yearly chart unavailable right now. Please refresh to try again.</div>
+</div>
+</div>
+</section>
+<section>
+<div class="mb-4">
+<h2 class="text-lg font-bold mb-4">Recent Orders</h2>
+<div class="flex flex-col md:flex-row gap-4">
+<div class="flex-grow">
+<label class="sr-only" for="search-orders">Search Orders</label>
+<div class="relative">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-text-dark-secondary">search</span>
+</div>
+<input class="w-full pl-10 pr-4 py-2.5 rounded-lg bg-card-dark border border-border-dark focus:ring-skipq-blue focus:border-skipq-blue placeholder:text-text-dark-secondary" id="search-orders" placeholder="Search by Order ID, User Name..." type="search"/>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<label for="filter-status" class="sr-only">Filter by status</label>
+<select id="filter-status" class="rounded-lg bg-card-dark border border-border-dark focus:ring-skipq-blue focus:border-skipq-blue">
+<option>Status: All</option>
+<option>Pending</option>
+<option>Completed</option>
+<option>Cancelled</option>
+</select>
+<label for="filter-canteen" class="sr-only">Filter by canteen</label>
+<select id="filter-canteen" class="rounded-lg bg-card-dark border border-border-dark focus:ring-skipq-blue focus:border-skipq-blue">
+<option>Canteen: All</option>
+<option>Main Cafeteria</option>
+<option>Juice Bar</option>
+</select>
+<label for="filter-date" class="sr-only">Filter by date</label>
+<input id="filter-date" class="rounded-lg bg-card-dark border border-border-dark focus:ring-skipq-blue focus:border-skipq-blue text-text-dark-primary" type="date"/>
+</div>
+</div>
+</div>
+<div class="bg-card-dark border border-border-dark rounded-xl overflow-hidden">
+<div class="overflow-x-auto">
+<table class="w-full text-sm text-left">
+<thead class="bg-background-dark text-xs uppercase tracking-wider text-text-dark-secondary">
+<tr>
+<th class="px-6 py-3 font-semibold" scope="col">Order ID</th>
+<th class="px-6 py-3 font-semibold" scope="col">User Name</th>
+<th class="px-6 py-3 font-semibold" scope="col">Canteen</th>
+<th class="px-6 py-3 font-semibold" scope="col">Total Amount</th>
+<th class="px-6 py-3 font-semibold" scope="col">Date</th>
+<th class="px-6 py-3 font-semibold" scope="col">Status</th>
+<th class="px-6 py-3 font-semibold" scope="col"><span class="sr-only">Actions</span></th>
+</tr>
+</thead>
+<tbody class="divide-y divide-border-dark">
+<tr class="hover:bg-white/5">
+<td class="px-6 py-4 font-medium whitespace-nowrap text-text-dark-primary">#AB-12345</td>
+<td class="px-6 py-4 text-text-dark-secondary">Alex Johnson</td>
+<td class="px-6 py-4 text-text-dark-secondary">Main Cafeteria</td>
+<td class="px-6 py-4 text-text-dark-secondary">$12.50</td>
+<td class="px-6 py-4 text-text-dark-secondary">2023-10-27</td>
+<td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-900 text-green-200">Completed</span></td>
+<td class="px-6 py-4 text-right"><a class="font-medium text-skipq-blue hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-white/5">
+<td class="px-6 py-4 font-medium whitespace-nowrap text-text-dark-primary">#CD-67890</td>
+<td class="px-6 py-4 text-text-dark-secondary">Maria Garcia</td>
+<td class="px-6 py-4 text-text-dark-secondary">Juice Bar</td>
+<td class="px-6 py-4 text-text-dark-secondary">$5.00</td>
+<td class="px-6 py-4 text-text-dark-secondary">2023-10-27</td>
+<td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-900 text-yellow-200">Pending</span></td>
+<td class="px-6 py-4 text-right"><a class="font-medium text-skipq-blue hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-white/5">
+<td class="px-6 py-4 font-medium whitespace-nowrap text-text-dark-primary">#EF-11223</td>
+<td class="px-6 py-4 text-text-dark-secondary">James Smith</td>
+<td class="px-6 py-4 text-text-dark-secondary">Main Cafeteria</td>
+<td class="px-6 py-4 text-text-dark-secondary">$8.75</td>
+<td class="px-6 py-4 text-text-dark-secondary">2023-10-26</td>
+<td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-900 text-green-200">Completed</span></td>
+<td class="px-6 py-4 text-right"><a class="font-medium text-skipq-blue hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-white/5">
+<td class="px-6 py-4 font-medium whitespace-nowrap text-text-dark-primary">#GH-44556</td>
+<td class="px-6 py-4 text-text-dark-secondary">Patricia Brown</td>
+<td class="px-6 py-4 text-text-dark-secondary">Snack Corner</td>
+<td class="px-6 py-4 text-text-dark-secondary">$3.20</td>
+<td class="px-6 py-4 text-text-dark-secondary">2023-10-26</td>
+<td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-red-900 text-red-200">Cancelled</span></td>
+<td class="px-6 py-4 text-right"><a class="font-medium text-skipq-blue hover:underline" href="#">View</a></td>
+</tr>
+<tr class="hover:bg-white/5">
+<td class="px-6 py-4 font-medium whitespace-nowrap text-text-dark-primary">#IJ-78901</td>
+<td class="px-6 py-4 text-text-dark-secondary">Michael Miller</td>
+<td class="px-6 py-4 text-text-dark-secondary">Main Cafeteria</td>
+<td class="px-6 py-4 text-text-dark-secondary">$15.00</td>
+<td class="px-6 py-4 text-text-dark-secondary">2023-10-25</td>
+<td class="px-6 py-4"><span class="px-2 py-1 text-xs font-semibold rounded-full bg-green-900 text-green-200">Completed</span></td>
+<td class="px-6 py-4 text-right"><a class="font-medium text-skipq-blue hover:underline" href="#">View</a></td>
+</tr>
+</tbody>
+</table>
+</div>
+<div data-pagination data-page-size="5" data-total-results="57" data-current-page="1" class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between p-4">
+<div class="flex flex-col gap-0.5" aria-live="polite">
+<span data-page-summary class="text-sm text-text-dark-secondary">Showing 1 to 5 of 57 results</span>
+<span data-page-indicator class="text-xs text-text-dark-secondary">Page 1 of 12</span>
+</div>
+<div class="inline-flex rounded-md text-sm" role="group" aria-label="Pagination controls">
+<button type="button" data-action="prev" class="inline-flex items-center px-3 py-2 border border-border-dark bg-card-dark hover:bg-white/10 rounded-l-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Previous page, disabled" aria-disabled="true" disabled>Previous</button>
+<button type="button" data-action="next" class="inline-flex items-center px-3 py-2 border-y border-r border-border-dark bg-card-dark hover:bg-white/10 rounded-r-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-skipq-blue disabled:opacity-50 disabled:cursor-not-allowed" aria-label="Next page" aria-disabled="false">Next</button>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const paginationRoot = document.querySelector('[data-pagination]');
+    if (!paginationRoot) return;
+
+    const prevButton = paginationRoot.querySelector('[data-action="prev"]');
+    const nextButton = paginationRoot.querySelector('[data-action="next"]');
+    const summaryEl = paginationRoot.querySelector('[data-page-summary]');
+    const indicatorEl = paginationRoot.querySelector('[data-page-indicator]');
+
+    const totalResults = Number(paginationRoot.dataset.totalResults) || 0;
+    const pageSize = Math.max(1, Number(paginationRoot.dataset.pageSize) || 1);
+    const totalPages = Math.max(1, Math.ceil(totalResults / pageSize));
+    let currentPage = clampPage(Number(paginationRoot.dataset.currentPage) || 1);
+
+    function clampPage(page) {
+      return Math.min(Math.max(page, 1), totalPages);
+    }
+
+    function updateUI() {
+      const hasResults = totalResults > 0;
+      const startIndex = hasResults ? (currentPage - 1) * pageSize + 1 : 0;
+      const endIndex = hasResults ? Math.min(startIndex + pageSize - 1, totalResults) : 0;
+
+      if (summaryEl) {
+        summaryEl.textContent = hasResults
+          ? `Showing ${startIndex} to ${endIndex} of ${totalResults} results`
+          : 'No results to display';
+      }
+
+      if (indicatorEl) {
+        indicatorEl.textContent = `Page ${currentPage} of ${totalPages}`;
+        indicatorEl.setAttribute('aria-current', 'true');
+      }
+
+      setButtonState(prevButton, currentPage === 1, 'Previous');
+      setButtonState(nextButton, currentPage === totalPages, 'Next');
+      paginationRoot.dataset.currentPage = String(currentPage);
+    }
+
+    function setButtonState(button, isDisabled, labelBase) {
+      if (!button) return;
+      button.disabled = isDisabled;
+      button.setAttribute('aria-disabled', String(isDisabled));
+      const label = isDisabled
+        ? `${labelBase} page, disabled`
+        : `Go to ${labelBase.toLowerCase()} page`;
+      button.setAttribute('aria-label', label);
+    }
+
+    prevButton?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage -= 1;
+        updateUI();
+      }
+    });
+
+    nextButton?.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage += 1;
+        updateUI();
+      }
+    });
+
+    updateUI();
+
+    initTabs();
+  });
+
+  function initTabs() {
+    const tablist = document.querySelector('[data-tabs="sales-trends"]');
+    if (!tablist) return;
+
+    const tabs = Array.from(tablist.querySelectorAll('[role="tab"]'));
+    const panels = document.querySelectorAll('[data-tab-panel]');
+
+    function activateTab(tab, focus = true) {
+      if (!tab) return;
+      const target = tab.dataset.tabTarget;
+
+      tabs.forEach((t) => {
+        const isActive = t === tab;
+        t.setAttribute('aria-selected', String(isActive));
+        t.setAttribute('tabindex', isActive ? '0' : '-1');
+        t.classList.toggle('bg-skipq-blue', isActive);
+        t.classList.toggle('text-white', isActive);
+        t.classList.toggle('font-semibold', isActive);
+        t.classList.toggle('font-medium', !isActive);
+        t.classList.toggle('text-text-dark-secondary', !isActive);
+      });
+
+      panels.forEach((panel) => {
+        const match = panel.dataset.tabPanel === target;
+        panel.hidden = !match;
+        panel.setAttribute('aria-hidden', String(!match));
+      });
+
+      if (focus) {
+        tab.focus();
+      }
+    }
+
+    function moveFocus(currentIndex, direction) {
+      const total = tabs.length;
+      const nextIndex = (currentIndex + direction + total) % total;
+      const nextTab = tabs[nextIndex];
+      activateTab(nextTab);
+    }
+
+    tablist.addEventListener('click', (event) => {
+      const tab = event.target.closest('[role="tab"]');
+      if (!tab || !tablist.contains(tab)) return;
+      activateTab(tab, false);
+    });
+
+    tablist.addEventListener('keydown', (event) => {
+      const currentTab = document.activeElement;
+      const currentIndex = tabs.indexOf(currentTab);
+      if (currentIndex === -1) return;
+
+      switch (event.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+          event.preventDefault();
+          moveFocus(currentIndex, 1);
+          break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+          event.preventDefault();
+          moveFocus(currentIndex, -1);
+          break;
+        case 'Home':
+          event.preventDefault();
+          activateTab(tabs[0]);
+          break;
+        case 'End':
+          event.preventDefault();
+          activateTab(tabs[tabs.length - 1]);
+          break;
+        case 'Enter':
+        case ' ':
+          event.preventDefault();
+          activateTab(currentTab, false);
+          break;
+        default:
+          break;
+      }
+    });
+
+    const initiallySelected = tabs.find((tab) => tab.getAttribute('aria-selected') === 'true') || tabs[0];
+    activateTab(initiallySelected, false);
+  }
+</script>
+</body></html>
