@@ -2,9 +2,9 @@ import { SiteFooter } from '@/components/SiteFooter'
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      {children}
-      <SiteFooter />
-    </>
+    <div className="flex min-h-screen flex-col">
+      <div className="flex-1">{children}</div>
+      <SiteFooter className="mt-auto" />
+    </div>
   )
 }

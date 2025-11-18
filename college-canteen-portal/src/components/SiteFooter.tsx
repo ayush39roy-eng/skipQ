@@ -7,38 +7,52 @@ const CONTACT_INFO = {
   phone: '+91-XXXXXXXXXX' // TODO: replace with the official phone number
 }
 
-export function SiteFooter() {
+type SiteFooterProps = { className?: string }
+
+export function SiteFooter({ className }: SiteFooterProps = {}) {
+  const footerClass = [
+    'border-t border-[rgb(var(--border))] bg-[rgb(var(--bg-alt))] text-[rgb(var(--text))]',
+    className
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const telHref = CONTACT_INFO.phone.replace(/[^+\d]/g, '')
+
   return (
-    <footer className="relative left-1/2 right-1/2 -ml-[50vw] w-screen border-t border-[rgb(var(--border))] bg-[rgb(var(--bg-alt))]/90 text-[rgb(var(--text))]">
-      <div className="mx-auto flex w-full max-w-[1400px] flex-col gap-8 px-6 py-10 md:flex-row md:items-start md:justify-between">
-        <section className="max-w-xl space-y-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[rgb(var(--text-muted))]">Contact</p>
-          <p className="text-lg font-semibold">{CONTACT_INFO.name}</p>
-          <p className="text-sm leading-relaxed text-[rgb(var(--text-muted))]">{CONTACT_INFO.address}</p>
-          <div className="space-y-1 text-sm">
-            <a href={`mailto:${CONTACT_INFO.email}`} className="text-[rgb(var(--text))] hover:underline">
-              {CONTACT_INFO.email}
-            </a>
-            <div>
-              <a href={`tel:${CONTACT_INFO.phone.replace(/[^+\d]/g, '')}`} className="text-[rgb(var(--text))] hover:underline">
+    <footer className={footerClass}>
+      <div className="mx-auto max-w-7xl px-6 py-4">
+        <div className="grid gap-4 text-sm md:grid-cols-2 md:items-start">
+          <section className="space-y-2">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-[rgb(var(--text-muted))]">Contact</p>
+            <div className="space-y-1">
+              <p className="text-base font-semibold tracking-tight">{CONTACT_INFO.name}</p>
+              <p className="text-[13px] leading-relaxed text-[rgb(var(--text-muted))]">{CONTACT_INFO.address}</p>
+            </div>
+            <div className="flex flex-col gap-1 text-sm sm:flex-row sm:flex-wrap sm:gap-4">
+              <a href={`mailto:${CONTACT_INFO.email}`} className="hover:underline">
+                {CONTACT_INFO.email}
+              </a>
+              <a href={`tel:${telHref}`} className="hover:underline">
                 {CONTACT_INFO.phone}
               </a>
             </div>
-          </div>
-        </section>
-        <section className="flex flex-col gap-2 text-sm md:items-end">
-          <Link
-            href="/privacy-policy"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[rgb(var(--text))] underline-offset-4 hover:underline"
-            prefetch={false}
-          >
-            Privacy Policy
-          </Link>
-        </section>
+          </section>
+          <section className="flex flex-col justify-start space-y-2 text-sm md:items-end">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-[rgb(var(--text-muted))]">Legal</span>
+            <Link
+              href="/privacy-policy"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[rgb(var(--text))] underline-offset-4 hover:underline"
+              prefetch={false}
+            >
+              Privacy Policy
+            </Link>
+          </section>
+        </div>
       </div>
-      <div className="border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]/60 px-6 py-4 text-center text-xs text-[rgb(var(--text-muted))]">
+      <div className="border-t border-[rgb(var(--border))] bg-[rgb(var(--bg))]/60 px-6 py-3 text-center text-xs text-[rgb(var(--text-muted))]">
         © 2025 AYUSH ROY. All rights reserved.
       </div>
     </footer>
