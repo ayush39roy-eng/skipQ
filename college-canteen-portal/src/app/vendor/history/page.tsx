@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { getTicketNumber } from '@/lib/order-ticket'
 
 const formatCurrency = (cents: number) => `₹${(cents / 100).toFixed(2)}`
 
@@ -31,6 +32,7 @@ const statusVariant = (status: string): 'default' | 'success' | 'warning' | 'dan
   }
 }
 
+
 export default async function VendorHistoryPage() {
   const session = await requireRole(['VENDOR'])
   if (!session) return <p>Unauthorized</p>
@@ -45,7 +47,7 @@ export default async function VendorHistoryPage() {
   }
 
   const orders = await prisma.order.findMany({
-    where: { vendorId },
+    where: { vendorId, status: { in: ['COMPLETED', 'CANCELLED'] } },
     include: { canteen: true },
     orderBy: { createdAt: 'desc' },
     take: 100
@@ -61,14 +63,14 @@ export default async function VendorHistoryPage() {
       <div className="space-y-4">
         {orders.length === 0 && (
           <Card className="text-center text-sm text-[rgb(var(--text-muted))]">
-            No orders yet. Once students start paying, they will appear here.
+            No completed or cancelled tickets yet. Wrap a few orders to see them here.
           </Card>
         )}
         {orders.map((order) => (
           <Card key={order.id} className="flex flex-wrap items-center gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
             <div className="min-w-[200px]">
               <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
-              <p className="text-base font-semibold">#{order.id.slice(-6).toUpperCase()}</p>
+              <p className="text-base font-semibold">#{getTicketNumber(order.id)}</p>
               <p className="text-xs text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)}</p>
             </div>
             <Badge variant={statusVariant(order.status)}>{order.status}</Badge>

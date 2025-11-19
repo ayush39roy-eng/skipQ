@@ -4,7 +4,9 @@ import { Input } from '@/components/ui/Input'
 import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
 import { revalidatePath } from 'next/cache'
+import Image from 'next/image'
 import { FormSubmitButton } from '@/components/ui/FormSubmitButton'
+import bcrypt from 'bcryptjs'
 
 async function AdminCanteenManager() {
   const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
@@ -84,7 +86,16 @@ async function AdminCanteenManager() {
               <TBody>
                 {items.map(it => (
                   <TR key={it.id}>
-                    <TD>{it.imageUrl && <img src={it.imageUrl} alt="Item" className="h-10 w-14 rounded object-cover" />}</TD>
+                    <TD>{it.imageUrl && (
+                      <Image
+                        src={it.imageUrl}
+                        alt={`${it.name} image`}
+                        width={56}
+                        height={40}
+                        unoptimized
+                        className="h-10 w-14 rounded object-cover"
+                      />
+                    )}</TD>
                     <TD>{it.name}</TD>
                     <TD>₹{(it.priceCents/100).toFixed(2)}</TD>
                     <TD>{it.available ? <Badge variant="success">Yes</Badge> : <Badge variant="warning">No</Badge>}</TD>
@@ -136,10 +147,90 @@ export default async function AdminPage() {
   const session = await requireRole(['ADMIN'])
   if (!session) return <p>Unauthorized</p>
   const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
+  const vendorUsers = await prisma.user.findMany({
+    where: { role: 'VENDOR' },
+    select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
+  })
   const stats = await prisma.order.aggregate({ _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true }, _count: true })
   const orders = await prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } })
   return (
     <div className="space-y-4">
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="card space-y-3">
+          <div className="font-medium">Add Vendor</div>
+          <form
+            className="space-y-3"
+            action={async (formData: FormData) => {
+              'use server'
+              const name = String(formData.get('vendorName') || '').trim()
+              if (!name) return
+              const phone = String(formData.get('vendorPhone') || '').trim()
+              const whatsappEnabled = Boolean(formData.get('vendorWhatsApp'))
+              await prisma.vendor.create({ data: { name, phone: phone || null, whatsappEnabled } })
+              revalidatePath('/admin')
+            }}
+          >
+            <Input name="vendorName" label="Vendor name" placeholder="Cafe XYZ" required />
+            <Input name="vendorPhone" label="WhatsApp phone" placeholder="+9198..." />
+            <label className="flex items-center gap-2 text-sm text-[rgb(var(--text))]">
+              <input type="checkbox" name="vendorWhatsApp" defaultChecked />
+              Enable WhatsApp alerts
+            </label>
+            <FormSubmitButton pendingLabel="Creating...">Create Vendor</FormSubmitButton>
+          </form>
+        </div>
+
+        <div className="card space-y-3">
+          <div className="font-medium">Create Vendor Login</div>
+          <form
+            className="space-y-3"
+            action={async (formData: FormData) => {
+              'use server'
+              const vendorId = String(formData.get('vendorAccountVendorId') || '')
+              const name = String(formData.get('vendorAccountName') || '').trim()
+              const email = String(formData.get('vendorAccountEmail') || '').trim().toLowerCase()
+              const password = String(formData.get('vendorAccountPassword') || '')
+              if (!vendorId || !name || !email || !password) return
+              const existing = await prisma.user.findUnique({ where: { email } })
+              if (existing && existing.role !== 'VENDOR') return
+              const passwordHash = await bcrypt.hash(password, 10)
+              if (existing) {
+                await prisma.user.update({ where: { id: existing.id }, data: { name, passwordHash, vendorId, role: 'VENDOR' } })
+              } else {
+                await prisma.user.create({ data: { name, email, passwordHash, role: 'VENDOR', vendorId } })
+              }
+              revalidatePath('/admin')
+            }}
+          >
+            <label className="block space-y-1">
+              <span className="text-sm font-medium" style={{ color: 'rgb(var(--text))' }}>Vendor</span>
+              <select name="vendorAccountVendorId" className="input" required defaultValue="">
+                <option value="" disabled>Select vendor</option>
+                {vendors.map((vendor) => (
+                  <option key={vendor.id} value={vendor.id}>{vendor.name}</option>
+                ))}
+              </select>
+            </label>
+            <Input name="vendorAccountName" label="Contact name" placeholder="Vendor lead" required />
+            <Input name="vendorAccountEmail" label="Login email" type="email" placeholder="vendor@college.local" required />
+            <Input name="vendorAccountPassword" label="Password" type="password" placeholder="Set temporary password" required />
+            <FormSubmitButton pendingLabel="Saving...">Create / Update Login</FormSubmitButton>
+          </form>
+          <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface-muted))]/40 p-3 text-sm">
+            <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Existing vendor logins</p>
+            <div className="mt-2 space-y-1">
+              {vendorUsers.length === 0 && <p className="text-[rgb(var(--text-muted))]">No vendor logins yet.</p>}
+              {vendorUsers.map((user) => (
+                <div key={user.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{user.name} — {user.email}</span>
+                  <span className="text-xs text-[rgb(var(--text-muted))]">{user.vendor?.name ?? 'Unlinked'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="card">
         <div className="mb-3 font-medium">Vendor Settings</div>
         <div className="space-y-3">

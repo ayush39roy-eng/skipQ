@@ -13,14 +13,14 @@ export async function GET() {
   const orders = await prisma.order.findMany({
     where: {
       vendorId,
-      status: { in: ['PAID', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] }
+      status: { in: ['PAID', 'CONFIRMED'] }
     },
     include: {
       canteen: true,
       user: { select: { name: true } },
       items: { include: { menuItem: true } }
     },
-    orderBy: { createdAt: 'asc' }
+    orderBy: { createdAt: 'desc' }
   })
 
   return NextResponse.json({ orders })

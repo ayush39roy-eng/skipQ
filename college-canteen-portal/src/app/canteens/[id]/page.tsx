@@ -1,6 +1,6 @@
 "use client"
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'next/navigation'
+import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useParams, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -12,14 +12,43 @@ type Item = { id: string; name: string; priceCents: number; imageUrl?: string | 
 
 export default function CanteenMenuPage() {
   const { id } = useParams<{ id: string }>()
+  const searchParams = useSearchParams()
   const [items, setItems] = useState<Item[]>([])
   const [cart, setCart] = useState<Record<string, number>>({})
   const [q, setQ] = useState('')
   const [fulfillmentType, setFulfillmentType] = useState<'TAKEAWAY' | 'DINE_IN'>('TAKEAWAY')
   const [sortMode, setSortMode] = useState<'popular' | 'price'>('popular')
+  const [cartRestored, setCartRestored] = useState(false)
 
   useEffect(() => {
     fetch(`/api/menu/${id}`).then(r => r.json()).then(setItems)
+  }, [id])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const raw = window.localStorage.getItem('skipq-pending-cart')
+    if (!raw) return
+    try {
+      const payload = JSON.parse(raw) as {
+        canteenId: string
+        cart: Record<string, number>
+        fulfillmentType?: 'TAKEAWAY' | 'DINE_IN'
+        savedAt?: number
+      }
+      if (!payload || payload.canteenId !== id) return
+      if (payload.savedAt && Date.now() - payload.savedAt > 1000 * 60 * 60) {
+        window.localStorage.removeItem('skipq-pending-cart')
+        return
+      }
+      setCart(payload.cart ?? {})
+      if (payload.fulfillmentType === 'DINE_IN') {
+        setFulfillmentType('DINE_IN')
+      }
+      setCartRestored(true)
+      window.localStorage.removeItem('skipq-pending-cart')
+    } catch {
+      window.localStorage.removeItem('skipq-pending-cart')
+    }
   }, [id])
 
   const filtered = useMemo(() => {
@@ -63,6 +92,16 @@ export default function CanteenMenuPage() {
   const platformFeeCents = Math.round(subtotalCents * 0.025)
   const grandTotalCents = subtotalCents + platformFeeCents
 
+  const persistCartForLogin = useCallback(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem('skipq-pending-cart', JSON.stringify({
+      canteenId: id,
+      cart,
+      fulfillmentType,
+      savedAt: Date.now(),
+    }))
+  }, [cart, fulfillmentType, id])
+
   const order = async () => {
     const orderItems = Object.entries(cart)
       .filter(([, q]) => q > 0)
@@ -74,12 +113,19 @@ export default function CanteenMenuPage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     })
-    const data = await res.json()
-    if (res.ok) {
-      window.location.href = `/order/${data.id}`
-    } else {
-      alert(data.error ?? 'Failed to create order')
+    if (res.status === 401) {
+      persistCartForLogin()
+      const nextPath = `/canteens/${id}?resume=1`
+      const redirectTarget = `/login?next=${encodeURIComponent(nextPath)}`
+      window.location.href = redirectTarget
+      return
     }
+    const data = await res.json().catch(() => ({}))
+    if (res.ok && data?.id) {
+      window.location.href = `/order/${data.id}`
+      return
+    }
+    alert(data.error ?? 'Failed to create order')
   }
 
   return (
@@ -201,6 +247,11 @@ export default function CanteenMenuPage() {
 
         <aside className="w-full lg:w-80 xl:w-96">
           <Card className="sticky top-24 space-y-4 border border-[rgb(var(--accent))]/20 bg-[rgb(var(--surface))]/70 backdrop-blur">
+            {(cartRestored || searchParams.get('resume')) && (
+              <div className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
+                Cart restored after login. Review items and checkout to finish payment.
+              </div>
+            )}
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="text-lg font-semibold">My Order</h3>

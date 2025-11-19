@@ -64,7 +64,7 @@ export default async function VendorPage() {
     prisma.order.findMany({
       where: {
         vendorId,
-        status: { in: ['PAID', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] }
+        status: { in: ['PAID', 'CONFIRMED'] }
       },
       include: {
         canteen: { select: { id: true, name: true } },
@@ -73,7 +73,7 @@ export default async function VendorPage() {
           include: { menuItem: { select: { name: true } } }
         }
       },
-      orderBy: { createdAt: 'asc' }
+      orderBy: { createdAt: 'desc' }
     })
   ])
 

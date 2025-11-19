@@ -2,6 +2,7 @@ import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
 import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
+import { getTicketNumber } from '@/lib/order-ticket'
 import OrderStatusClient from '../_components/status-client'
 import PayNowButton from '../_components/pay-now-button'
 
@@ -13,7 +14,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
   const statusVariant = ['PAID', 'CONFIRMED', 'COMPLETED'].includes(status) ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold flex items-center gap-3">Order #{order.id.slice(0,8)} <Badge variant={statusVariant}>{status}</Badge></h1>
+      <h1 className="text-xl font-semibold flex items-center gap-3">Ticket #{getTicketNumber(order.id)} <Badge variant={statusVariant}>{status}</Badge></h1>
       <Card className="space-y-3">
         <div className="text-sm text-muted">Canteen: {order.canteen.name}</div>
         <ul className="divide-y divide-[rgb(var(--border))] rounded-md border border-[rgb(var(--border))]">

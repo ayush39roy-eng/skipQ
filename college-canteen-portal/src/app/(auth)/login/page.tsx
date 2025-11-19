@@ -1,5 +1,6 @@
 "use client"
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -18,6 +19,9 @@ const demoUsers = [
 ]
 
 export default function LoginPage() {
+  const searchParams = useSearchParams()
+  const nextParam = searchParams.get('next') ?? '/canteens'
+  const encodedNext = encodeURIComponent(nextParam)
   const [email, setEmail] = useState('student@college.local')
   const [password, setPassword] = useState('user123')
   const [message, setMessage] = useState('')
@@ -31,7 +35,7 @@ export default function LoginPage() {
       body: JSON.stringify({ email, password })
     })
     if (res.ok) {
-      window.location.href = '/canteens'
+      window.location.href = nextParam
     } else {
       const data = await res.json().catch(() => ({}))
       setMessage(data.error ?? 'Login failed')
@@ -90,7 +94,7 @@ export default function LoginPage() {
           </form>
           {message && <p className="text-sm text-red-500">{message}</p>}
           <p className="text-sm text-[rgb(var(--text-muted))]">Forgot password? <Link href="/privacy" className="text-sky-400 hover:underline">Contact admin</Link></p>
-          <p className="text-sm text-[rgb(var(--text-muted))]">New here? <Link href="/register" className="text-sky-400 hover:underline">Create an account</Link></p>
+          <p className="text-sm text-[rgb(var(--text-muted))]">New here? <Link href={`/register?next=${encodedNext}`} className="text-sky-400 hover:underline">Create an account</Link></p>
         </Card>
       </div>
     </div>

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
+import { getTicketNumber } from '@/lib/order-ticket'
 
 type MenuItemPayload = {
   id: string
@@ -63,6 +64,8 @@ const formatRelativeTime = (isoDate: string) => {
 const fulfillmentLabel = (type: string) => (type === 'DINE_IN' ? 'Dine-in' : 'Takeaway')
 
 const customerName = (name?: string | null) => name?.split(' ')[0] ?? 'Customer'
+
+const sortByNewest = (a: VendorOrderPayload, b: VendorOrderPayload) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 
 export default function VendorDashboardClient({ vendorName, initialOrders }: Props) {
   const [orders, setOrders] = useState<VendorOrderPayload[]>(initialOrders)
@@ -124,9 +127,15 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
     }
   }, [prepInputs, refresh])
 
-  const pendingOrders = useMemo(() => orders.filter((o) => o.status === 'PENDING'), [orders])
-  const confirmedOrders = useMemo(() => orders.filter((o) => o.status === 'CONFIRMED'), [orders])
-  const queueState = pendingOrders.length ? `${pendingOrders.length} awaiting action` : 'Queue is clear'
+  const incomingOrders = useMemo(
+    () => orders.filter((o) => o.status === 'PAID' || o.status === 'PENDING').sort(sortByNewest),
+    [orders]
+  )
+  const confirmedOrders = useMemo(
+    () => orders.filter((o) => o.status === 'CONFIRMED').sort(sortByNewest),
+    [orders]
+  )
+  const queueState = incomingOrders.length ? `${incomingOrders.length} awaiting action` : 'Queue is clear'
 
   const isLoading = (orderId: string, action: string) => actionKey === `${orderId}:${action}`
 
@@ -146,22 +155,22 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
               <h2 className="text-xl font-semibold">Incoming orders</h2>
               <p className="text-sm text-[rgb(var(--text-muted))]">{queueState}</p>
             </div>
-            <Badge variant={pendingOrders.length ? 'warning' : 'success'}>
-              {pendingOrders.length ? `${pendingOrders.length} waiting` : 'All clear'}
+            <Badge variant={incomingOrders.length ? 'warning' : 'success'}>
+              {incomingOrders.length ? `${incomingOrders.length} waiting` : 'All clear'}
             </Badge>
           </div>
           <div className="space-y-4">
-            {pendingOrders.length === 0 && (
+            {incomingOrders.length === 0 && (
               <div className="rounded-2xl border border-dashed border-[rgb(var(--border))] p-8 text-center text-sm text-[rgb(var(--text-muted))]">
                 No new orders yet. Keep notifications on—WhatsApp will buzz when students pay.
               </div>
             )}
-            {pendingOrders.map((order) => (
+            {incomingOrders.map((order) => (
               <Card key={order.id} className="space-y-4 border border-[rgb(var(--accent))]/30 bg-[rgb(var(--surface-muted))]/30">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
-                    <p className="mt-1 text-xl font-semibold">Order {order.id.slice(-6).toUpperCase()}</p>
+                    <p className="mt-1 text-xl font-semibold">Ticket #{getTicketNumber(order.id)}</p>
                     <p className="text-sm text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)} • {customerName(order.user?.name)}</p>
                   </div>
                   <div className="text-right">
@@ -223,17 +232,28 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
               </div>
             )}
             {confirmedOrders.map((order) => (
-              <Card key={order.id} className="flex flex-col gap-3 border border-[rgb(var(--accent))]/30 bg-[rgb(var(--surface-muted))]/20 p-4">
-                <div className="flex items-center justify-between">
+              <Card key={order.id} className="space-y-3 border border-[rgb(var(--accent))]/30 bg-[rgb(var(--surface-muted))]/20 p-4">
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-sm font-semibold">{order.canteen.name}</p>
-                    <p className="text-xs text-[rgb(var(--text-muted))]">#{order.id.slice(-6).toUpperCase()} • {customerName(order.user?.name)}</p>
+                    <p className="text-xs text-[rgb(var(--text-muted))]">Ticket #{getTicketNumber(order.id)} • {customerName(order.user?.name)}</p>
                   </div>
-                  <p className="text-sm font-semibold">{formatCurrency(order.totalCents)}</p>
+                  <div className="text-right">
+                    <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
+                    <p className="text-sm font-semibold">{formatCurrency(order.totalCents)}</p>
+                  </div>
                 </div>
+                <ul className="divide-y divide-[rgb(var(--border))] rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))]/40 text-sm">
+                  {order.items.map((item) => (
+                    <li key={item.id} className="flex items-center justify-between px-3 py-2">
+                      <span>{item.menuItem?.name ?? 'Menu item'} × {item.quantity}</span>
+                      <span className="font-medium">₹{((item.priceCents * item.quantity) / 100).toFixed(2)}</span>
+                    </li>
+                  ))}
+                </ul>
                 <div className="flex items-center justify-between text-xs text-[rgb(var(--text-muted))]">
-                  <span>{order.items.length} item{order.items.length === 1 ? '' : 's'}</span>
                   <span>{fulfillmentLabel(order.fulfillmentType)}</span>
+                  <span>Placed {formatRelativeTime(order.createdAt)}</span>
                 </div>
                 <div className="flex justify-end">
                   <Button

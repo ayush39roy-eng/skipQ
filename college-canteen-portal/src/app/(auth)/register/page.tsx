@@ -1,5 +1,6 @@
 "use client"
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +13,9 @@ const onboardingSteps = [
 ]
 
 export default function RegisterPage() {
+  const searchParams = useSearchParams()
+  const nextParam = searchParams.get('next') ?? '/canteens'
+  const encodedNext = encodeURIComponent(nextParam)
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -39,7 +43,7 @@ export default function RegisterPage() {
         body: JSON.stringify({ email, password })
       })
       if (login.ok) {
-        window.location.href = '/canteens'
+        window.location.href = nextParam
       } else {
         setMessage('Registered, but auto-login failed. Please login manually.')
       }
@@ -101,7 +105,7 @@ export default function RegisterPage() {
             <Button type="submit" className="w-full" loading={loading}>{loading ? 'Creating…' : 'Sign up'}</Button>
           </form>
           {message && <p className="text-sm text-red-500">{message}</p>}
-          <p className="text-sm text-[rgb(var(--text-muted))]">Already have an account? <Link href="/login" className="text-violet-400 hover:underline">Log in</Link></p>
+          <p className="text-sm text-[rgb(var(--text-muted))]">Already have an account? <Link href={`/login?next=${encodedNext}`} className="text-violet-400 hover:underline">Log in</Link></p>
         </Card>
       </div>
     </div>
