@@ -187,9 +187,9 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
                     </li>
                   ))}
                 </ul>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button type="button" loading={isLoading(order.id, 'CONFIRM')} onClick={() => void handleAction(order.id, 'CONFIRM')}>Confirm</Button>
-                  <Button type="button" variant="outline" loading={isLoading(order.id, 'CANCELLED')} onClick={() => void handleAction(order.id, 'CANCELLED')}>Cancel</Button>
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <Button type="button" className="w-full sm:w-auto" loading={isLoading(order.id, 'CONFIRM')} onClick={() => void handleAction(order.id, 'CONFIRM')}>Confirm</Button>
+                  <Button type="button" variant="outline" className="w-full sm:w-auto" loading={isLoading(order.id, 'CANCELLED')} onClick={() => void handleAction(order.id, 'CANCELLED')}>Cancel</Button>
                   <label className="sr-only" htmlFor={`prep-${order.id}`}>Prep minutes</label>
                   <input
                     id={`prep-${order.id}`}
@@ -199,13 +199,14 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
                     min={5}
                     step={5}
                     placeholder="Prep min"
-                    className="input w-24"
+                    className="input w-full sm:w-24"
                   />
                   <Button
                     type="button"
                     variant="secondary"
                     loading={isLoading(order.id, 'SET_PREP')}
                     onClick={() => void handleAction(order.id, 'SET_PREP')}
+                    className="w-full sm:w-auto"
                   >
                     Set Prep
                   </Button>
@@ -260,6 +261,7 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
                     type="button"
                     loading={isLoading(order.id, 'COMPLETED')}
                     onClick={() => void handleAction(order.id, 'COMPLETED')}
+                    className="w-full sm:w-auto"
                   >
                     Completed
                   </Button>

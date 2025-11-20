@@ -9,14 +9,17 @@ import { FormSubmitButton } from '@/components/ui/FormSubmitButton'
 import bcrypt from 'bcryptjs'
 
 async function AdminCanteenManager() {
-  const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
-  const canteens = await prisma.canteen.findMany({ select: { id: true, name: true, location: true, notificationPhones: true } })
-  const menuByCanteen = await Promise.all(
-    canteens.map(async c => ({
-      canteen: c,
-      items: await prisma.menuItem.findMany({ where: { canteenId: c.id }, orderBy: { name: 'asc' } })
-    }))
-  )
+  const [vendors, canteens] = await Promise.all([
+    prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } }),
+    prisma.canteen.findMany({
+      select: {
+        id: true, name: true, location: true, notificationPhones: true,
+        menuItems: { orderBy: { name: 'asc' } }
+      }
+    })
+  ])
+
+  const menuByCanteen = canteens.map(c => ({ canteen: c, items: c.menuItems }))
 
   return (
     <div className="space-y-6">
@@ -24,6 +27,8 @@ async function AdminCanteenManager() {
         <div className="mb-3 font-medium">Add Canteen</div>
         <form className="flex flex-col gap-2" action={async (formData: FormData) => {
           'use server'
+          const session = await requireRole(['ADMIN'])
+          if (!session) return
           const name = String(formData.get('name') || '')
           const location = String(formData.get('location') || '')
           const vendorId = String(formData.get('vendorId') || '')
@@ -35,7 +40,7 @@ async function AdminCanteenManager() {
           <Input name="location" placeholder="Location" required />
           <select name="vendorId" className="rounded border p-2" required>
             <option value="">Select Vendor</option>
-            {vendors.map(v=> <option key={v.id} value={v.id}>{v.name}</option>)}
+            {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
           <FormSubmitButton pendingLabel="Creating...">Create</FormSubmitButton>
         </form>
@@ -45,20 +50,71 @@ async function AdminCanteenManager() {
         <div key={canteen.id} className="card space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="font-medium">{canteen.name} — {canteen.location}</div>
-            <form className="flex items-center gap-2" action={async (formData: FormData) => {
+            <form className="flex flex-col gap-2 sm:flex-row sm:items-center" action={async (formData: FormData) => {
               'use server'
+              const session = await requireRole(['ADMIN'])
+              if (!session) return
               const raw = String(formData.get('phones') || '')
-              const arr = raw.split(',').map(p=>p.trim()).filter(Boolean)
+              const arr = raw.split(',').map(p => p.trim()).filter(Boolean)
               await prisma.canteen.update({ where: { id: canteen.id }, data: { notificationPhones: arr } })
               revalidatePath('/admin')
             }}>
-              <input name="phones" defaultValue={canteen.notificationPhones?.join(',') ?? ''} placeholder="Notif phones (+1555..., comma sep)" className="w-64 rounded border p-2 text-xs" />
-              <FormSubmitButton variant="secondary" size="sm" pendingLabel="Saving..." className="px-3 py-1 text-xs">Save Phones</FormSubmitButton>
+              <input name="phones" defaultValue={canteen.notificationPhones?.join(',') ?? ''} placeholder="Notif phones (+1555..., comma sep)" className="w-full rounded border p-2 text-xs sm:w-64" />
+              <FormSubmitButton variant="secondary" size="sm" pendingLabel="Saving..." className="px-3 py-1 text-xs sm:self-end">Save Phones</FormSubmitButton>
             </form>
           </div>
 
-          <form className="flex flex-wrap items-end gap-2" action={async (formData: FormData) => {
+          <div className="flex flex-col gap-2 border border-dashed border-[rgb(var(--border))] p-3 text-sm sm:flex-row sm:items-end">
+            <form className="flex flex-1 flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end" action={async (formData: FormData) => {
+              'use server'
+              const session = await requireRole(['ADMIN'])
+              if (!session) return
+              const name = String(formData.get('name') || '').trim()
+              const location = String(formData.get('location') || '').trim()
+              if (!name || !location) return
+              await prisma.canteen.update({ where: { id: canteen.id }, data: { name, location } })
+              revalidatePath('/admin')
+            }}>
+              <Input name="name" label="Name" defaultValue={canteen.name} className="w-full sm:w-48" required />
+              <Input name="location" label="Location" defaultValue={canteen.location} className="w-full sm:w-48" required />
+              <FormSubmitButton pendingLabel="Saving..." className="w-full sm:w-auto">Rename / Move</FormSubmitButton>
+            </form>
+            <form
+              className="sm:w-auto"
+              action={async () => {
+                'use server'
+                const session = await requireRole(['ADMIN'])
+                if (!session) return
+                await prisma.$transaction(async tx => {
+                  const orders = await tx.order.findMany({ where: { canteenId: canteen.id }, select: { id: true } })
+                  const orderIds = orders.map(o => o.id)
+                  if (orderIds.length) {
+                    await tx.payment.deleteMany({ where: { orderId: { in: orderIds } } })
+                    await tx.orderItem.deleteMany({ where: { orderId: { in: orderIds } } })
+                  }
+                  await tx.menuItem.deleteMany({ where: { canteenId: canteen.id } })
+                  if (orderIds.length) {
+                    await tx.order.deleteMany({ where: { id: { in: orderIds } } })
+                  }
+                  await tx.canteen.delete({ where: { id: canteen.id } })
+                })
+                revalidatePath('/admin')
+              }}
+            >
+              <FormSubmitButton
+                variant="outline"
+                className="w-full border-red-600 text-red-600 hover:bg-red-600/10 sm:w-auto"
+                pendingLabel="Deleting..."
+              >
+                Delete Canteen
+              </FormSubmitButton>
+            </form>
+          </div>
+
+          <form className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end" action={async (formData: FormData) => {
             'use server'
+            const session = await requireRole(['ADMIN'])
+            if (!session) return
             const name = String(formData.get('name') || '')
             const priceCents = Number(formData.get('priceCents') || 0)
             const imageUrl = String(formData.get('imageUrl') || '')
@@ -66,10 +122,10 @@ async function AdminCanteenManager() {
             await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null } })
             revalidatePath('/admin')
           }}>
-            <Input name="name" placeholder="Item name" className="w-48" />
-            <Input name="priceCents" placeholder="Price (in cents)" className="w-48" />
-            <Input name="imageUrl" placeholder="Image URL (optional)" className="w-64" />
-            <FormSubmitButton pendingLabel="Adding...">Add Item</FormSubmitButton>
+            <Input name="name" placeholder="Item name" className="w-full sm:w-48" />
+            <Input name="priceCents" placeholder="Price (in cents)" className="w-full sm:w-48" />
+            <Input name="imageUrl" placeholder="Image URL (optional)" className="w-full sm:w-64" />
+            <FormSubmitButton pendingLabel="Adding..." className="w-full sm:w-auto">Add Item</FormSubmitButton>
           </form>
 
           <div className="overflow-x-auto">
@@ -97,12 +153,14 @@ async function AdminCanteenManager() {
                       />
                     )}</TD>
                     <TD>{it.name}</TD>
-                    <TD>₹{(it.priceCents/100).toFixed(2)}</TD>
+                    <TD>₹{(it.priceCents / 100).toFixed(2)}</TD>
                     <TD>{it.available ? <Badge variant="success">Yes</Badge> : <Badge variant="warning">No</Badge>}</TD>
                     <TD>
-                      <div className="flex flex-wrap items-center gap-2">
-                        <form className="flex flex-wrap items-center gap-2" action={async (formData: FormData) => {
+                      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                        <form className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" action={async (formData: FormData) => {
                           'use server'
+                          const session = await requireRole(['ADMIN'])
+                          if (!session) return
                           const name = String(formData.get('name') || it.name)
                           const priceCents = Number(formData.get('priceCents') || it.priceCents)
                           const rawImage = formData.get('imageUrl')
@@ -111,21 +169,23 @@ async function AdminCanteenManager() {
                           await prisma.menuItem.update({ where: { id: it.id }, data: { name, priceCents, imageUrl, available } })
                           revalidatePath('/admin')
                         }}>
-                          <Input name="name" defaultValue={it.name} className="w-40" />
-                          <Input name="priceCents" defaultValue={String(it.priceCents)} className="w-36" />
-                          <Input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-64" />
+                          <Input name="name" defaultValue={it.name} className="w-full sm:w-40" />
+                          <Input name="priceCents" defaultValue={String(it.priceCents)} className="w-full sm:w-36" />
+                          <Input name="imageUrl" defaultValue={it.imageUrl ?? ''} className="w-full sm:w-64" />
                           <label className="flex items-center gap-1 text-xs"><input type="checkbox" name="available" defaultChecked={it.available} /> Available</label>
-                          <FormSubmitButton pendingLabel="Saving...">Update</FormSubmitButton>
+                          <FormSubmitButton pendingLabel="Saving..." className="w-full sm:w-auto">Update</FormSubmitButton>
                         </form>
-                        <form action={async () => {
+                        <form className="sm:w-auto" action={async () => {
                           'use server'
+                          const session = await requireRole(['ADMIN'])
+                          if (!session) return
                           await prisma.menuItem.delete({ where: { id: it.id } })
                           revalidatePath('/admin')
                         }}>
                           <FormSubmitButton
                             pendingLabel="Deleting..."
                             variant="outline"
-                            className="border-red-600 text-red-600 hover:bg-red-600/10"
+                            className="w-full border-red-600 text-red-600 hover:bg-red-600/10 sm:w-auto"
                           >
                             Delete
                           </FormSubmitButton>
@@ -146,13 +206,16 @@ async function AdminCanteenManager() {
 export default async function AdminPage() {
   const session = await requireRole(['ADMIN'])
   if (!session) return <p>Unauthorized</p>
-  const vendors = await prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } })
-  const vendorUsers = await prisma.user.findMany({
-    where: { role: 'VENDOR' },
-    select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
-  })
-  const stats = await prisma.order.aggregate({ _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true }, _count: true })
-  const orders = await prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } })
+
+  const [vendors, vendorUsers, stats, orders] = await Promise.all([
+    prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } }),
+    prisma.user.findMany({
+      where: { role: 'VENDOR' },
+      select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
+    }),
+    prisma.order.aggregate({ _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true }, _count: true }),
+    prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } })
+  ])
   return (
     <div className="space-y-4">
       <div className="grid gap-4 lg:grid-cols-2">
@@ -162,6 +225,8 @@ export default async function AdminPage() {
             className="space-y-3"
             action={async (formData: FormData) => {
               'use server'
+              const session = await requireRole(['ADMIN'])
+              if (!session) return
               const name = String(formData.get('vendorName') || '').trim()
               if (!name) return
               const phone = String(formData.get('vendorPhone') || '').trim()
@@ -186,6 +251,8 @@ export default async function AdminPage() {
             className="space-y-3"
             action={async (formData: FormData) => {
               'use server'
+              const session = await requireRole(['ADMIN'])
+              if (!session) return
               const vendorId = String(formData.get('vendorAccountVendorId') || '')
               const name = String(formData.get('vendorAccountName') || '').trim()
               const email = String(formData.get('vendorAccountEmail') || '').trim().toLowerCase()
@@ -235,25 +302,27 @@ export default async function AdminPage() {
         <div className="mb-3 font-medium">Vendor Settings</div>
         <div className="space-y-3">
           {vendors.map(v => (
-            <form key={v.id} className="flex flex-wrap items-end gap-2" action={async (formData: FormData) => {
+            <form key={v.id} className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-end" action={async (formData: FormData) => {
               'use server'
+              const session = await requireRole(['ADMIN'])
+              if (!session) return
               const phone = String(formData.get('phone') || '')
               const whatsappEnabled = formData.get('whatsappEnabled') ? true : false
               await prisma.vendor.update({ where: { id: v.id }, data: { phone: phone || null, whatsappEnabled } })
               revalidatePath('/admin')
             }}>
-              <div className="w-40 text-sm font-medium">{v.name}</div>
-              <Input name="phone" defaultValue={v.phone ?? ''} placeholder="WhatsApp phone (e.g. +9198...)" className="w-72" />
+              <div className="text-sm font-medium sm:w-40">{v.name}</div>
+              <Input name="phone" defaultValue={v.phone ?? ''} placeholder="WhatsApp phone (e.g. +9198...)" className="w-full sm:w-72" />
               <label className="flex items-center gap-1 text-sm"><input type="checkbox" name="whatsappEnabled" defaultChecked={v.whatsappEnabled} /> Enable WhatsApp</label>
-              <FormSubmitButton pendingLabel="Saving...">Save</FormSubmitButton>
+              <FormSubmitButton pendingLabel="Saving..." className="w-full sm:w-auto">Save</FormSubmitButton>
             </form>
           ))}
         </div>
       </div>
       <h1 className="text-xl font-semibold">Admin Dashboard</h1>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="card"><div className="text-sm text-gray-600">Total Sales</div><div className="text-2xl font-semibold">₹{((stats._sum.totalCents ?? 0)/100).toFixed(2)}</div></div>
-        <div className="card"><div className="text-sm text-gray-600">Commission (2.5%)</div><div className="text-2xl font-semibold">₹{((stats._sum.commissionCents ?? 0)/100).toFixed(2)}</div></div>
+        <div className="card"><div className="text-sm text-gray-600">Total Sales</div><div className="text-2xl font-semibold">₹{((stats._sum.totalCents ?? 0) / 100).toFixed(2)}</div></div>
+        <div className="card"><div className="text-sm text-gray-600">Commission (2.5%)</div><div className="text-2xl font-semibold">₹{((stats._sum.commissionCents ?? 0) / 100).toFixed(2)}</div></div>
         <div className="card"><div className="text-sm text-gray-600">Orders</div><div className="text-2xl font-semibold">{stats._count}</div></div>
       </div>
       <div className="card">
@@ -261,7 +330,7 @@ export default async function AdminPage() {
         <ul className="list-disc pl-5 text-sm">
           {orders.map(o => (
             <li key={o.id}>
-              {o.id.slice(0,8)} — {o.canteen.name} — {o.user.email} — ₹{(o.totalCents/100).toFixed(2)} — {o.status}
+              {o.id.slice(0, 8)} — {o.canteen.name} — {o.user.email} — ₹{(o.totalCents / 100).toFixed(2)} — {o.status}
               {typeof o.prepMinutes === 'number' ? ` — Prep: ${o.prepMinutes} min` : ''}
             </li>
           ))}

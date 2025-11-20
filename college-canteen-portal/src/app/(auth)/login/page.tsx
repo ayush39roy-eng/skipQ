@@ -12,18 +12,12 @@ const benefits = [
   'Cashfree, UPI & card checkout'
 ]
 
-const demoUsers = [
-  { label: 'Student', email: 'student@college.local', password: 'user123' },
-  { label: 'Vendor', email: 'vendor@college.local', password: 'vendor123' },
-  { label: 'Admin', email: 'admin@college.local', password: 'admin123' }
-]
-
 export default function LoginPage() {
   const searchParams = useSearchParams()
   const nextParam = searchParams.get('next') ?? '/canteens'
   const encodedNext = encodeURIComponent(nextParam)
-  const [email, setEmail] = useState('student@college.local')
-  const [password, setPassword] = useState('user123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
 
   const submit = async (e: React.FormEvent) => {
@@ -43,9 +37,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-6 py-12 shadow-[0_30px_120px_-60px_rgba(15,118,255,0.8)] sm:px-10 lg:px-16">
+    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 shadow-[0_30px_120px_-60px_rgba(15,118,255,0.8)] sm:px-10 sm:py-12 lg:px-16">
       <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-r from-sky-500/20 via-emerald-400/10 to-transparent blur-3xl" aria-hidden />
-      <div className="relative grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
+      <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
         <div className="space-y-6 text-white">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-sky-200">SkipQ Access</span>
           <div className="space-y-4">
@@ -63,25 +57,14 @@ export default function LoginPage() {
             ))}
           </ul>
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.4em] text-white/60">Demo access</p>
-            <div className="mt-3 grid gap-3 sm:grid-cols-3">
-              {demoUsers.map(user => (
-                <button
-                  key={user.label}
-                  type="button"
-                  className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left text-white transition hover:border-sky-400/60"
-                  onClick={() => { setEmail(user.email); setPassword(user.password); }}
-                >
-                  <p className="text-xs uppercase tracking-[0.3em] text-white/60">{user.label}</p>
-                  <p className="text-sm font-semibold">{user.email}</p>
-                  <p className="text-xs text-white/70">{user.password}</p>
-                </button>
-              ))}
-            </div>
+            <p className="text-xs uppercase tracking-[0.4em] text-white/60">Secure access</p>
+            <p className="mt-3 text-sm text-white/70">
+              Student and vendor accounts now use the credentials shared with them directly. If you need an account or reset, contact the SkipQ admin team.
+            </p>
           </div>
         </div>
 
-        <Card className="space-y-6 border-white/10 bg-[rgb(var(--bg))]/80 p-8 text-[rgb(var(--text))] backdrop-blur">
+        <Card className="space-y-6 border-white/10 bg-[rgb(var(--bg))]/80 p-6 text-[rgb(var(--text))] backdrop-blur sm:p-8">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Account</p>
             <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>

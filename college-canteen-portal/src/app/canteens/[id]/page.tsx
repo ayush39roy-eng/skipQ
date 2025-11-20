@@ -130,8 +130,8 @@ export default function CanteenMenuPage() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[rgb(var(--surface))] via-[rgb(var(--surface-muted))] to-[rgb(var(--bg))] p-6 sm:p-10 shadow-[0_25px_60px_rgba(15,15,35,0.35)]">
-        <div className="relative aspect-[16/6] w-full overflow-hidden rounded-3xl border border-white/10">
+      <section className="rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[rgb(var(--surface))] via-[rgb(var(--surface-muted))] to-[rgb(var(--bg))] p-5 sm:p-10 shadow-[0_25px_60px_rgba(15,15,35,0.35)]">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-white/10 sm:aspect-[16/6]">
           <Image
             src={heroImage}
             alt="Canteen hero"
@@ -246,7 +246,7 @@ export default function CanteenMenuPage() {
         </section>
 
         <aside className="w-full lg:w-80 xl:w-96">
-          <Card className="sticky top-24 space-y-4 border border-[rgb(var(--accent))]/20 bg-[rgb(var(--surface))]/70 backdrop-blur">
+          <Card className="space-y-4 border border-[rgb(var(--accent))]/20 bg-[rgb(var(--surface))]/70 backdrop-blur lg:sticky lg:top-24">
             {(cartRestored || searchParams.get('resume')) && (
               <div className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
                 Cart restored after login. Review items and checkout to finish payment.

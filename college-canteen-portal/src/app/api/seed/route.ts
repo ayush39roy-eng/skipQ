@@ -8,19 +8,40 @@ export const dynamic = 'force-dynamic'
 // GET /api/seed?token=YOUR_TOKEN
 // Only runs if no ADMIN user exists yet. Use once, then delete this file.
 export async function GET(req: Request) {
+  const enabled = (process.env.ENABLE_SEED_ROUTE || '').toLowerCase() === 'true'
+  if (!enabled) {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   const url = new URL(req.url)
   const token = (url.searchParams.get('token') || '').trim()
+  const resetAdmin = ((url.searchParams.get('reset') || '').toLowerCase()) === 'true'
   const expected = (process.env.SEED_TOKEN || '').trim()
   if (!expected) return NextResponse.json({ error: 'SEED_TOKEN not set on server' }, { status: 500 })
   if (token !== expected) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
-  if (existingAdmin) {
+  if (existingAdmin && !resetAdmin) {
     return NextResponse.json({ error: 'Already seeded', admin: existingAdmin.email }, { status: 409 })
   }
   try {
-    const adminPass = await bcrypt.hash('admin123', 10)
-    const admin = await prisma.user.create({ data: { email: 'admin@college.local', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' } })
+    const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'skipq@dtu29'
+    const adminPass = await bcrypt.hash(adminPassword, 10)
+    if (existingAdmin && resetAdmin) {
+      const admin = await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: { email: 'admin@skipq.live', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' },
+      })
+      return NextResponse.json({
+        ok: true,
+        reset: true,
+        credentials: {
+          admin: { email: admin.email, password: adminPassword },
+        },
+      })
+    }
+
+    const admin = await prisma.user.create({ data: { email: 'admin@skipq.live', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' } })
 
     const vendorPass = await bcrypt.hash('vendor123', 10)
     const vendorUser = await prisma.user.create({ data: { email: 'vendor@college.local', name: 'Vendor User', passwordHash: vendorPass, role: 'VENDOR' } })
@@ -48,7 +69,7 @@ export async function GET(req: Request) {
     return NextResponse.json({
       ok: true,
       credentials: {
-        admin: { email: admin.email, password: 'admin123' },
+        admin: { email: admin.email, password: adminPassword },
         vendor: { email: vendorUser.email, password: 'vendor123' },
         user: { email: student.email, password: 'user123' },
       },

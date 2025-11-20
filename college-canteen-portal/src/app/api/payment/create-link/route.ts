@@ -57,8 +57,18 @@ async function notifyManualPayment(order: NonNullable<OrderWithRelations>) {
   log('Manual payment notification loop complete', { orderId: order.id })
 }
 
+import { getSession } from '@/lib/session'
+
 async function resolvePaymentLink(orderId: string, req: Request) {
   log('Resolving payment link', { orderId })
+
+  // Security: Prevent spam by requiring login and ownership
+  const session = await getSession()
+  if (!session) {
+    console.warn(logPrefix, 'Unauthorized access attempt', { orderId })
+    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  }
+
   const order = await prisma.order.findUnique({
     where: { id: orderId },
     ...orderInclude
@@ -66,6 +76,12 @@ async function resolvePaymentLink(orderId: string, req: Request) {
   if (!order) {
     console.warn(logPrefix, 'Order not found', { orderId })
     return { error: NextResponse.json({ error: 'Order not found' }, { status: 404 }) }
+  }
+
+  // Allow Admin or the Order Owner
+  if (session.role !== 'ADMIN' && session.user.id !== order.userId) {
+    console.warn(logPrefix, 'Forbidden access attempt', { orderId, userId: session.user.id })
+    return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   }
 
   const hasCashfree = process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY

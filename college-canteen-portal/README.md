@@ -36,7 +36,7 @@ Open http://localhost:3000
 Demo logins:
 - student@college.local / user123 (USER)
 - vendor@college.local / vendor123 (VENDOR)
-- admin@college.local / admin123 (ADMIN)
+- Admin credentials are configured privately via the `ADMIN_DEFAULT_PASSWORD` env var and are not shown on the login page.
 
 ## Notes
 - MongoDB provider does not use SQL migrations; schema changes are applied directly via the Prisma client. Remove old `prisma/migrations` if present.
@@ -58,6 +58,8 @@ npm test
 ## Environment Variables
 See `.env.example` for required and optional variables:
 - `DATABASE_URL` — MongoDB connection string
+- `ADMIN_DEFAULT_PASSWORD` — Seed/Admin password used for `admin@skipq.live` (default `skipq@dtu29`)
+- `ENABLE_SEED_ROUTE` — leave blank (or anything other than `true`) to disable `/api/seed`; set to `true` only when you intentionally need to reseed
 - WhatsApp / Twilio variables (optional) for messaging
  - Cashfree payment gateway:
 	 - `CASHFREE_APP_ID`, `CASHFREE_SECRET_KEY` — credentials

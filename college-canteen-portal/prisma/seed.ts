@@ -5,12 +5,19 @@ const prisma = new PrismaClient()
 
 async function main() {
   // Admin
-  const adminPass = await bcrypt.hash('admin123', 10)
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@college.local' },
-    update: {},
-    create: { email: 'admin@college.local', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' },
-  })
+  const adminPassword = process.env.ADMIN_DEFAULT_PASSWORD || 'skipq@dtu29'
+  const adminPass = await bcrypt.hash(adminPassword, 10)
+  let admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (admin) {
+    admin = await prisma.user.update({
+      where: { id: admin.id },
+      data: { email: 'admin@skipq.live', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' },
+    })
+  } else {
+    admin = await prisma.user.create({
+      data: { email: 'admin@skipq.live', name: 'Admin', passwordHash: adminPass, role: 'ADMIN' },
+    })
+  }
 
   // Vendor and canteen
   const vendorPass = await bcrypt.hash('vendor123', 10)

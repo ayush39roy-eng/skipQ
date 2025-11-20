@@ -38,14 +38,25 @@ type MetaWebhookPayload = {
 function timingSafeEqualStr(a: string, b: string) {
   const ab = Buffer.from(a)
   const bb = Buffer.from(b)
-  if (ab.length !== bb.length) return false
+  // timingSafeEqual throws if lengths differ, so we must check length first.
+  // To prevent timing attacks on length, we can double-HMAC or just accept that length leaks are usually minimal risk here.
+  // However, a better approach for timing safety is to hash both again and compare hashes, or pad.
+  // For this implementation, we'll stick to the standard pattern but ensure we don't crash.
+  if (ab.length !== bb.length) {
+    // Return false immediately. Length leakage is generally considered acceptable for HMACs in this context
+    // as the attacker needs to guess the secret, not just the length.
+    return false
+  }
   return crypto.timingSafeEqual(ab, bb)
 }
 
 async function verifyMetaSignature(raw: string, headerSig: string | null) {
   if (!headerSig) return false
   const appSecret = process.env.WHATSAPP_META_APP_SECRET
-  if (!appSecret) throw new Error('WHATSAPP_META_APP_SECRET environment variable is required for Meta webhook verification')
+  if (!appSecret) {
+    console.error('WHATSAPP_META_APP_SECRET is missing')
+    return false
+  }
   const mac = crypto.createHmac('sha256', appSecret)
   mac.update(raw, 'utf8')
   const expected = 'sha256=' + mac.digest('hex')

@@ -40,8 +40,8 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-14">
-      <section className="relative overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-sky-500/20 via-purple-500/10 to-transparent px-8 py-10 shadow-[0_25px_70px_-35px_rgba(15,118,255,0.6)]">
-        <div className="absolute inset-y-0 right-0 w-1/2 opacity-40 blur-3xl" aria-hidden>
+      <section className="relative overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-sky-500/20 via-purple-500/10 to-transparent px-5 py-8 shadow-[0_25px_70px_-35px_rgba(15,118,255,0.6)] sm:px-8 sm:py-10">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 opacity-40 blur-3xl lg:block" aria-hidden>
           <div className="h-full w-full bg-gradient-to-br from-sky-400/40 to-emerald-400/20" />
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center">
@@ -98,16 +98,16 @@ export default async function HomePage() {
       </section>
 
       {session && (
-        <section className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-alt))] p-6">
+        <section className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-alt))] p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm uppercase tracking-widest text-[rgb(var(--text-muted))]">Welcome back</p>
               <h2 className="text-2xl font-bold text-[rgb(var(--text))]">{session.user.name}</h2>
               <p className="text-sm text-[rgb(var(--text-muted))]">You&apos;re signed in as {session.role.toLowerCase()}.</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto">
               {quickLinks.map(link => (
-                <Link key={link.href} href={link.href} className="btn-secondary px-4 py-2 text-sm">
+                <Link key={link.href} href={link.href} className="btn-secondary w-full px-4 py-2 text-sm sm:w-auto">
                   {link.label}
                 </Link>
               ))}
@@ -136,7 +136,7 @@ export default async function HomePage() {
           <p className="mt-2 text-[rgb(var(--text-muted))]">Sign in with your campus email to unlock personalised menus, loyalty perks and seamless checkout.</p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Link href="/login" className="btn px-5 py-2.5">Login</Link>
-            <Link href="/auth/register" className="btn-secondary px-5 py-2.5">Create account</Link>
+            <Link href="/register" className="btn-secondary px-5 py-2.5">Create account</Link>
           </div>
         </section>
       )}

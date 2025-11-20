@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export const metadata = { title: 'Privacy Policy — College Canteen Portal' }
 
 const lastUpdated = '18 November 2025'
@@ -57,14 +59,6 @@ const sections = [
   {
     title: '8. Contact Us',
     body: ['If you have questions about this Privacy Policy, contact us at skipq39@gmail.com.']
-  },
-  {
-    title: 'CANCELLATION & REFUND POLICY',
-    body: ['Orders can be cancelled only before the vendor starts processing them. Once the vendor confirms preparation or dispatch, cancellation may not be possible. Service/processing fees are non-refundable, as they cover platform and operational costs. If an order is cancelled before vendor confirmation, the product amount may be refunded to the customer as per the vendor’s policies. Refund timelines may vary based on the customer’s bank and payment provider. For cancellation or refund assistance, users can contact us at skipq39@gmail.com.']
-  },
-  {
-    title: 'CANCELLATION & REFUND POLICY',
-    body: ['Orders can be cancelled only before the vendor starts processing them. Once the vendor confirms preparation or dispatch, cancellation may not be possible. Service/processing fees are non-refundable, as they cover platform and operational costs. If an order is cancelled before vendor confirmation, the product amount may be refunded to the customer as per the vendor’s policies. Refund timelines may vary based on the customer’s bank and payment provider. For cancellation or refund assistance, users can contact us at skipq39@gmail.com.']
   }
 ]
 
@@ -84,6 +78,10 @@ export default function PrivacyPolicyPage() {
           </ul>
         </div>
       ))}
+      <p className="text-sm text-[rgb(var(--text-muted))]">
+        For cancellations or refunds, please review our{' '}
+        <Link href="/cancellation-refund" className="underline-offset-4 hover:underline">Cancellation &amp; Refund Policy</Link>.
+      </p>
     </section>
   )
 }

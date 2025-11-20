@@ -21,9 +21,9 @@ export function SiteFooter({ className }: SiteFooterProps = {}) {
 
   return (
     <footer className={footerClass}>
-      <div className="mx-auto max-w-7xl px-6 py-4">
-        <div className="grid gap-4 text-sm md:grid-cols-2 md:items-start">
-          <section className="space-y-2">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="grid gap-6 text-sm md:grid-cols-2 md:items-start">
+          <section className="space-y-3">
             <p className="text-[11px] font-semibold uppercase tracking-[0.35em] text-[rgb(var(--text-muted))]">Contact</p>
             <div className="space-y-1">
               <p className="text-base font-semibold tracking-tight">{CONTACT_INFO.name}</p>
@@ -38,17 +38,23 @@ export function SiteFooter({ className }: SiteFooterProps = {}) {
               </a>
             </div>
           </section>
-          <section className="flex flex-col justify-start space-y-2 text-sm md:items-end">
+          <section className="space-y-2 text-sm md:items-end md:text-right">
             <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-[rgb(var(--text-muted))]">Legal</span>
-            <Link
-              href="/privacy-policy"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[rgb(var(--text))] underline-offset-4 hover:underline"
-              prefetch={false}
-            >
-              Privacy Policy
-            </Link>
+            <ul className="space-y-2">
+              {[{ href: '/privacy-policy', label: 'Privacy Policy' }, { href: '/terms-and-conditions', label: 'Terms & Conditions' }, { href: '/cancellation-refund', label: 'Cancellation & Refund Policy' }].map(link => (
+                <li key={link.href}>
+                  <Link
+                    href={link.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[rgb(var(--text))] underline-offset-4 hover:underline"
+                    prefetch={false}
+                  >
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
         </div>
       </div>

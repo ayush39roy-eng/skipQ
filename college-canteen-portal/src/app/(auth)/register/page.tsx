@@ -56,9 +56,9 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[#0f172a] via-[#111927] to-[#05070f] px-6 py-12 shadow-[0_40px_160px_-80px_rgba(76,29,149,0.8)] sm:px-10 lg:px-16">
+    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[#0f172a] via-[#111927] to-[#05070f] px-4 py-8 shadow-[0_40px_160px_-80px_rgba(76,29,149,0.8)] sm:px-10 sm:py-12 lg:px-16">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.35),transparent_45%)]" aria-hidden />
-      <div className="relative grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+      <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-6 text-white">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">Join SkipQ</span>
           <div className="space-y-4">
@@ -92,7 +92,7 @@ export default function RegisterPage() {
           </div>
         </div>
 
-        <Card className="space-y-6 border-white/10 bg-[rgb(var(--bg))]/80 p-8 text-[rgb(var(--text))] backdrop-blur">
+        <Card className="space-y-6 border-white/10 bg-[rgb(var(--bg))]/80 p-6 text-[rgb(var(--text))] backdrop-blur sm:p-8">
           <div className="space-y-2">
             <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Step 1</p>
             <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>

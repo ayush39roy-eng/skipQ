@@ -19,7 +19,7 @@ type OrderRequestBody = {
 function isOrderItemPayload(value: unknown): value is OrderItemPayload {
   if (!value || typeof value !== 'object') return false
   const item = value as Record<string, unknown>
-  return typeof item.menuItemId === 'string' && typeof item.quantity === 'number' && item.quantity > 0
+  return typeof item.menuItemId === 'string' && typeof item.quantity === 'number' && item.quantity > 0 && item.quantity <= 100
 }
 
 function parseOrderBody(payload: unknown): OrderRequestBody | null {
@@ -42,8 +42,11 @@ export async function POST(req: Request) {
   if (!body) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   const { canteenId, items, fulfillmentType } = body
 
-  const menuItems = await prisma.menuItem.findMany({ where: { id: { in: items.map((i) => i.menuItemId) }, canteenId } })
-  if (menuItems.length === 0) return NextResponse.json({ error: 'No items' }, { status: 400 })
+  const menuItems = await prisma.menuItem.findMany({ where: { id: { in: items.map((i) => i.menuItemId) }, canteenId, available: true } })
+  if (menuItems.length !== items.length) {
+    // Some items were not found or are unavailable
+    return NextResponse.json({ error: 'One or more items are unavailable or invalid' }, { status: 400 })
+  }
 
   let subtotal = 0
   const orderItems = items.map((item) => {
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
     if (!mi) return null
     subtotal += mi.priceCents * item.quantity
     return { menuItemId: mi.id, quantity: item.quantity, priceCents: mi.priceCents }
-  }).filter(Boolean) as {menuItemId:string, quantity:number, priceCents:number}[]
+  }).filter(Boolean) as { menuItemId: string, quantity: number, priceCents: number }[]
 
   const canteen = await prisma.canteen.findUnique({ where: { id: canteenId }, include: { vendor: true } })
   if (!canteen) return NextResponse.json({ error: 'Canteen not found' }, { status: 404 })

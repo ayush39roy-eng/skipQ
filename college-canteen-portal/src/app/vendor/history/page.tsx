@@ -67,14 +67,14 @@ export default async function VendorHistoryPage() {
           </Card>
         )}
         {orders.map((order) => (
-          <Card key={order.id} className="flex flex-wrap items-center gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
-            <div className="min-w-[200px]">
+          <Card key={order.id} className="flex flex-col gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))] sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="min-w-0 sm:min-w-[200px]">
               <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
               <p className="text-base font-semibold">#{getTicketNumber(order.id)}</p>
               <p className="text-xs text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)}</p>
             </div>
             <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-            <div className="ml-auto text-right">
+            <div className="text-left sm:ml-auto sm:text-right">
               <p className="text-lg font-semibold">{formatCurrency(order.totalCents)}</p>
               <p className="text-xs text-[rgb(var(--text-muted))]">Updated {formatRelativeTime(order.updatedAt)}</p>
             </div>
