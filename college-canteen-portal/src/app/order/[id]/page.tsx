@@ -33,6 +33,10 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
           <div className="text-sm text-green-500">Payment received.</div>
         )}
       </Card>
+      <div className="flex flex-wrap gap-3">
+        <Link className="btn" href="/order">View order history</Link>
+        <Link className="btn-secondary" href="/canteens">Browse canteens</Link>
+      </div>
       {order.payment && order.payment.status === 'PENDING' && (
         <Card className="space-y-2">
           <div className="text-sm font-medium">Payment link</div>

@@ -32,6 +32,33 @@ const journey = [
 
 export default async function HomePage() {
   const session = await getSession()
+
+  // Fetch real statistics
+  // const [totalOrders, vendorCount, avgPrepData] = await Promise.all([
+  //   prisma.order.count(),
+  //   prisma.vendor.count(),
+  //   prisma.order.aggregate({
+  //     where: {
+  //       prepMinutes: { not: null }
+  //     },
+  //     _avg: {
+  //       prepMinutes: true
+  //     }
+  //   })
+  // ])
+
+  // const avgPrepTime = avgPrepData._avg.prepMinutes 
+  //   ? Math.round(avgPrepData._avg.prepMinutes) 
+  //   : 0
+
+  // // Format order count
+  // const formatOrderCount = (count: number) => {
+  //   if (count >= 1000) {
+  //     return `${(count / 1000).toFixed(1)}k+`
+  //   }
+  //   return count.toString()
+  // }
+
   const quickLinks = [
     { label: 'Browse menus', href: '/canteens', description: 'Find something delicious in seconds.' },
     { label: 'Vendor hub', href: '/vendor', description: 'Manage prep times and live orders.', requireRole: 'VENDOR' as const },
@@ -65,20 +92,20 @@ export default async function HomePage() {
                 Become a Vendor
               </Link>
             </div>
-            <dl className="grid grid-cols-2 gap-4 text-white/80 sm:grid-cols-3">
+            {/* <dl className="grid grid-cols-2 gap-4 text-white/80 sm:grid-cols-3">
               <div>
                 <dt className="text-sm uppercase tracking-wide text-white/60">Orders processed</dt>
-                <dd className="text-2xl font-bold">52k+</dd>
+                <dd className="text-2xl font-bold">{formatOrderCount(totalOrders)}</dd>
               </div>
               <div>
                 <dt className="text-sm uppercase tracking-wide text-white/60">Avg pickup time</dt>
-                <dd className="text-2xl font-bold">6 min</dd>
+                <dd className="text-2xl font-bold">{avgPrepTime > 0 ? `${avgPrepTime} min` : 'N/A'}</dd>
               </div>
               <div>
                 <dt className="text-sm uppercase tracking-wide text-white/60">Vendors onboarded</dt>
-                <dd className="text-2xl font-bold">38</dd>
+                <dd className="text-2xl font-bold">{vendorCount}</dd>
               </div>
-            </dl>
+            </dl> */}
           </div>
           <div className="flex-1 rounded-2xl border border-white/10 bg-[rgb(var(--bg))]/90 p-6 backdrop-blur">
             <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Today&apos;s flow</h2>

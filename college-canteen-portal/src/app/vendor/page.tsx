@@ -59,8 +59,24 @@ export default async function VendorPage() {
     )
   }
 
-  const [vendor, orders] = await Promise.all([
-    prisma.vendor.findUnique({ where: { id: vendorId }, select: { name: true } }),
+  const [vendor, liveOrders, stats, allOrderItems] = await Promise.all([
+    prisma.vendor.findUnique({
+      where: { id: vendorId },
+      select: {
+        name: true,
+        canteens: {
+          select: {
+            id: true,
+            name: true,
+            openingTime: true,
+            closingTime: true,
+            weeklySchedule: true,
+            autoMode: true,
+            manualIsOpen: true
+          }
+        }
+      }
+    }),
     prisma.order.findMany({
       where: {
         vendorId,
@@ -74,10 +90,47 @@ export default async function VendorPage() {
         }
       },
       orderBy: { createdAt: 'desc' }
+    }),
+    prisma.order.aggregate({
+      where: {
+        vendorId,
+        status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] }
+      },
+      _sum: { vendorTakeCents: true },
+      _count: true
+    }),
+    prisma.orderItem.findMany({
+      where: {
+        order: {
+          vendorId,
+          status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] }
+        }
+      },
+      select: { quantity: true, menuItem: { select: { name: true } } }
     })
   ])
 
-  const typedOrders = orders as OrderWithRelations[]
+  // Calculate popular items
+  const itemCounts: Record<string, number> = {}
+  for (const item of allOrderItems) {
+    const name = item.menuItem.name
+    if (name) {
+      itemCounts[name] = (itemCounts[name] || 0) + item.quantity
+    }
+  }
+
+  const popularItems = Object.entries(itemCounts)
+    .map(([name, quantity]) => ({ name, quantity }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5)
+
+  const dashboardStats = {
+    totalRevenue: stats._sum.vendorTakeCents ?? 0,
+    totalOrders: stats._count,
+    popularItems
+  }
+
+  const typedOrders = liveOrders as OrderWithRelations[]
   const initialOrders: SerializableOrder[] = typedOrders.map((order) => ({
     id: order.id,
     status: order.status,
@@ -96,5 +149,5 @@ export default async function VendorPage() {
     }))
   }))
 
-  return <VendorDashboardClient vendorName={vendor?.name ?? null} initialOrders={initialOrders} />
+  return <VendorDashboardClient vendorName={vendor?.name ?? null} canteens={vendor?.canteens ?? []} initialOrders={initialOrders} stats={dashboardStats} />
 }

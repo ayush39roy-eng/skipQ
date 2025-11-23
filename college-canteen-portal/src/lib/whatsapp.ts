@@ -1,7 +1,7 @@
 import twilio from 'twilio'
 import { writeLog } from '@/lib/log-writer'
 
-type Provider = 'meta' | 'twilio'
+type Provider = 'meta' | 'twilio' | 'gupshup'
 
 type MetaTextMessage = {
   type: 'text'
@@ -29,6 +29,18 @@ type TwilioPayload = {
   templateVariables?: Record<string, unknown> | string
 }
 
+type GupshupMessage =
+  | { type: 'text'; text: string }
+  | {
+    type: 'quick_reply'
+    content: {
+      type: 'text'
+      header: string
+      text: string
+      options: { type: 'text'; title: string; postbackText: string }[]
+    }
+  }
+
 const logPrefix = '[WhatsApp]'
 
 function log(message: string, ...args: unknown[]) {
@@ -50,7 +62,10 @@ function formatWhatsAppAddress(raw: string) {
 
 function resolveProvider(): Provider {
   const declared = process.env.WHATSAPP_PROVIDER as Provider | undefined
-  if (declared === 'meta' || declared === 'twilio') return declared
+  if (declared === 'meta' || declared === 'twilio' || declared === 'gupshup') return declared
+
+  // Auto-detect
+  if (process.env.GUPSHUP_API_KEY && process.env.GUPSHUP_SRC_NAME) return 'gupshup'
   const hasTwilio = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM
   return hasTwilio ? 'twilio' : 'meta'
 }
@@ -99,22 +114,32 @@ async function sendViaTwilio(to: string, payload: TwilioPayload) {
   const from = formatWhatsAppAddress(envRequired('TWILIO_WHATSAPP_FROM'))
   const toWhatsApp = formatWhatsAppAddress(to)
   const contentSid = process.env.TWILIO_CONTENT_SID
-  log('Sending via Twilio', { to, from, mode: contentSid ? 'template' : 'text' })
+
+  log('Sending via Twilio', {
+    to,
+    from,
+    mode: contentSid ? 'template' : 'text',
+    contentSid: contentSid || 'none',
+    hasVariables: Boolean(payload.templateVariables)
+  })
+
   try {
-    const message = await client.messages.create(
-      contentSid
-        ? {
-            from,
-            to: toWhatsApp,
-            contentSid,
-            contentVariables: resolveContentVariables(payload.templateVariables),
-          }
-        : {
-            from,
-            to: toWhatsApp,
-            body: payload.text.body,
-          }
-    )
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const messageOptions: any = {
+      from,
+      to: toWhatsApp,
+    }
+
+    if (contentSid && payload.templateVariables) {
+      // Use Content API (Templates)
+      messageOptions.contentSid = contentSid
+      messageOptions.contentVariables = resolveContentVariables(payload.templateVariables)
+    } else {
+      // Fallback to plain text
+      messageOptions.body = payload.text.body
+    }
+
+    const message = await client.messages.create(messageOptions)
     log('Twilio send success', { to, sid: message.sid, status: message.status })
   } catch (error) {
     console.error('Twilio WhatsApp send failed:', error)
@@ -123,12 +148,78 @@ async function sendViaTwilio(to: string, payload: TwilioPayload) {
   }
 }
 
+async function sendViaGupshup(to: string, payload: { text: string, buttons?: { id: string, title: string }[], header?: string }) {
+  const apiKey = envRequired('GUPSHUP_API_KEY')
+  const srcName = envRequired('GUPSHUP_SRC_NAME')
+
+  // Gupshup uses form-urlencoded for the main wrapper, but the 'message' param is JSON
+  const url = 'https://api.gupshup.io/sm/api/v1/msg'
+
+  let messageJson: GupshupMessage
+
+  if (payload.buttons && payload.buttons.length > 0) {
+    // Use quick_reply for buttons
+    messageJson = {
+      type: 'quick_reply',
+      content: {
+        type: 'text',
+        header: payload.header || '',
+        text: payload.text,
+        options: payload.buttons.map(b => ({
+          type: 'text',
+          title: b.title,
+          postbackText: b.id // This is what we get back in the webhook
+        }))
+      }
+    }
+  } else {
+    messageJson = {
+      type: 'text',
+      text: payload.text
+    }
+  }
+
+  const params = new URLSearchParams()
+  params.append('channel', 'whatsapp')
+  params.append('source', srcName)
+  params.append('destination', to)
+  params.append('message', JSON.stringify(messageJson))
+  params.append('src.name', srcName)
+
+  log('Sending via Gupshup', { to, hasButtons: Boolean(payload.buttons?.length) })
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'apikey': apiKey
+    },
+    body: params
+  })
+
+  if (!res.ok) {
+    const t = await res.text()
+    console.error('Gupshup WhatsApp send failed:', t)
+    void writeLog('WhatsAppError', { provider: 'gupshup', to, detail: t })
+  } else {
+    const t = await res.text()
+    log('Gupshup send success', { to, response: t })
+  }
+}
+
 export async function sendWhatsApp(to: string, payload: { text?: string, buttons?: { id: string, title: string }[], header?: string, templateVariables?: Record<string, unknown> | string }) {
   const provider = resolveProvider()
   if (!to) return
   try {
     log('Preparing message', { provider, to, hasButtons: Boolean(payload.buttons?.length) })
-    if (provider === 'meta') {
+
+    if (provider === 'gupshup') {
+      await sendViaGupshup(to, {
+        text: payload.text ?? '',
+        buttons: payload.buttons,
+        header: payload.header
+      })
+    } else if (provider === 'meta') {
       if (payload.buttons && payload.buttons.length) {
         await sendViaMeta(to, {
           type: 'interactive',
@@ -143,7 +234,12 @@ export async function sendWhatsApp(to: string, payload: { text?: string, buttons
         await sendViaMeta(to, { type: 'text', text: { body: payload.text ?? '' } })
       }
     } else if (provider === 'twilio') {
-      await sendViaTwilio(to, { text: { body: payload.text ?? '' }, templateVariables: payload.templateVariables })
+      // If we have buttons and a template is configured, we try to use the template variables
+      // The caller (order-payment.ts) should provide the correct structure for templateVariables
+      await sendViaTwilio(to, {
+        text: { body: payload.text ?? '' },
+        templateVariables: payload.templateVariables
+      })
     }
     log('Message dispatched', { provider, to })
   } catch (error) {
@@ -154,12 +250,12 @@ export async function sendWhatsApp(to: string, payload: { text?: string, buttons
 
 export function buildOrderButtons(orderId: string) {
   return [
-    { id: `CONFIRM:${orderId}`, title: 'Confirm' },
-    { id: `CANCEL:${orderId}`, title: 'Cancel' },
+    { id: `1|${orderId}`, title: 'Complete (1)' },
+    { id: `0|${orderId}`, title: 'Cancel (0)' },
   ]
 }
 
 export function buildPrepButtons(orderId: string) {
   // Updated prep time options per new requirement
-  return [20,30,40].map(m => ({ id: `PREP:${orderId}:${m}`, title: `${m} min` }))
+  return [20, 30, 40].map(m => ({ id: `PREP:${orderId}:${m}`, title: `${m} min` }))
 }

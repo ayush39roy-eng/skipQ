@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
-import { createCashfreeOrder } from '@/lib/cashfree'
+import { createRazorpayOrder } from '@/lib/razorpay'
 import { sendWhatsApp } from '@/lib/whatsapp'
 import { writeLog } from '@/lib/log-writer'
 
@@ -59,7 +59,7 @@ async function notifyManualPayment(order: NonNullable<OrderWithRelations>) {
 
 import { getSession } from '@/lib/session'
 
-async function resolvePaymentLink(orderId: string, req: Request) {
+async function resolvePaymentLink(orderId: string) {
   log('Resolving payment link', { orderId })
 
   // Security: Prevent spam by requiring login and ownership
@@ -84,40 +84,65 @@ async function resolvePaymentLink(orderId: string, req: Request) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   }
 
-  const hasCashfree = process.env.CASHFREE_APP_ID && process.env.CASHFREE_SECRET_KEY
-  log('Cashfree check', { orderId, hasCashfree: Boolean(hasCashfree) })
+  const hasRazorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+  log('Razorpay check', { orderId, hasRazorpay: Boolean(hasRazorpay) })
   let paymentLink: string
   let externalOrderId: string | undefined
-  if (hasCashfree) {
-    const cfOrderId = `cf_${order.id}`
-    const amountRupees = (order.totalCents / 100).toFixed(2)
+
+  if (hasRazorpay) {
     try {
-      const base = process.env.APP_BASE_URL || new URL(req.url).origin
-      log('Creating Cashfree order', { orderId, cfOrderId })
-      const cfResp = await createCashfreeOrder({
-        order_id: cfOrderId,
-        order_amount: Number(amountRupees),
-        order_currency: 'INR',
-        customer_details: {
-          customer_id: order.userId,
-          customer_email: order.user.email,
-        },
-        order_note: 'College Canteen Order',
-        return_url: `${base}/api/payment/confirm?orderId=${order.id}`,
-        notify_url: `${base}/api/payment/webhook`,
-      })
-      paymentLink = cfResp.payment_link || `${base}/pay/${order.id}`
-      externalOrderId = cfResp.order_id
-      log('Cashfree link resolved', { orderId, paymentLink })
+      // Check if we already have a Razorpay order for this
+      const existingPayment = await prisma.payment.findUnique({ where: { orderId: order.id } })
+      if (existingPayment?.externalOrderId && existingPayment.provider === 'razorpay') {
+        externalOrderId = existingPayment.externalOrderId
+        paymentLink = `/pay/${order.id}`
+
+        // If we strictly need a Razorpay Order ID for the checkout:
+        if (!externalOrderId) {
+          // Create new
+          const rzpOrder = await createRazorpayOrder({
+            orderId: order.id,
+            amountCents: order.totalCents,
+            currency: 'INR',
+            notes: {
+              userId: order.userId,
+              userEmail: order.user.email
+            }
+          })
+          externalOrderId = rzpOrder.id
+        }
+      } else {
+        // Create new Razorpay Order
+        const rzpOrder = await createRazorpayOrder({
+          orderId: order.id,
+          amountCents: order.totalCents,
+          currency: 'INR',
+          notes: {
+            userId: order.userId,
+            userEmail: order.user.email
+          }
+        })
+        externalOrderId = rzpOrder.id
+        paymentLink = `/pay/${order.id}` // The frontend at /pay/[id] should fetch this orderId and open Razorpay
+      }
+
+      log('Razorpay order resolved', { orderId, externalOrderId })
+
       await prisma.payment.upsert({
         where: { orderId: order.id },
-        update: { paymentLink, amountCents: order.totalCents, provider: 'cashfree', externalOrderId },
-        create: { orderId: order.id, amountCents: order.totalCents, paymentLink, provider: 'cashfree', externalOrderId }
+        update: { paymentLink, amountCents: order.totalCents, provider: 'razorpay', externalOrderId },
+        create: { orderId: order.id, amountCents: order.totalCents, paymentLink, provider: 'razorpay', externalOrderId }
       })
+
     } catch (error) {
-      const detail = error instanceof Error ? error.message : 'Unknown Cashfree error'
-      console.error(logPrefix, 'Cashfree order failed', { orderId, detail })
-      return { error: NextResponse.json({ error: 'Cashfree order failed', detail }, { status: 500 }) }
+      const detail = error instanceof Error ? error.message : 'Unknown Razorpay error'
+      console.error(logPrefix, 'Razorpay order failed', {
+        orderId,
+        detail,
+        errorObj: error,
+        keyIdPrefix: process.env.RAZORPAY_KEY_ID?.substring(0, 5)
+      })
+      return { error: NextResponse.json({ error: 'Razorpay order failed', detail, fullError: String(error) }, { status: 500 }) }
     }
   } else {
     paymentLink = `/pay/${order.id}`
@@ -142,7 +167,7 @@ export async function GET(req: Request) {
   const orderId = searchParams.get('orderId')
   if (!orderId) return NextResponse.json({ error: 'Missing orderId' }, { status: 400 })
   log('GET create-link', { orderId })
-  const result = await resolvePaymentLink(orderId, req)
+  const result = await resolvePaymentLink(orderId)
   if ('error' in result) return result.error
   const { paymentLink } = result
   const target = paymentLink.startsWith('http') ? paymentLink : new URL(paymentLink, req.url)
@@ -166,7 +191,7 @@ export async function POST(req: Request) {
     }
   }
   if (!orderId) return NextResponse.json({ error: 'Missing orderId' }, { status: 400 })
-  const result = await resolvePaymentLink(orderId, req)
+  const result = await resolvePaymentLink(orderId)
   if ('error' in result) return result.error
   const { paymentLink } = result
   const absoluteLink = paymentLink.startsWith('http') ? paymentLink : new URL(paymentLink, req.url).toString()

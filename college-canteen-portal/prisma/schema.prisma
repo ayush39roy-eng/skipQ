@@ -39,6 +39,18 @@ model Canteen {
   vendorId  String
   // Optional additional notification phone numbers (E.164) for WhatsApp alerts.
   notificationPhones String[] @default([])
+  
+  // Timings and Status
+  openingTime   String?   // Format: "HH:mm" (24-hour) - DEPRECATED, use weeklySchedule
+  closingTime   String?   // Format: "HH:mm" (24-hour) - DEPRECATED, use weeklySchedule
+  
+  // Weekly schedule: JSON array of 7 objects (Mon-Sun)
+  // Each object: { day: "Monday", isOpen: true, openingTime: "09:00", closingTime: "17:00" }
+  weeklySchedule Json?     @default("[{\"day\":\"Monday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Tuesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Wednesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Thursday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Friday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Saturday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Sunday\",\"isOpen\":false,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"}]")
+  
+  autoMode      Boolean   @default(true)
+  manualIsOpen  Boolean   @default(true)
+
   menuItems MenuItem[]
   orders    Order[]
 }
@@ -51,6 +63,7 @@ model MenuItem {
   priceCents Int
   available  Boolean     @default(true)
   imageUrl   String?
+  description String?
   orderItems OrderItem[]
 }
 

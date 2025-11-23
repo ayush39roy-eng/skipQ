@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { calculateCommissionSplit } from '@/lib/billing'
+import { checkCanteenStatus } from '@/lib/canteen-utils'
 
 type FulfillmentType = 'TAKEAWAY' | 'DINE_IN'
 
@@ -56,8 +57,17 @@ export async function POST(req: Request) {
     return { menuItemId: mi.id, quantity: item.quantity, priceCents: mi.priceCents }
   }).filter(Boolean) as { menuItemId: string, quantity: number, priceCents: number }[]
 
-  const canteen = await prisma.canteen.findUnique({ where: { id: canteenId }, include: { vendor: true } })
+  const canteen = await prisma.canteen.findUnique({
+    where: { id: canteenId },
+    include: { vendor: true }
+  })
   if (!canteen) return NextResponse.json({ error: 'Canteen not found' }, { status: 404 })
+
+  const status = checkCanteenStatus(canteen)
+  if (!status.isOpen) {
+    return NextResponse.json({ error: `Canteen is closed. ${status.message}` }, { status: 400 })
+  }
+
   const { commissionCents, vendorTakeCents, totalWithFeeCents } = calculateCommissionSplit(subtotal)
 
   const order = await prisma.order.create({

@@ -213,7 +213,11 @@ export default async function AdminPage() {
       where: { role: 'VENDOR' },
       select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
     }),
-    prisma.order.aggregate({ _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true }, _count: true }),
+    prisma.order.aggregate({
+      where: { status: { notIn: ['PENDING', 'CANCELLED'] } },
+      _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true },
+      _count: true
+    }),
     prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } })
   ])
   return (
@@ -322,7 +326,7 @@ export default async function AdminPage() {
       <h1 className="text-xl font-semibold">Admin Dashboard</h1>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="card"><div className="text-sm text-gray-600">Total Sales</div><div className="text-2xl font-semibold">₹{((stats._sum.totalCents ?? 0) / 100).toFixed(2)}</div></div>
-        <div className="card"><div className="text-sm text-gray-600">Commission (2.5%)</div><div className="text-2xl font-semibold">₹{((stats._sum.commissionCents ?? 0) / 100).toFixed(2)}</div></div>
+        <div className="card"><div className="text-sm text-gray-600">Commission (5%)</div><div className="text-2xl font-semibold">₹{((stats._sum.commissionCents ?? 0) / 100).toFixed(2)}</div></div>
         <div className="card"><div className="text-sm text-gray-600">Orders</div><div className="text-2xl font-semibold">{stats._count}</div></div>
       </div>
       <div className="card">

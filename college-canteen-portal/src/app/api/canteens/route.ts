@@ -4,6 +4,16 @@ import { prisma } from '@/lib/prisma'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const canteens = await prisma.canteen.findMany({ select: { id: true, name: true, location: true } })
+  const canteens = await prisma.canteen.findMany({
+    select: {
+      id: true,
+      name: true,
+      location: true,
+      openingTime: true,
+      closingTime: true,
+      autoMode: true,
+      manualIsOpen: true
+    }
+  })
   return NextResponse.json(canteens)
 }

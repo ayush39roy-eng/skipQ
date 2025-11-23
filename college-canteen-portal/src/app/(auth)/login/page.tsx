@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
+import { Loader } from '@/components/ui/Loader'
 
 const benefits = [
   'Real-time menus & wait times',
@@ -19,20 +20,24 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage('')
+    setIsLoading(true)
     const res = await fetch('/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     })
     if (res.ok) {
+      // Keep loading state active during redirect
       window.location.href = nextParam
     } else {
       const data = await res.json().catch(() => ({}))
       setMessage(data.error ?? 'Login failed')
+      setIsLoading(false)
     }
   }
 
@@ -73,7 +78,16 @@ export default function LoginPage() {
           <form onSubmit={submit} className="space-y-4">
             <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
             <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <Button type="submit" className="w-full" variant="primary">Login</Button>
+            <Button type="submit" className="w-full" variant="primary" disabled={isLoading}>
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader size="small" />
+                  Logging in...
+                </span>
+              ) : (
+                'Login'
+              )}
+            </Button>
           </form>
           {message && <p className="text-sm text-red-500">{message}</p>}
           <p className="text-sm text-[rgb(var(--text-muted))]">Forgot password? <Link href="/privacy" className="text-sky-400 hover:underline">Contact admin</Link></p>

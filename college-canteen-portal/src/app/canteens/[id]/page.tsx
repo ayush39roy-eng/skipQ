@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useMemo, useState, useCallback } from 'react'
+import { useEffect, useMemo, useState, useCallback, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { Card } from '@/components/ui/Card'
@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/Button'
 import { Stepper } from '@/components/ui/Stepper'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
+import { Loader } from '@/components/ui/Loader'
+import { MobileCartPill } from './_components/MobileCartPill'
 
 type Item = { id: string; name: string; priceCents: number; imageUrl?: string | null; description?: string | null }
 
-export default function CanteenMenuPage() {
+function CanteenMenuContent() {
   const { id } = useParams<{ id: string }>()
   const searchParams = useSearchParams()
   const [items, setItems] = useState<Item[]>([])
@@ -19,9 +21,10 @@ export default function CanteenMenuPage() {
   const [fulfillmentType, setFulfillmentType] = useState<'TAKEAWAY' | 'DINE_IN'>('TAKEAWAY')
   const [sortMode, setSortMode] = useState<'popular' | 'price'>('popular')
   const [cartRestored, setCartRestored] = useState(false)
+  const [isCheckingOut, setIsCheckingOut] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/menu/${id}`).then(r => r.json()).then(setItems)
+    fetch(`/api/menu/${id}`).then(r => r.json()).then(data => setItems(data.items || []))
   }, [id])
 
   useEffect(() => {
@@ -52,6 +55,7 @@ export default function CanteenMenuPage() {
   }, [id])
 
   const filtered = useMemo(() => {
+    if (!Array.isArray(items)) return []
     const query = q.trim().toLowerCase()
     let base = items
     if (query) {
@@ -70,11 +74,12 @@ export default function CanteenMenuPage() {
   }, [items, q, sortMode])
 
   const heroImage = useMemo(() => {
+    if (!Array.isArray(items)) return '/placeholder.svg'
     return items.find((it) => it.imageUrl)?.imageUrl || '/placeholder.svg'
   }, [items])
 
   const priceStats = useMemo(() => {
-    if (!items.length) return { avg: '0.00', min: '0.00', max: '0.00' }
+    if (!Array.isArray(items) || !items.length) return { avg: '0.00', min: '0.00', max: '0.00' }
     const cents = items.map((it) => it.priceCents)
     const avg = (cents.reduce((sum, val) => sum + val, 0) / items.length / 100).toFixed(2)
     const min = (Math.min(...cents) / 100).toFixed(2)
@@ -88,8 +93,8 @@ export default function CanteenMenuPage() {
     { label: 'Dine-in', value: 'DINE_IN', description: 'Enjoy at the seating area' }
   ]), [])
 
-  const subtotalCents = items.reduce((acc, it) => acc + (cart[it.id] ?? 0) * it.priceCents, 0)
-  const platformFeeCents = Math.round(subtotalCents * 0.025)
+  const subtotalCents = Array.isArray(items) ? items.reduce((acc, it) => acc + (cart[it.id] ?? 0) * it.priceCents, 0) : 0
+  const platformFeeCents = Math.round(subtotalCents * 0.05)
   const grandTotalCents = subtotalCents + platformFeeCents
 
   const persistCartForLogin = useCallback(() => {
@@ -107,6 +112,8 @@ export default function CanteenMenuPage() {
       .filter(([, q]) => q > 0)
       .map(([menuItemId, quantity]) => ({ menuItemId, quantity }))
     if (orderItems.length === 0) return
+
+    setIsCheckingOut(true)
     const payload = { canteenId: id, items: orderItems, fulfillmentType }
     const res = await fetch('/api/orders', {
       method: 'POST',
@@ -117,15 +124,18 @@ export default function CanteenMenuPage() {
       persistCartForLogin()
       const nextPath = `/canteens/${id}?resume=1`
       const redirectTarget = `/login?next=${encodeURIComponent(nextPath)}`
+      // Keep loading during redirect
       window.location.href = redirectTarget
       return
     }
     const data = await res.json().catch(() => ({}))
     if (res.ok && data?.id) {
+      // Keep loading during redirect
       window.location.href = `/order/${data.id}`
       return
     }
     alert(data.error ?? 'Failed to create order')
+    setIsCheckingOut(false)
   }
 
   return (
@@ -305,13 +315,44 @@ export default function CanteenMenuPage() {
             </div>
             <div className="space-y-2 border-t border-[rgb(var(--border))] pt-4 text-sm">
               <div className="flex justify-between text-muted"><span>Subtotal</span><span>₹{(subtotalCents / 100).toFixed(2)}</span></div>
-              <div className="flex justify-between text-muted"><span>Platform fee (2.5%)</span><span>₹{(platformFeeCents / 100).toFixed(2)}</span></div>
+              <div className="flex justify-between text-muted"><span>Platform fee (5%)</span><span>₹{(platformFeeCents / 100).toFixed(2)}</span></div>
               <div className="flex justify-between text-base font-semibold"><span>Total (charged)</span><span>₹{(grandTotalCents / 100).toFixed(2)}</span></div>
             </div>
-            <Button disabled={subtotalCents <= 0} onClick={order} className="w-full">Checkout</Button>
+            <Button disabled={subtotalCents <= 0 || isCheckingOut} onClick={order} className="w-full">
+              {isCheckingOut ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader size="small" />
+                  Processing...
+                </span>
+              ) : (
+                'Checkout'
+              )}
+            </Button>
           </Card>
         </aside>
       </div>
+      <MobileCartPill
+        items={items}
+        cart={cart}
+        subtotalCents={subtotalCents}
+        platformFeeCents={platformFeeCents}
+        grandTotalCents={grandTotalCents}
+        fulfillmentType={fulfillmentType}
+        setFulfillmentType={setFulfillmentType}
+        onCheckout={order}
+        onClear={() => setCart({})}
+        cartRestored={cartRestored}
+        searchParamsResume={!!searchParams.get('resume')}
+        isCheckingOut={isCheckingOut}
+      />
     </div>
+  )
+}
+
+export default function CanteenMenuPage() {
+  return (
+    <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center"><Loader size="large" /></div>}>
+      <CanteenMenuContent />
+    </Suspense>
   )
 }

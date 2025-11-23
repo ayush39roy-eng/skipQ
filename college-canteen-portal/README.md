@@ -41,7 +41,7 @@ Demo logins:
 ## Notes
 - MongoDB provider does not use SQL migrations; schema changes are applied directly via the Prisma client. Remove old `prisma/migrations` if present.
 - Payments are simulated via a local stub. Replace with a real provider (e.g., Stripe Checkout) and mark `commissionCents` via your payout flow.
-- Commission is set to 2.5% of order total and stored per-order.
+- Commission is set to 5% of order total and stored per-order.
 - Optional WhatsApp integration (Meta API or Twilio) can notify vendors on new orders.
 
 ## Tests

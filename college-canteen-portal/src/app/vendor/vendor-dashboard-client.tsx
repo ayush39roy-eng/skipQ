@@ -6,6 +6,8 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { getTicketNumber } from '@/lib/order-ticket'
+import { WeeklyScheduleEditor } from '@/components/WeeklyScheduleEditor'
+import { type WeeklySchedule, DEFAULT_WEEKLY_SCHEDULE } from '@/types/schedule'
 
 type MenuItemPayload = {
   id: string
@@ -30,6 +32,20 @@ type VendorOrderPayload = {
 type Props = {
   vendorName: string | null
   initialOrders: VendorOrderPayload[]
+  stats: {
+    totalRevenue: number
+    totalOrders: number
+    popularItems: Array<{ name: string; quantity: number }>
+  }
+  canteens: Array<{
+    id: string
+    name: string
+    openingTime: string | null
+    closingTime: string | null
+    weeklySchedule?: unknown
+    autoMode: boolean
+    manualIsOpen: boolean
+  }>
 }
 
 const statusVariant = (status: string): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
@@ -67,9 +83,65 @@ const customerName = (name?: string | null) => name?.split(' ')[0] ?? 'Customer'
 
 const sortByNewest = (a: VendorOrderPayload, b: VendorOrderPayload) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
 
-export default function VendorDashboardClient({ vendorName, initialOrders }: Props) {
+export default function VendorDashboardClient({ vendorName, initialOrders, stats, canteens: initialCanteens }: Props) {
   const [orders, setOrders] = useState<VendorOrderPayload[]>(initialOrders)
+  const [canteenSettings, setCanteenSettings] = useState(initialCanteens)
+
   const [actionKey, setActionKey] = useState<string | null>(null)
+
+  const handleSettingChange = async (canteenId: string, field: string, value: boolean | string) => {
+    try {
+      // Optimistic update
+      const newSettings = canteenSettings.map(c =>
+        c.id === canteenId ? { ...c, [field]: value } : c
+      )
+      setCanteenSettings(newSettings)
+
+      const targetCanteen = newSettings.find(c => c.id === canteenId)
+      if (!targetCanteen) return
+
+      const res = await fetch('/api/vendor/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canteenId,
+          openingTime: targetCanteen.openingTime,
+          closingTime: targetCanteen.closingTime,
+          weeklySchedule: targetCanteen.weeklySchedule,
+          autoMode: targetCanteen.autoMode,
+          manualIsOpen: targetCanteen.manualIsOpen
+        })
+      })
+
+      if (!res.ok) throw new Error('Failed to save settings')
+    } catch {
+      setError('Failed to save settings')
+    }
+  }
+
+  const handleWeeklyScheduleSave = async (canteenId: string, schedule: WeeklySchedule) => {
+    try {
+      // Optimistic update
+      const newSettings = canteenSettings.map(c =>
+        c.id === canteenId ? { ...c, weeklySchedule: schedule } : c
+      )
+      setCanteenSettings(newSettings)
+
+      const res = await fetch('/api/vendor/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          canteenId,
+          weeklySchedule: schedule
+        })
+      })
+
+      if (!res.ok) throw new Error('Failed to save schedule')
+    } catch {
+      setError('Failed to save schedule')
+    }
+  }
+
   const [prepInputs, setPrepInputs] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
 
@@ -139,6 +211,7 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
 
   const isLoading = (orderId: string, action: string) => actionKey === `${orderId}:${action}`
 
+
   return (
     <div className="space-y-8 text-[rgb(var(--text))]">
       <header className="space-y-2">
@@ -147,6 +220,119 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
         <p className="text-sm text-[rgb(var(--text-muted))]">Left column lists fresh orders with full details. Confirmed tickets hop over to the right so you can mark them completed.</p>
         {error && <p className="text-sm text-amber-400">{error}</p>}
       </header>
+
+      {/* Canteen Settings Section */}
+      {
+        canteenSettings.length > 0 && (
+          <section className="space-y-6">
+            {canteenSettings.map(canteen => {
+              // Parse weekly schedule from JSON
+              let weeklySchedule: WeeklySchedule
+              try {
+                if (canteen.weeklySchedule) {
+                  weeklySchedule = typeof canteen.weeklySchedule === 'string'
+                    ? JSON.parse(canteen.weeklySchedule)
+                    : canteen.weeklySchedule as WeeklySchedule
+                } else {
+                  weeklySchedule = DEFAULT_WEEKLY_SCHEDULE
+                }
+              } catch {
+                weeklySchedule = DEFAULT_WEEKLY_SCHEDULE
+              }
+
+              return (
+                <div key={canteen.id} className="space-y-4">
+                  <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <h3 className="font-semibold">{canteen.name} Status</h3>
+                      <Badge variant={canteen.autoMode ? 'info' : (canteen.manualIsOpen ? 'success' : 'danger')}>
+                        {canteen.autoMode ? 'Auto' : (canteen.manualIsOpen ? 'Open' : 'Closed')}
+                      </Badge>
+                    </div>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm text-[rgb(var(--text-muted))]">Mode</label>
+                        <div className="flex items-center gap-2 rounded-lg bg-[rgb(var(--surface-muted))] p-1">
+                          <button
+                            onClick={() => handleSettingChange(canteen.id, 'autoMode', true)}
+                            className={`rounded-md px-3 py-1 text-xs font-medium transition ${canteen.autoMode ? 'bg-[rgb(var(--accent))] text-white' : 'text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text))]'}`}
+                          >
+                            Auto
+                          </button>
+                          <button
+                            onClick={() => handleSettingChange(canteen.id, 'autoMode', false)}
+                            className={`rounded-md px-3 py-1 text-xs font-medium transition ${!canteen.autoMode ? 'bg-[rgb(var(--accent))] text-white' : 'text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text))]'}`}
+                          >
+                            Manual
+                          </button>
+                        </div>
+                      </div>
+
+                      {!canteen.autoMode && (
+                        <div className="flex items-center justify-between">
+                          <label className="text-sm text-[rgb(var(--text-muted))]">Manual Override</label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', true)}
+                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${canteen.manualIsOpen ? 'border-green-500 bg-green-500/10 text-green-500' : 'border-[rgb(var(--border))] text-[rgb(var(--text-muted))]'}`}
+                            >
+                              Open
+                            </button>
+                            <button
+                              onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', false)}
+                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${!canteen.manualIsOpen ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-[rgb(var(--border))] text-[rgb(var(--text-muted))]'}`}
+                            >
+                              Closed
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </Card>
+
+                  {canteen.autoMode && (
+                    <WeeklyScheduleEditor
+                      canteenName={canteen.name}
+                      initialSchedule={weeklySchedule}
+                      onSave={(schedule) => handleWeeklyScheduleSave(canteen.id, schedule)}
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </section>
+        )
+      }
+
+      {/* Insights Section */}
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Payout</p>
+          <p className="mt-2 text-2xl font-semibold">{formatCurrency(stats.totalRevenue)}</p>
+          <p className="text-xs text-[rgb(var(--text-muted))]">After SkipQ commission</p>
+        </Card>
+        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Orders</p>
+          <p className="mt-2 text-2xl font-semibold">{stats.totalOrders}</p>
+          <p className="text-xs text-[rgb(var(--text-muted))]">Total served</p>
+        </Card>
+        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Top Items</p>
+          <ul className="mt-2 space-y-1 text-sm">
+            {stats.popularItems.length > 0 ? (
+              stats.popularItems.map((item, i) => (
+                <li key={i} className="flex justify-between">
+                  <span className="truncate">{item.name}</span>
+                  <span className="font-medium text-[rgb(var(--text-muted))]">{item.quantity}</span>
+                </li>
+              ))
+            ) : (
+              <li className="text-[rgb(var(--text-muted))]">No data yet</li>
+            )}
+          </ul>
+        </Card>
+      </div>
 
       <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
         <Card className="space-y-5 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]/80">
@@ -279,6 +465,6 @@ export default function VendorDashboardClient({ vendorName, initialOrders }: Pro
         </div>
         <Link href="/vendor/history" className="btn">Open order history</Link>
       </Card>
-    </div>
+    </div >
   )
 }
