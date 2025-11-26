@@ -47,7 +47,11 @@ export function CartSummary({
         <div className={`space-y-4 ${className}`}>
             {(cartRestored || searchParamsResume) && (
                 <div className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
-                    Cart restored after login. Review items and checkout to finish payment.
+                    {cartRestored ? (
+                        'Cart restored after login. Review items and checkout to finish payment.'
+                    ) : (
+                        'Cart restored from URL/resumed session. Review items and checkout to finish payment.'
+                    )}
                 </div>
             )}
             <div className="flex items-center justify-between">
@@ -75,27 +79,39 @@ export function CartSummary({
             </div>
             <div className="max-h-64 space-y-4 overflow-y-auto">
                 {Object.entries(cart).filter(([, qty]) => qty > 0).map(([itemId, qty]) => {
-                    const it = items.find((x) => x.id === itemId)
-                    if (!it) return null
+                const it = items.find((x) => String(x.id) === String(itemId))
+                // Render a fallback row when the lookup fails so the user always sees cart contents
+                if (!it) {
                     return (
-                        <div key={itemId} className="flex items-start gap-3">
-                            <div className="relative h-16 w-16 overflow-hidden rounded-lg">
-                                <Image
-                                    src={it.imageUrl || '/placeholder.svg'}
-                                    alt={it.name}
-                                    fill
-                                    sizes="64px"
-                                    className="object-cover"
-                                    style={{ objectFit: 'cover', objectPosition: 'center' }}
-                                />
-                            </div>
-                            <div className="flex-1">
-                                <p className="font-medium">{it.name}</p>
-                                <p className="text-sm text-muted">₹{(it.priceCents / 100).toFixed(2)}</p>
-                            </div>
-                            <span className="text-sm font-semibold">×{qty}</span>
+                      <div key={itemId} className="flex items-start gap-3">
+                        <div className="h-16 w-16 rounded-lg bg-[rgb(var(--surface-muted))] flex items-center justify-center text-xs text-[rgb(var(--text-muted))]">No image</div>
+                        <div className="flex-1">
+                          <p className="font-medium">Unknown item</p>
+                          <p className="text-sm text-muted">ID: {String(itemId)}</p>
                         </div>
+                        <span className="text-sm font-semibold">×{qty}</span>
+                      </div>
                     )
+                }
+                return (
+                    <div key={itemId} className="flex items-start gap-3">
+                        <div className="relative h-16 w-16 overflow-hidden rounded-lg">
+                            <Image
+                                src={it.imageUrl || '/placeholder.svg'}
+                                alt={it.name}
+                                fill
+                                sizes="64px"
+                                className="object-contain bg-[rgb(var(--surface-muted))] p-1"
+                                style={{ objectFit: 'contain', objectPosition: 'center' }}
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <p className="font-medium">{it.name}</p>
+                            <p className="text-sm text-muted">₹{(it.priceCents / 100).toFixed(2)}</p>
+                        </div>
+                        <span className="text-sm font-semibold">×{qty}</span>
+                    </div>
+                )
                 })}
                 {Object.values(cart).reduce((a, b) => a + b, 0) === 0 && (
                     <p className="text-center text-sm text-muted">No items added yet.</p>
@@ -106,14 +122,14 @@ export function CartSummary({
                 <div className="flex justify-between text-muted"><span>Platform fee (5%)</span><span>₹{(platformFeeCents / 100).toFixed(2)}</span></div>
                 <div className="flex justify-between text-base font-semibold"><span>Total (charged)</span><span>₹{(grandTotalCents / 100).toFixed(2)}</span></div>
             </div>
-            <Button disabled={subtotalCents <= 0 || isCheckingOut} onClick={onCheckout} className="w-full">
+            <Button variant="primary" size="lg" disabled={subtotalCents <= 0 || isCheckingOut} onClick={onCheckout} className="w-full rounded-xl">
                 {isCheckingOut ? (
                     <span className="flex items-center justify-center gap-2">
                         <Loader size="small" />
                         Processing...
                     </span>
                 ) : (
-                    'Checkout'
+                    'Checkout & Pay'
                 )}
             </Button>
         </div>

@@ -123,9 +123,8 @@ async function sendViaTwilio(to: string, payload: TwilioPayload) {
     hasVariables: Boolean(payload.templateVariables)
   })
 
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const messageOptions: any = {
+    try {
+    const messageOptions: Parameters<TwilioClient['messages']['create']>[0] = {
       from,
       to: toWhatsApp,
     }

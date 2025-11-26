@@ -7,7 +7,7 @@ export function Loader({ size = 'medium', className = '' }: LoaderProps) {
     const sizeClasses = {
         small: 'h-4 w-4 border-2',
         medium: 'h-6 w-6 border-2',
-        large: 'h-10 w-10 border-3'
+        large: 'h-10 w-10 border-4'
     }
 
     return (

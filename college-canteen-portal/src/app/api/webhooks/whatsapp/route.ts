@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { validateRequest } from 'twilio'
 import { writeLog } from '@/lib/log-writer'
 
 type Action = 'COMPLETE' | 'CANCEL'
@@ -10,9 +11,56 @@ function sanitizePhone(value: string | null | undefined) {
   return value.replace(/^whatsapp:/i, '').replace(/[^\d]/g, '')
 }
 
-function phonesMatch(a: string, b: string) {
+async function phonesMatch(a: string | null | undefined, b: string | null | undefined): Promise<boolean> {
   if (!a || !b) return false
-  return a === b || a.endsWith(b) || b.endsWith(a)
+
+  // Normalize: strip non-digits
+  const norm = (s: string) => {
+    const digits = (s || '').replace(/\D+/g, '')
+    // Strip leading zeros
+    return digits.replace(/^0+/, '')
+  }
+
+  const na = norm(a)
+  const nb = norm(b)
+
+  if (!na || !nb) return false
+
+  // Try to use libphonenumber-js if available to compare E.164 formats
+  try {
+    // Avoid static TS resolution; attempt runtime require if available (e.g., node).
+    const req = (globalThis as unknown as { require?: (id: string) => unknown }).require
+    const mod = req ? (req('libphonenumber-js') as unknown) : null
+    const modObj = mod as { parsePhoneNumberFromString?: (s: string) => unknown; parsePhoneNumber?: (s: string) => unknown } | null
+    const parse = modObj?.parsePhoneNumberFromString ?? modObj?.parsePhoneNumber
+    if (typeof parse === 'function') {
+      try {
+        const pa = parse(na)
+        const pb = parse(nb)
+        const paFmt = pa as { format?: (f: string) => string } | null
+        const pbFmt = pb as { format?: (f: string) => string } | null
+        const ea = paFmt && typeof paFmt.format === 'function' ? paFmt.format('E.164') : null
+        const eb = pbFmt && typeof pbFmt.format === 'function' ? pbFmt.format('E.164') : null
+        if (ea && eb) return ea === eb
+      } catch {
+        // parsing failed — fall back
+      }
+    }
+  } catch {
+    // lib not available — continue to fallback logic
+  }
+
+  // Exact normalized digits match
+  if (na === nb) return true
+
+  // Safe fallback: if both are long enough, compare last 10 digits only
+  if (na.length >= 10 && nb.length >= 10) {
+    const la = na.slice(-10)
+    const lb = nb.slice(-10)
+    return la === lb
+  }
+
+  return false
 }
 
 async function resolveOrderFromPhone(rawFrom: string | null | undefined) {
@@ -36,8 +84,10 @@ async function resolveOrderFromPhone(rawFrom: string | null | undefined) {
   for (const order of candidates) {
     const vendorPhone = sanitizePhone(order.canteen.vendor?.phone)
     const canteenPhones = (order.canteen.notificationPhones || []).map(sanitizePhone)
-    if (phonesMatch(vendorPhone, normalized)) return order.id
-    if (canteenPhones.some(phone => phonesMatch(phone, normalized))) return order.id
+    if (await phonesMatch(vendorPhone, normalized)) return order.id
+    for (const phone of canteenPhones) {
+      if (await phonesMatch(phone, normalized)) return order.id
+    }
   }
   return null
 }
@@ -90,6 +140,38 @@ export async function POST(req: Request) {
     } else {
       // Twilio (Form Data)
       const formData = await req.formData()
+
+      // Twilio request validation: ensure the request is genuinely from Twilio.
+      const signature = req.headers.get('x-twilio-signature') || req.headers.get('X-Twilio-Signature') || ''
+      const authToken = process.env.TWILIO_AUTH_TOKEN || ''
+      // Build params as simple string map for validation. We only extract fields
+      // that Twilio typically sends for incoming WhatsApp messages.
+      const params: Record<string, string> = {
+        Body: String(formData.get('Body') ?? ''),
+        From: String(formData.get('From') ?? ''),
+        ButtonPayload: String(formData.get('ButtonPayload') ?? ''),
+        MessageSid: String(formData.get('MessageSid') ?? ''),
+        SmsSid: String(formData.get('SmsSid') ?? ''),
+        SmsStatus: String(formData.get('SmsStatus') ?? ''),
+        To: String(formData.get('To') ?? ''),
+      }
+
+      if (!signature || !authToken) {
+        // Missing credentials or signature — reject
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+      }
+
+      try {
+        const url = new URL(req.url).toString()
+        const valid = validateRequest(authToken, signature, url, params)
+        if (!valid) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+        }
+      } catch (err) {
+        console.error('Twilio validation error', err)
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401, headers: { 'Content-Type': 'application/json' } })
+      }
+
       Body = formData.get('Body') as string
       From = formData.get('From') as string
       ButtonPayload = formData.get('ButtonPayload') as string

@@ -76,13 +76,46 @@ export function checkCanteenStatus(canteen: {
     }
 
     // Check time-based opening
-    const [openH, openM] = todaySchedule.openingTime.split(':').map(Number)
-    const [closeH, closeM] = todaySchedule.closingTime.split(':').map(Number)
+    // Validate and parse HH:MM strings safely to avoid NaN/runtime errors
+    const parseHHMM = (t: string | null) => {
+        if (!t || typeof t !== 'string') return null
+        const re = /^\d{1,2}:\d{2}$/
+        if (!re.test(t)) return null
+        const parts = t.split(':')
+        if (parts.length !== 2) return null
+        const hh = Number(parts[0])
+        const mm = Number(parts[1])
+        if (!Number.isFinite(hh) || !Number.isFinite(mm)) return null
+        if (hh < 0 || hh > 23 || mm < 0 || mm > 59) return null
+        return { hh, mm }
+    }
+
+    const openParsed = parseHHMM(todaySchedule.openingTime)
+    const closeParsed = parseHHMM(todaySchedule.closingTime)
+
+    if (!openParsed || !closeParsed) {
+        console.warn('Invalid opening/closing time format for canteen schedule', { opening: todaySchedule.openingTime, closing: todaySchedule.closingTime })
+        // Fall back to safe default (keep behavior consistent with earlier parsing errors)
+        return { isOpen: true, message: 'Open' }
+    }
+
+    const openH = openParsed.hh
+    const openM = openParsed.mm
+    const closeH = closeParsed.hh
+    const closeM = closeParsed.mm
 
     const openTimeVal = openH * 60 + openM
     const closeTimeVal = closeH * 60 + closeM
 
-    const isOpen = currentTimeVal >= openTimeVal && currentTimeVal < closeTimeVal
+    // Handle intervals that span midnight (e.g., open 20:00, close 02:00)
+    let isOpen: boolean
+    if (closeTimeVal < openTimeVal) {
+        // crosses midnight: open when current >= open OR current < close
+        isOpen = currentTimeVal >= openTimeVal || currentTimeVal < closeTimeVal
+    } else {
+        // normal same-day window
+        isOpen = currentTimeVal >= openTimeVal && currentTimeVal < closeTimeVal
+    }
 
     return {
         isOpen,

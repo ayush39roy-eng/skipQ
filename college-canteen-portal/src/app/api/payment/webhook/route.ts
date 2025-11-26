@@ -2,19 +2,37 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyRazorpaySignature } from '@/lib/razorpay'
 import { markOrderAsPaid } from '@/lib/order-payment'
+import { writeLog } from '@/lib/log-writer'
+
+const logPrefix = '[RazorpayWebhook]'
+
+function log(message: string, data?: Record<string, unknown>) {
+  console.log(logPrefix, message, data)
+  void writeLog('RazorpayWebhook', { message, data })
+}
 
 export async function POST(req: Request) {
   const raw = await req.text()
   const signature = req.headers.get('x-razorpay-signature')
 
+  log('Received webhook', { signatureLength: signature?.length })
+
   if (!verifyRazorpaySignature(raw, signature || '')) {
+    log('Invalid signature', { signature })
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
   let payload: { event: string, payload?: { payment?: { entity?: { id: string, order_id: string } }, order?: { entity?: { id: string } } } }
-  try { payload = JSON.parse(raw) } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }) }
+  try {
+    payload = JSON.parse(raw)
+  } catch (err) {
+    log('Invalid JSON', { error: err })
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
 
   const event = payload.event
+  log('Processing event', { event })
+
   const paymentEntity = payload.payload?.payment?.entity
   const orderEntity = payload.payload?.order?.entity
 
@@ -23,22 +41,72 @@ export async function POST(req: Request) {
     const externalOrderId = orderEntity?.id || paymentEntity?.order_id
 
     if (!externalOrderId) {
-      // If we don't have an order_id, we can't link it easily unless we stored payment_id
-      // But we store externalOrderId (razorpay_order_id)
+      log('Missing externalOrderId', { payload })
       return NextResponse.json({ ok: true }) // Idempotent
     }
 
     const payment = await prisma.payment.findFirst({ where: { externalOrderId } })
     if (!payment) {
-      // Might be a payment for something else or not found
+      log('Payment not found for externalOrderId', { externalOrderId })
       return NextResponse.json({ error: 'Payment not found' }, { status: 404 })
     }
 
-    if (payment.status === 'PAID') {
+    log('Found payment', { paymentId: payment.id, orderId: payment.orderId, currentStatus: payment.status })
+
+    // Perform an atomic conditional update to avoid race conditions
+    // Only set to PAID if it isn't already PAID. updateMany returns the number of rows modified.
+    const updateResult = await prisma.payment.updateMany({
+      where: { orderId: payment.orderId, status: { not: 'PAID' } },
+      data: { status: 'PAID' }
+    })
+
+    if (updateResult.count > 0) {
+      log('Payment status updated to PAID', { orderId: payment.orderId })
+      // We successfully transitioned the payment to PAID; now perform downstream actions once.
+      try {
+        await markOrderAsPaid(payment.orderId)
+        log('Order marked as PAID', { orderId: payment.orderId })
+      } catch (err) {
+        // Log the full error and identifiers for debugging/observability
+        console.error('markOrderAsPaid failed', {
+          error: err,
+          orderId: payment.orderId,
+          paymentId: payment.id,
+          externalOrderId: payment.externalOrderId,
+        })
+        log('markOrderAsPaid failed', { error: err, orderId: payment.orderId })
+
+        // Safely extract possible code/message from unknown `err` without using `any`.
+        let code: string | undefined
+        let message = ''
+        if (err && typeof err === 'object') {
+          const eObj = err as Record<string, unknown>
+          if (typeof eObj.code === 'string') code = eObj.code
+          if (typeof eObj.message === 'string') message = eObj.message
+        }
+
+        const unrecoverablePrismaCodes = ['P2002', 'P2025']
+        const isUnrecoverable = (code && unrecoverablePrismaCodes.includes(code)) || /unique constraint/i.test(message)
+        const isTransient = /timeout|ETIMEDOUT|ECONNRESET|EAI_AGAIN/i.test(message)
+
+        if (isUnrecoverable) {
+          // Acknowledge to avoid repeated retries for an unrecoverable situation.
+          return NextResponse.json({ ok: true })
+        }
+
+        if (isTransient) {
+          // Let provider retry by returning 500.
+          return NextResponse.json({ error: 'Transient error, please retry' }, { status: 500 })
+        }
+
+        // Default: conservative — return 500 so provider may retry once.
+        return NextResponse.json({ error: 'Processing error' }, { status: 500 })
+      }
+    } else {
+      log('Payment already PAID or handled', { orderId: payment.orderId })
+      // Nothing to do — payment was already PAID or another process handled it.
       return NextResponse.json({ ok: true })
     }
-
-    await markOrderAsPaid(payment.orderId)
   }
 
   return NextResponse.json({ ok: true })

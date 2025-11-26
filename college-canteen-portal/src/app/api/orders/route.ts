@@ -15,6 +15,7 @@ type OrderRequestBody = {
   canteenId: string
   items: OrderItemPayload[]
   fulfillmentType?: FulfillmentType
+  cookingInstructions?: string
 }
 
 function isOrderItemPayload(value: unknown): value is OrderItemPayload {
@@ -31,7 +32,8 @@ function parseOrderBody(payload: unknown): OrderRequestBody | null {
   if (!items.length) return null
   const rawMode = typeof body.fulfillmentType === 'string' ? body.fulfillmentType.toUpperCase() : undefined
   const fulfillmentType: FulfillmentType | undefined = rawMode === 'DINE_IN' ? 'DINE_IN' : rawMode === 'TAKEAWAY' ? 'TAKEAWAY' : undefined
-  return { canteenId: body.canteenId, items, fulfillmentType }
+  const cookingInstructions = typeof body.cookingInstructions === 'string' ? String(body.cookingInstructions) : undefined
+  return { canteenId: body.canteenId, items, fulfillmentType, cookingInstructions }
 }
 
 export const dynamic = 'force-dynamic'
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = parseOrderBody(await req.json())
   if (!body) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-  const { canteenId, items, fulfillmentType } = body
+  const { canteenId, items, fulfillmentType, cookingInstructions } = body
 
   const menuItems = await prisma.menuItem.findMany({ where: { id: { in: items.map((i) => i.menuItemId) }, canteenId, available: true } })
   if (menuItems.length !== items.length) {
@@ -79,9 +81,55 @@ export async function POST(req: Request) {
       commissionCents,
       vendorTakeCents,
       fulfillmentType: fulfillmentType ?? 'TAKEAWAY',
-      items: { create: orderItems }
+      items: { create: orderItems },
+      cookingInstructions: cookingInstructions?.trim() ? cookingInstructions : null
     }
   })
+
+  // Initialize Payment
+  const hasRazorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+  let externalOrderId: string | undefined
+  let paymentLink = `/pay/${order.id}`
+
+  if (hasRazorpay) {
+    try {
+      const { createRazorpayOrder } = await import('@/lib/razorpay')
+      const rzpOrder = await createRazorpayOrder({
+        orderId: order.id,
+        amountCents: order.totalCents,
+        currency: 'INR',
+        notes: {
+          userId: session.userId,
+          userEmail: session.user.email
+        }
+      })
+      externalOrderId = rzpOrder.id
+
+      await prisma.payment.create({
+        data: {
+          orderId: order.id,
+          amountCents: order.totalCents,
+          paymentLink,
+          provider: 'razorpay',
+          externalOrderId
+        }
+      })
+    } catch (error) {
+      console.error('Failed to initialize Razorpay order:', error)
+      // Don't fail the order creation, just log error. User can retry payment later.
+    }
+  } else {
+    // Manual payment fallback
+    await prisma.payment.create({
+      data: {
+        orderId: order.id,
+        amountCents: order.totalCents,
+        paymentLink,
+        provider: 'manual'
+      }
+    })
+  }
+
   return NextResponse.json({ id: order.id })
 }
 

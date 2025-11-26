@@ -20,7 +20,7 @@ export async function POST(req: Request) {
     const password = typeof body.password === 'string' ? body.password : ''
     if (!email || !password) return NextResponse.json({ error: 'Missing email/password' }, { status: 400 })
     const user = await prisma.user.findUnique({ where: { email } })
-    if (!user) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
+    if (!user || !user.passwordHash) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     const ok = await bcrypt.compare(password, user.passwordHash)
     if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     const role: Role = isRole(user.role) ? user.role : 'USER'

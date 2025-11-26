@@ -1,48 +1,99 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Badge } from '@/components/ui/Badge'
 import { Card } from '@/components/ui/Card'
 import { getTicketNumber } from '@/lib/order-ticket'
 import OrderStatusClient from '../_components/status-client'
 import PayNowButton from '../_components/pay-now-button'
 
+import { getSession } from '@/lib/session'
+import { redirect } from 'next/navigation'
+
 export default async function OrderPage({ params }: { params: { id: string } }) {
+  const session = await getSession()
+  if (!session) {
+    redirect(`/login?next=/order/${params.id}`)
+  }
+
   const order = await prisma.order.findUnique({ where: { id: params.id }, include: { items: { include: { menuItem: true } }, payment: true, canteen: true } })
   if (!order) return <p>Order not found.</p>
-  const total = (order.totalCents/100).toFixed(2)
+
+  const isOwner = session.userId === order.userId
+  const isAdmin = session.role === 'ADMIN'
+  const isVendor = session.role === 'VENDOR' && session.user.vendorId === order.vendorId
+
+  if (!isOwner && !isAdmin && !isVendor) {
+    return <div className="p-8 text-center text-red-500">You are not authorized to view this order.</div>
+  }
+  const total = (order.totalCents / 100).toFixed(2)
   const status = order.status
-  const statusVariant = ['PAID', 'CONFIRMED', 'COMPLETED'].includes(status) ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold flex items-center gap-3">Ticket #{getTicketNumber(order.id)} <Badge variant={statusVariant}>{status}</Badge></h1>
-      <Card className="space-y-3">
-        <div className="text-sm text-muted">Canteen: {order.canteen.name}</div>
-        <ul className="divide-y divide-[rgb(var(--border))] rounded-md border border-[rgb(var(--border))]">
-          {order.items.map(it=> (
-            <li key={it.id} className="flex items-center justify-between px-3 py-2 text-sm">
-              <span>{it.menuItem.name} × {it.quantity}</span>
-              <span className="font-medium">₹{(it.priceCents*it.quantity/100).toFixed(2)}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="flex items-center justify-between text-sm"><span className="text-muted">Total</span><span className="font-semibold">₹{total}</span></div>
-        <OrderStatusClient orderId={order.id} initialStatus={order.status} initialPrep={order.prepMinutes} initialPaymentStatus={order.payment?.status ?? null} />
-        {!order.payment || order.payment.status !== 'PAID' ? (
-          <PayNowButton orderId={order.id} />
-        ) : (
-          <div className="text-sm text-green-500">Payment received.</div>
-        )}
-      </Card>
-      <div className="flex flex-wrap gap-3">
-        <Link className="btn" href="/order">View order history</Link>
-        <Link className="btn-secondary" href="/canteens">Browse canteens</Link>
-      </div>
-      {order.payment && order.payment.status === 'PENDING' && (
-        <Card className="space-y-2">
-          <div className="text-sm font-medium">Payment link</div>
-          <Link className="btn" href={order.payment.paymentLink}>Open Payment Page</Link>
+    <div className="space-y-6">
+      <div className="max-w-md mx-auto">
+        <Card className="p-6 rounded-2xl bg-[rgb(var(--surface))]/90 border border-[rgb(var(--border))] shadow-lg">
+          <div className="flex items-start justify-between">
+            <div>
+              <h2 className="text-2xl font-semibold">Ticket #{getTicketNumber(order.id)}</h2>
+              <div className="text-sm text-[rgb(var(--text-muted))] mt-1">Canteen: <span className="font-medium text-[rgb(var(--text))]">{order.canteen.name}</span></div>
+            </div>
+            <div />
+          </div>
+
+          <hr className="my-4 border-[rgb(var(--border))]" />
+
+          <ul className="divide-y divide-[rgb(var(--border))] rounded-md overflow-hidden text-sm">
+            {order.items.map(it => (
+              <li key={it.id} className="flex items-center justify-between px-4 py-3">
+                <div className="text-sm text-[rgb(var(--text))]">{it.menuItem.name} <span className="text-[rgb(var(--text-muted))]">× {it.quantity}</span></div>
+                <div className="font-medium">₹{(it.priceCents * it.quantity / 100).toFixed(2)}</div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 border-t border-[rgb(var(--border))] pt-4">
+            <div className="flex items-center justify-between text-sm text-[rgb(var(--text-muted))]">
+              <div>Platform fee</div>
+              <div className="font-medium">₹{((order.commissionCents ?? 0) / 100).toFixed(2)}</div>
+            </div>
+            <div className="mt-2 flex items-center justify-between">
+              <div className="text-sm text-[rgb(var(--text-muted))]">Total</div>
+              <div className="text-2xl font-semibold">₹{total}</div>
+            </div>
+          </div>
+
+          {order.cookingInstructions && (
+            <div className="mt-3 text-sm text-[rgb(var(--text-muted))]">Instruction: <span className="font-medium text-[rgb(var(--text))]">{order.cookingInstructions}</span></div>
+          )}
+
+          <div className="mt-5">
+            <div className="text-sm text-[rgb(var(--text-muted))] mb-2">Current Status:</div>
+            <div className="flex items-center gap-3">
+              <OrderStatusClient orderId={order.id} initialStatus={status} initialPrep={order.prepMinutes ?? null} initialPaymentStatus={order.payment?.status ?? null} />
+            </div>
+          </div>
+
+          {/* StatusClient renders refund notice when status changes; avoid duplicate server banner */}
+
+          <div className="mt-6">
+            {!order.payment || order.payment.status !== 'PAID' ? (
+              <PayNowButton orderId={order.id} />
+            ) : (
+              <div className="text-sm text-green-500">Payment received.</div>
+            )}
+          </div>
         </Card>
-      )}
+
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <Link className="btn w-1/2 text-center" href="/order">View order history</Link>
+          <Link className="btn w-1/2 text-center" href="/canteens">Browse canteens</Link>
+        </div>
+
+        {order.payment && order.payment.status === 'PENDING' && (
+          <Card className="space-y-2 mt-4 p-4">
+            <div className="text-sm font-medium">Payment link</div>
+            <Link className="btn w-full text-center" href={order.payment.paymentLink}>Open Payment Page</Link>
+          </Card>
+        )}
+      </div>
     </div>
   )
 }

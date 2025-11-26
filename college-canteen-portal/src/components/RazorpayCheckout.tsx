@@ -94,12 +94,36 @@ export function RazorpayCheckout({
             name: name,
             description: description,
             order_id: razorpayOrderId,
-            handler: function (response: RazorpayResponse) {
-                // Handler success - keep loading state active
-                // Redirect to confirm route with payment details
-                router.push(
-                    `/api/payment/confirm?orderId=${orderId}&razorpay_payment_id=${response.razorpay_payment_id}&razorpay_order_id=${response.razorpay_order_id}&razorpay_signature=${response.razorpay_signature}`
-                )
+            handler: async function (response: RazorpayResponse) {
+                // Handler success - keep loading state active while we confirm server-side.
+                try {
+                    setIsProcessing(true)
+                    const res = await fetch('/api/payment/confirm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            orderId,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature
+                        })
+                    })
+
+                    if (!res.ok) {
+                        const body = await res.text().catch(() => '')
+                        console.error('Payment confirmation failed', res.status, body)
+                        alert('Payment confirmation failed. Please contact support.')
+                        setIsProcessing(false)
+                        return
+                    }
+
+                    // Confirmation succeeded — navigate to order ticket (no sensitive data in URL)
+                    router.push(`/order/${orderId}`)
+                } catch (err) {
+                    console.error('Error confirming payment', err)
+                    alert('Network error while confirming payment. Please check your connection.')
+                    setIsProcessing(false)
+                }
             },
             prefill: {
                 name: prefill.name,

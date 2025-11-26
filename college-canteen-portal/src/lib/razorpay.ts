@@ -1,19 +1,24 @@
 import Razorpay from 'razorpay'
 import crypto from 'crypto'
 
-const key_id = process.env.RAZORPAY_KEY_ID
-const key_secret = process.env.RAZORPAY_KEY_SECRET
+const key_id = (process.env.RAZORPAY_KEY_ID || '').trim()
+const key_secret = (process.env.RAZORPAY_KEY_SECRET || '').trim()
 
+// Fail fast: credentials are required for payment functionality. Throw an explicit
+// error during module initialization so the app fails loudly and clearly in CI
+// / deployment if these values are missing.
 if (!key_id || !key_secret) {
-    console.warn('Razorpay credentials missing. Payment features will fail.')
+    const msg = 'Missing Razorpay credentials: set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET'
+    console.error(msg)
+    throw new Error(msg)
 }
 
 export const razorpay = new Razorpay({
-    key_id: (key_id || 'test_id').trim(),
-    key_secret: (key_secret || 'test_secret').trim(),
+    key_id,
+    key_secret,
 })
 
-console.log('[Razorpay] Initialized with key_id length:', (key_id || '').trim().length)
+console.log('[Razorpay] Initialized with key_id length:', key_id.length)
 
 
 interface CreateOrderParams {
@@ -24,8 +29,25 @@ interface CreateOrderParams {
 }
 
 export async function createRazorpayOrder({ orderId, amountCents, currency = 'INR', notes }: CreateOrderParams) {
+    // Validate inputs strictly to avoid accidental overcharging or silent coercion.
+    if (!orderId || typeof orderId !== 'string') {
+        throw new Error('createRazorpayOrder: invalid orderId')
+    }
+
+    if (!Number.isFinite(amountCents)) {
+        throw new Error('createRazorpayOrder: amountCents must be a finite number')
+    }
+
+    // Coerce to integer in the smallest currency unit, but do not round up.
+    // For example, INR uses paise (1 INR = 100 paise). Ensure amount is at least 1
+    // of the smallest currency unit to avoid zero-value orders.
+    const amountInteger = Math.floor(amountCents)
+    if (amountInteger < 1) {
+        throw new Error('createRazorpayOrder: amountCents must be >= 1 (smallest currency unit)')
+    }
+
     const options = {
-        amount: Math.round(amountCents), // Razorpay expects amount in smallest currency unit (paise)
+        amount: amountInteger, // amount in smallest currency unit
         currency,
         receipt: orderId,
         notes,
@@ -40,13 +62,28 @@ export async function createRazorpayOrder({ orderId, amountCents, currency = 'IN
     }
 }
 
-export function verifyRazorpaySignature(body: string, signature: string, secret: string = key_secret || '') {
-    if (!secret) return false
-    const expectedSignature = crypto
-        .createHmac('sha256', secret)
-        .update(body)
-        .digest('hex')
-    return expectedSignature === signature
+export function verifyRazorpaySignature(body: string, signature: string, secret?: string) {
+    const webhookSecret = secret || process.env.RAZORPAY_WEBHOOK_SECRET || key_secret || ''
+    if (!webhookSecret) return false
+    try {
+        const expectedSignature = crypto
+            .createHmac('sha256', webhookSecret)
+            .update(body)
+            .digest('hex')
+
+        // Convert hex strings to buffers for timing-safe comparison.
+        // Guard against invalid hex by catching errors and returning false.
+        const expectedBuf = Buffer.from(expectedSignature, 'hex')
+        const sigBuf = Buffer.from(signature || '', 'hex')
+
+        // If buffer lengths differ, signatures can't match — return false.
+        if (expectedBuf.length !== sigBuf.length) return false
+
+        return crypto.timingSafeEqual(expectedBuf, sigBuf)
+    } catch {
+        // Any error (invalid hex, etc.) should result in a false verification
+        return false
+    }
 }
 
 export async function getRazorpayOrder(razorpayOrderId: string) {

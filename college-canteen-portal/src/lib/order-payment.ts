@@ -38,17 +38,20 @@ async function notifyPaid(order: OrderWithRelations) {
   if (!vendor?.whatsappEnabled || !phones.length) return
 
   const ticketNumber = getTicketNumber(order.id)
-  const vendorAmountCents = order.vendorTakeCents || Math.max(order.totalCents - order.commissionCents, 0)
-  const amountCents = vendorAmountCents > 0 ? vendorAmountCents : order.totalCents
+  const vendorAmountCents = order.vendorTakeCents ?? Math.max(order.totalCents - order.commissionCents, 0)
+  // Use vendorAmountCents as-is. Do not fall back to order.totalCents when vendorAmountCents is 0,
+  // as that would misrepresent the vendor payout. If the payout is zero, surface that explicitly.
+  const amountCents = vendorAmountCents
   const total = (amountCents / 100).toFixed(2)
   const itemsSummary = summarizeItems(order)
 
   // Text fallback shown to vendors
-  const text = `Ticket #${ticketNumber} paid — ₹${total}\n${itemsSummary}\nReply 1 to mark completed or 0 to cancel.`
+  const zeroPayoutNote = amountCents === 0 ? ' (Vendor payout: ₹0.00)' : ''
+  const text = `Ticket #${ticketNumber} paid — ₹${total}${zeroPayoutNote}\n${itemsSummary}\nReply 1 to mark completed or 0 to cancel.`
 
   // Template variables for Twilio Content API
   // The Twilio Content Template must be configured to use these variables:
-  // - {{1}}: Short Order ID for display (last 4 digits)
+  // - {{1}}: Short ticket number (as returned by `getTicketNumber`)
   // - {{2}}: Total amount with currency symbol
   // - {{3}}: Items summary
   // - {{confirm_payload}}: Pre-formatted payload for Complete button (1|fullOrderId)

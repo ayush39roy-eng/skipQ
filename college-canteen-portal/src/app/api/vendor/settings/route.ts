@@ -15,11 +15,16 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: 'Canteen ID is required' }, { status: 400 })
     }
 
-    // Verify ownership
+    // Ensure the session is linked to a vendor and enforce ownership strictly
+    const vendorId = session.user.vendorId
+    if (!vendorId) {
+        return NextResponse.json({ error: 'No vendor linked to this account' }, { status: 403 })
+    }
+
     const canteen = await prisma.canteen.findFirst({
         where: {
             id: canteenId,
-            vendorId: session.user.vendorId ?? undefined
+            vendorId: vendorId
         }
     })
 

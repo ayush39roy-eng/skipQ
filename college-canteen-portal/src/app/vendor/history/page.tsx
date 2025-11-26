@@ -48,7 +48,11 @@ export default async function VendorHistoryPage() {
 
   const orders = await prisma.order.findMany({
     where: { vendorId, status: { in: ['COMPLETED', 'CANCELLED'] } },
-    include: { canteen: true },
+    include: {
+      canteen: true,
+      user: true,
+      items: { include: { menuItem: true } }
+    },
     orderBy: { createdAt: 'desc' },
     take: 100
   })
@@ -67,17 +71,40 @@ export default async function VendorHistoryPage() {
           </Card>
         )}
         {orders.map((order) => (
-          <Card key={order.id} className="flex flex-col gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))] sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="min-w-0 sm:min-w-[200px]">
-              <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
-              <p className="text-base font-semibold">#{getTicketNumber(order.id)}</p>
-              <p className="text-xs text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)}</p>
+          <Card key={order.id} className="flex flex-col gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
+                <p className="text-base font-semibold">#{getTicketNumber(order.id)}</p>
+                <p className="text-xs text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)}</p>
+                {order.user?.name && <p className="text-sm text-[rgb(var(--text-muted))] mt-1">Customer: {order.user.name}</p>}
+              </div>
+              <div className="text-left sm:ml-auto sm:text-right">
+                <Badge variant={statusVariant(order.status)} className="mb-2">{order.status}</Badge>
+                <p className="text-lg font-semibold">{formatCurrency(order.totalCents)}</p>
+                <p className="text-xs text-[rgb(var(--text-muted))]">Updated {formatRelativeTime(order.updatedAt)}</p>
+              </div>
             </div>
-            <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-            <div className="text-left sm:ml-auto sm:text-right">
-              <p className="text-lg font-semibold">{formatCurrency(order.totalCents)}</p>
-              <p className="text-xs text-[rgb(var(--text-muted))]">Updated {formatRelativeTime(order.updatedAt)}</p>
+
+            {/* Items list */}
+            <div className="mt-2">
+              <h4 className="text-sm font-semibold">Items</h4>
+              <ul className="mt-2 space-y-2">
+                {order.items.map((it) => (
+                  <li key={it.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium">{it.menuItem?.name || 'Unknown item'}</p>
+                      <p className="text-xs text-[rgb(var(--text-muted))]">₹{(it.priceCents / 100).toFixed(2)} × {it.quantity}</p>
+                    </div>
+                    <div className="text-sm font-semibold">₹{((it.priceCents * it.quantity) / 100).toFixed(2)}</div>
+                  </li>
+                ))}
+              </ul>
             </div>
+
+            {order.cookingInstructions && (
+              <p className="mt-3 text-sm text-[rgb(var(--text-muted))]">Instructions: {order.cookingInstructions}</p>
+            )}
           </Card>
         ))}
       </div>

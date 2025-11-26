@@ -65,8 +65,11 @@ async function resolvePaymentLink(orderId: string) {
   // Security: Prevent spam by requiring login and ownership
   const session = await getSession()
   if (!session) {
-    console.warn(logPrefix, 'Unauthorized access attempt', { orderId })
-    return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+    // If user is not authenticated, send them to signup first so they can complete payment.
+    // Return a paymentLink that points to the registration flow with a `next` back to the payment page.
+    console.warn(logPrefix, 'Unauthenticated access - redirecting to register', { orderId })
+    const paymentLink = `/register?next=/pay/${orderId}`
+    return { paymentLink }
   }
 
   const order = await prisma.order.findUnique({
@@ -94,23 +97,9 @@ async function resolvePaymentLink(orderId: string) {
       // Check if we already have a Razorpay order for this
       const existingPayment = await prisma.payment.findUnique({ where: { orderId: order.id } })
       if (existingPayment?.externalOrderId && existingPayment.provider === 'razorpay') {
+        // Reuse existing Razorpay order id and payment link
         externalOrderId = existingPayment.externalOrderId
         paymentLink = `/pay/${order.id}`
-
-        // If we strictly need a Razorpay Order ID for the checkout:
-        if (!externalOrderId) {
-          // Create new
-          const rzpOrder = await createRazorpayOrder({
-            orderId: order.id,
-            amountCents: order.totalCents,
-            currency: 'INR',
-            notes: {
-              userId: order.userId,
-              userEmail: order.user.email
-            }
-          })
-          externalOrderId = rzpOrder.id
-        }
       } else {
         // Create new Razorpay Order
         const rzpOrder = await createRazorpayOrder({
@@ -136,13 +125,15 @@ async function resolvePaymentLink(orderId: string) {
 
     } catch (error) {
       const detail = error instanceof Error ? error.message : 'Unknown Razorpay error'
+      // Log full error details server-side for debugging/observability
       console.error(logPrefix, 'Razorpay order failed', {
         orderId,
         detail,
         errorObj: error,
         keyIdPrefix: process.env.RAZORPAY_KEY_ID?.substring(0, 5)
       })
-      return { error: NextResponse.json({ error: 'Razorpay order failed', detail, fullError: String(error) }, { status: 500 }) }
+      // Return a generic error payload to the client to avoid leaking internals
+      return { error: NextResponse.json({ error: 'Razorpay order failed', detail }, { status: 500 }) }
     }
   } else {
     paymentLink = `/pay/${order.id}`

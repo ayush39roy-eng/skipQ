@@ -11,6 +11,7 @@ type SerializableOrder = {
   totalCents: number
   fulfillmentType: string
   prepMinutes: number | null
+  prepExtended?: boolean
   createdAt: string
   updatedAt: string
   canteen: { id: string; name: string }
@@ -30,6 +31,7 @@ type OrderWithRelations = {
   totalCents: number
   fulfillmentType?: string
   prepMinutes: number | null
+  prepExtended?: boolean
   createdAt: Date
   updatedAt: Date
   canteen: { id: string; name: string }
@@ -72,7 +74,17 @@ export default async function VendorPage() {
             closingTime: true,
             weeklySchedule: true,
             autoMode: true,
-            manualIsOpen: true
+            manualIsOpen: true,
+            menuItems: {
+              select: {
+                id: true,
+                name: true,
+                available: true,
+                priceCents: true,
+                section: { select: { name: true } }
+              },
+              orderBy: { name: 'asc' }
+            }
           }
         }
       }
@@ -113,10 +125,10 @@ export default async function VendorPage() {
   // Calculate popular items
   const itemCounts: Record<string, number> = {}
   for (const item of allOrderItems) {
-    const name = item.menuItem.name
-    if (name) {
-      itemCounts[name] = (itemCounts[name] || 0) + item.quantity
-    }
+    const name = item.menuItem?.name
+    // Skip entries with no linked menuItem or no name
+    if (!item.menuItem || !name) continue
+    itemCounts[name] = (itemCounts[name] || 0) + item.quantity
   }
 
   const popularItems = Object.entries(itemCounts)
@@ -137,6 +149,7 @@ export default async function VendorPage() {
     totalCents: order.totalCents,
     fulfillmentType: order.fulfillmentType ?? 'TAKEAWAY',
     prepMinutes: order.prepMinutes ?? null,
+    prepExtended: !!order.prepExtended,
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
     canteen: { id: order.canteen.id, name: order.canteen.name },
@@ -149,5 +162,13 @@ export default async function VendorPage() {
     }))
   }))
 
-  return <VendorDashboardClient vendorName={vendor?.name ?? null} canteens={vendor?.canteens ?? []} initialOrders={initialOrders} stats={dashboardStats} />
+  const canteensWithMenu = (vendor?.canteens ?? []).map(c => ({
+    ...c,
+    menuItems: c.menuItems.map(m => ({
+      ...m,
+      sectionName: m.section?.name ?? 'Uncategorized'
+    }))
+  }))
+
+  return <VendorDashboardClient vendorName={vendor?.name ?? null} canteens={canteensWithMenu} initialOrders={initialOrders} stats={dashboardStats} />
 }

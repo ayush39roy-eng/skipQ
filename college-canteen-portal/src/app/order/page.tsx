@@ -31,7 +31,7 @@ export default async function OrderHistoryPage() {
   const orders = await prisma.order.findMany({
     where: {
       userId: session.userId,
-      status: { in: ['PAID', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] }
+      status: { in: ['PENDING', 'PAID', 'CONFIRMED', 'COMPLETED', 'CANCELLED'] }
     },
     orderBy: { createdAt: 'desc' },
     include: { canteen: true, payment: true }

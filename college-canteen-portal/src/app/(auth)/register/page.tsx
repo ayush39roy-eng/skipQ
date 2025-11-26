@@ -1,5 +1,5 @@
 "use client"
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Input } from '@/components/ui/Input'
@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/Button'
 import { Card } from '@/components/ui/Card'
 
 const onboardingSteps = [
-  { title: 'Campus verification', detail: 'Use your official college email so we can activate loyalty perks.' },
   { title: 'Personalise menus', detail: 'Save diet preferences and top canteens for instant suggestions.' },
   { title: 'Collect in minutes', detail: 'We notify you when the order hits the counter—no queueing.' }
 ]
@@ -21,6 +20,15 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
+  const formRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    // slight delay to ensure layout is ready
+    const t = setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 100)
+    return () => clearTimeout(t)
+  }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -59,7 +67,14 @@ export default function RegisterPage() {
     <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[#0f172a] via-[#111927] to-[#05070f] px-4 py-8 shadow-[0_40px_160px_-80px_rgba(76,29,149,0.8)] sm:px-10 sm:py-12 lg:px-16">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.35),transparent_45%)]" aria-hidden />
       <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="space-y-6 text-white">
+        {/* Mobile Header - Visible only on small screens */}
+        <div className="lg:hidden text-center space-y-2 mb-[-1rem]">
+          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">Join SkipQ</span>
+          <h1 className="text-2xl font-black text-white">Create account</h1>
+        </div>
+
+        {/* Desktop Sidebar - Hidden on mobile */}
+        <div className="hidden lg:block space-y-6 text-white">
           <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">Join SkipQ</span>
           <div className="space-y-4">
             <h1 className="text-4xl font-black leading-tight sm:text-5xl">Create an account. Unlock instant dining.</h1>
@@ -76,37 +91,59 @@ export default function RegisterPage() {
               </li>
             ))}
           </ol>
-          <div className="flex flex-wrap gap-4 text-sm text-white/80">
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Food ready faster</p>
-              <p className="text-2xl font-bold">6 min avg</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Canteens onboard</p>
-              <p className="text-2xl font-bold">38</p>
-            </div>
-            <div>
-              <p className="text-xs uppercase tracking-[0.4em] text-white/50">Students satisfied</p>
-              <p className="text-2xl font-bold">97%</p>
-            </div>
-          </div>
+
         </div>
 
-        <Card className="space-y-6 border-white/10 bg-[rgb(var(--bg))]/80 p-6 text-[rgb(var(--text))] backdrop-blur sm:p-8">
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Step 1</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>
-            <p className="text-sm text-[rgb(var(--text-muted))]">Use your campus email so we can secure your profile.</p>
-          </div>
-          <form onSubmit={submit} className="space-y-4">
-            <Input label="Full name" value={name} onChange={e => setName(e.target.value)} required />
-            <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <Button type="submit" className="w-full" loading={loading}>{loading ? 'Creating…' : 'Sign up'}</Button>
-          </form>
-          {message && <p className="text-sm text-red-500">{message}</p>}
-          <p className="text-sm text-[rgb(var(--text-muted))]">Already have an account? <Link href={`/login?next=${encodedNext}`} className="text-violet-400 hover:underline">Log in</Link></p>
-        </Card>
+        <div ref={formRef}>
+          <Card className="space-y-4 border-white/10 bg-[rgb(var(--bg))]/80 p-5 text-[rgb(var(--text))] backdrop-blur sm:p-8">
+            <div className="space-y-1 lg:block hidden">
+              <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Step 1</p>
+              <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>
+            </div>
+            <form onSubmit={submit} className="space-y-4">
+              <Input label="Full name" value={name} onChange={e => setName(e.target.value)} required />
+              <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+              <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+              <Button type="submit" className="w-full" loading={loading}>{loading ? 'Creating…' : 'Sign up'}</Button>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t border-[rgb(var(--border))]"></span>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-[rgb(var(--bg))] px-2 text-[rgb(var(--text-muted))]">Or continue with</span>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={() => window.location.href = '/api/auth/google'}
+              >
+                <svg className="h-5 w-5" viewBox="0 0 24 24">
+                  <path
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                Google
+              </Button>
+            </form>
+            {message && <p className="text-sm text-red-500">{message}</p>}
+            <p className="text-base text-[rgb(var(--text))]">Already have an account? <Link href={`/login?next=${encodedNext}`} className="text-violet-600 font-semibold hover:underline">Log in</Link></p>
+          </Card>
+        </div>
       </div>
     </div>
   )

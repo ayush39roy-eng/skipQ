@@ -13,7 +13,7 @@ export async function GET() {
   const orders = await prisma.order.findMany({
     where: {
       vendorId,
-      status: { in: ['PAID', 'CONFIRMED'] }
+      status: { in: ['PAID', 'CONFIRMED', 'READY'] }
     },
     include: {
       canteen: true,

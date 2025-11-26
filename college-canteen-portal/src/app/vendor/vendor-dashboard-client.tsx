@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
@@ -8,6 +8,12 @@ import { Button } from '@/components/ui/Button'
 import { getTicketNumber } from '@/lib/order-ticket'
 import { WeeklyScheduleEditor } from '@/components/WeeklyScheduleEditor'
 import { type WeeklySchedule, DEFAULT_WEEKLY_SCHEDULE } from '@/types/schedule'
+
+declare global {
+  interface Window {
+    __prep_timer_interval?: number
+  }
+}
 
 type MenuItemPayload = {
   id: string
@@ -22,6 +28,8 @@ type VendorOrderPayload = {
   totalCents: number
   fulfillmentType: string
   prepMinutes: number | null
+  prepExtended?: boolean
+  cookingInstructions?: string | null
   createdAt: string
   updatedAt: string
   canteen: { id: string; name: string }
@@ -45,12 +53,20 @@ type Props = {
     weeklySchedule?: unknown
     autoMode: boolean
     manualIsOpen: boolean
+    menuItems: Array<{
+      id: string
+      name: string
+      available: boolean
+      priceCents: number
+      sectionName: string
+    }>
   }>
 }
 
 const statusVariant = (status: string): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
   switch (status) {
     case 'CONFIRMED':
+    case 'READY':
     case 'COMPLETED':
     case 'PAID':
       return 'success'
@@ -87,11 +103,19 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
   const [orders, setOrders] = useState<VendorOrderPayload[]>(initialOrders)
   const [canteenSettings, setCanteenSettings] = useState(initialCanteens)
 
+  // Audio & notification helpers
+  const audioCtxRef = useRef<AudioContext | null>(null)
+  const lastNotifiedRef = useRef<string | null>(null)
+  const audioUnlockedRef = useRef(false)
+
   const [actionKey, setActionKey] = useState<string | null>(null)
 
   const handleSettingChange = async (canteenId: string, field: string, value: boolean | string) => {
+    if (savingSettings === canteenId) return
     try {
+      setSavingSettings(canteenId)
       // Optimistic update
+      const previousSettings = canteenSettings
       const newSettings = canteenSettings.map(c =>
         c.id === canteenId ? { ...c, [field]: value } : c
       )
@@ -113,9 +137,16 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
         })
       })
 
-      if (!res.ok) throw new Error('Failed to save settings')
-    } catch {
-      setError('Failed to save settings')
+      if (!res.ok) {
+        setCanteenSettings(previousSettings)
+        throw new Error('Failed to save settings')
+      }
+    } catch (err) {
+      // Rollback and surface error
+      setCanteenSettings((prev) => prev)
+      setError(err instanceof Error ? err.message : 'Failed to save settings')
+    } finally {
+      setSavingSettings(null)
     }
   }
 
@@ -144,13 +175,76 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
 
   const [prepInputs, setPrepInputs] = useState<Record<string, string>>({})
   const [error, setError] = useState<string | null>(null)
+  const [savingSettings, setSavingSettings] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
       const res = await fetch('/api/vendor/orders/live', { cache: 'no-store' })
       if (!res.ok) throw new Error('Failed to refresh queue')
       const data = await res.json()
-      setOrders(data.orders)
+      // Detect new order and notify
+      const incoming = Array.isArray(data.orders) ? data.orders : []
+      // find newest order by createdAt
+      let newest: VendorOrderPayload | null = null
+      for (const o of incoming) {
+        if (!newest || new Date(o.createdAt).getTime() > new Date(newest.createdAt).getTime()) newest = o
+      }
+      if (newest && newest.id !== lastNotifiedRef.current) {
+        // Avoid notifying for the initial load; lastNotifiedRef is initialized on mount
+        // Notify only when this is a truly new order
+        try {
+          // Play beep using WebAudio
+          if (!audioCtxRef.current) {
+            // Some browsers expose webkitAudioContext on window; guard with a typed check
+            type AudioWindow = Window & { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+            const w = globalThis as unknown as AudioWindow
+            const Ctor = w.AudioContext ?? w.webkitAudioContext
+            if (Ctor) audioCtxRef.current = new Ctor()
+          }
+          const ctx = audioCtxRef.current
+          if (ctx) {
+            const o = ctx.createOscillator()
+            const g = ctx.createGain()
+            o.type = 'sine'
+            o.frequency.value = 880
+            g.gain.value = 0.0001
+            o.connect(g)
+            g.connect(ctx.destination)
+            // ramp gain to avoid click
+            g.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 0.02)
+            o.start()
+            o.stop(ctx.currentTime + 0.25)
+            // gentle release
+            g.gain.linearRampToValueAtTime(0.0001, ctx.currentTime + 0.25)
+          }
+        } catch {
+          // fallback: try Audio constructor (some browsers block AudioContext until interaction)
+          try { new Audio('/sounds/new-order.mp3').play().catch(() => { }) } catch { }
+        }
+
+        // Browser notification
+        try {
+          if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const title = `New order — Ticket #${getTicketNumber(newest.id)}`
+            const body = `${(newest.totalCents / 100).toFixed(2)} • ${newest.canteen.name}`
+            // Keep notification visible until user interacts where supported
+            // @ts-expect-error: some TS DOM libs don't include `requireInteraction` in NotificationOptions
+            const notif = new Notification(title, { body, tag: `order-${newest.id}`, requireInteraction: true, vibrate: [200, 100, 200] })
+            try {
+              notif.onclick = () => {
+                try { window.focus() } catch { }
+                try { notif.close() } catch { }
+              }
+            } catch { }
+          }
+        } catch {
+          // ignore notification errors
+        }
+
+        lastNotifiedRef.current = newest.id
+      }
+
+      setOrders(incoming)
       setError(null)
     } catch (err) {
       if (err instanceof Error) setError(err.message)
@@ -158,25 +252,90 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
   }, [])
 
   useEffect(() => {
+    // Unlock audio on first user gesture (required on iOS/Safari/iPadOS)
+    const tryUnlockAudio = () => {
+      if (audioUnlockedRef.current) return
+      audioUnlockedRef.current = true
+      try {
+        type AudioWindow = Window & { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+        const w = globalThis as unknown as AudioWindow
+        const Ctor = w.AudioContext ?? w.webkitAudioContext
+        if (Ctor && !audioCtxRef.current) {
+          try {
+            audioCtxRef.current = new Ctor()
+          } catch { }
+        }
+        try {
+          audioCtxRef.current?.resume().catch(() => { })
+        } catch { }
+
+        // Try a silent play to prime the audio stack (some Safari versions need an actual element play)
+        try {
+          const priming = new Audio('/sounds/new-order.mp3')
+          priming.volume = 0
+          void priming.play().then(() => {
+            try { priming.pause(); priming.currentTime = 0 } catch { }
+          }).catch(() => { })
+        } catch { }
+      } finally {
+        // remove listeners after first attempt
+        window.removeEventListener('click', tryUnlockAudio)
+        window.removeEventListener('touchstart', tryUnlockAudio)
+      }
+    }
+
+    window.addEventListener('click', tryUnlockAudio, { passive: true })
+    window.addEventListener('touchstart', tryUnlockAudio, { passive: true })
+    // initialize last-notified id so initial load doesn't trigger alert
+    try {
+      if (Array.isArray(initialOrders) && initialOrders.length > 0) {
+        let newest: VendorOrderPayload | null = null
+        for (const o of initialOrders) {
+          if (!newest || new Date(o.createdAt).getTime() > new Date(newest.createdAt).getTime()) newest = o
+        }
+        if (newest) lastNotifiedRef.current = newest.id
+      }
+    } catch { }
+
+    // request notification permission (non-blocking)
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission === 'default') Notification.requestPermission().catch(() => { })
+    } catch { }
+
     const interval = setInterval(() => {
       void refresh()
     }, 5000)
     return () => clearInterval(interval)
-  }, [refresh])
+  }, [refresh, initialOrders])
 
-  const handleAction = useCallback(async (orderId: string, action: 'CONFIRM' | 'CANCELLED' | 'SET_PREP' | 'COMPLETED') => {
+  const handleAction = useCallback(async (orderId: string, action: 'CONFIRM' | 'CANCELLED' | 'SET_PREP' | 'COMPLETED' | 'EXTEND_PREP' | 'READY') => {
     const form = new FormData()
     form.append('orderId', orderId)
     form.append('action', action)
 
-    if (action === 'SET_PREP') {
+    // For SET_PREP we require a valid minutes value; for CONFIRM we'll include prepMinutes if available
+    if (action === 'SET_PREP' || action === 'CONFIRM') {
       const minutesRaw = prepInputs[orderId]
-      const minutes = minutesRaw ? Number(minutesRaw) : NaN
-      if (!minutes || Number.isNaN(minutes)) {
-        setError('Enter prep minutes before saving')
-        return
+      let minutes = minutesRaw ? Number(minutesRaw) : NaN
+      const o = orders.find((x) => x.id === orderId)
+      if (Number.isNaN(minutes)) {
+        // fallback to current order value if present
+        if (o && typeof o.prepMinutes === 'number') minutes = o.prepMinutes
       }
-      form.append('prepMinutes', String(minutes))
+
+      // For CONFIRM we always want to persist a prepMinutes so the user sees it.
+      if (action === 'CONFIRM') {
+        if (Number.isNaN(minutes) || !minutes) {
+          minutes = o && typeof o.prepMinutes === 'number' ? o.prepMinutes : 5
+        }
+        form.append('prepMinutes', String(minutes))
+      } else if (action === 'SET_PREP') {
+        if (!minutes || Number.isNaN(minutes)) {
+          setError('Enter prep minutes before saving')
+          return
+        }
+        form.append('prepMinutes', String(minutes))
+      }
     }
 
     const key = `${orderId}:${action}`
@@ -197,19 +356,66 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
     } finally {
       setActionKey(null)
     }
-  }, [prepInputs, refresh])
+  }, [prepInputs, refresh, orders])
 
   const incomingOrders = useMemo(
     () => orders.filter((o) => o.status === 'PAID' || o.status === 'PENDING').sort(sortByNewest),
     [orders]
   )
   const confirmedOrders = useMemo(
-    () => orders.filter((o) => o.status === 'CONFIRMED').sort(sortByNewest),
+    // Show oldest confirmed orders on top
+    () => orders
+      .filter((o) => o.status === 'CONFIRMED' || o.status === 'READY')
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [orders]
   )
   const queueState = incomingOrders.length ? `${incomingOrders.length} awaiting action` : 'Queue is clear'
 
   const isLoading = (orderId: string, action: string) => actionKey === `${orderId}:${action}`
+
+  function PrepTimer({ prep, updatedAt, status }: { prep: number | null | undefined; updatedAt: string; status: string }) {
+    const [remainingMinutes, setRemainingMinutes] = useState<number | null>(null)
+
+    useEffect(() => {
+      if (prep == null || !updatedAt || status !== 'CONFIRMED') {
+        setRemainingMinutes(null)
+        return
+      }
+      const start = Date.parse(updatedAt)
+      const endAt = start + prep * 60_000
+
+      const update = () => {
+        const diff = endAt - Date.now()
+        setRemainingMinutes(Math.max(0, Math.ceil(diff / 60000)))
+      }
+
+      update()
+      // align to next minute boundary then every 60s
+      const now = Date.now()
+      const msToNextMinute = 60000 - (now % 60000)
+      const timeoutId = window.setTimeout(() => {
+        update()
+        const id = window.setInterval(update, 60000)
+          ; (window).__prep_timer_interval = id
+      }, msToNextMinute)
+
+      return () => {
+        clearTimeout(timeoutId as unknown as number)
+        const id = window.__prep_timer_interval
+        if (id) clearInterval(id)
+      }
+    }, [prep, updatedAt, status])
+
+    if (prep == null || remainingMinutes == null) return null
+    const start = updatedAt ? Date.parse(updatedAt) : Date.now()
+    const endAt = start + (prep ?? 0) * 60_000
+    return (
+      <div className="text-sm text-[rgb(var(--text-muted))] mt-2">
+        <div>Prep time: <span className="font-medium">{prep} min</span></div>
+        <div className="text-xs mt-1">Approx ready at <span className="font-medium">{new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> — <span className="font-medium">{remainingMinutes > 0 ? `${remainingMinutes} min` : 'Ready'}</span></div>
+      </div>
+    )
+  }
 
 
   return (
@@ -377,26 +583,47 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
                   <Button type="button" className="w-full sm:w-auto" loading={isLoading(order.id, 'CONFIRM')} onClick={() => void handleAction(order.id, 'CONFIRM')}>Confirm</Button>
                   <Button type="button" variant="outline" className="w-full sm:w-auto" loading={isLoading(order.id, 'CANCELLED')} onClick={() => void handleAction(order.id, 'CANCELLED')}>Cancel</Button>
                   <label className="sr-only" htmlFor={`prep-${order.id}`}>Prep minutes</label>
-                  <input
-                    id={`prep-${order.id}`}
-                    value={prepInputs[order.id] ?? ''}
-                    onChange={(e) => setPrepInputs((prev) => ({ ...prev, [order.id]: e.target.value }))}
-                    type="number"
-                    min={5}
-                    step={5}
-                    placeholder="Prep min"
-                    className="input w-full sm:w-24"
-                  />
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    loading={isLoading(order.id, 'SET_PREP')}
-                    onClick={() => void handleAction(order.id, 'SET_PREP')}
-                    className="w-full sm:w-auto"
-                  >
-                    Set Prep
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-label="Decrease prep minutes"
+                      onClick={() => {
+                        setPrepInputs((prev) => {
+                          const cur = Number(prev[order.id]) || (order.prepMinutes ?? 5)
+                          const next = Math.max(5, cur - 5)
+                          return { ...prev, [order.id]: String(next) }
+                        })
+                      }}
+                      className="rounded-md border px-3 py-1 text-sm font-medium"
+                    >
+                      –
+                    </button>
+
+                    <div className="w-20 text-center font-medium">
+                      {(Number(prepInputs[order.id]) || order.prepMinutes || 5) + ' min'}
+                    </div>
+
+                    <button
+                      type="button"
+                      aria-label="Increase prep minutes"
+                      onClick={() => {
+                        setPrepInputs((prev) => {
+                          const cur = Number(prev[order.id]) || (order.prepMinutes ?? 5)
+                          const next = cur + 5
+                          return { ...prev, [order.id]: String(next) }
+                        })
+                      }}
+                      className="rounded-md border px-3 py-1 text-sm font-medium"
+                    >
+                      +
+                    </button>
+
+                    {/* Set Prep button removed — +/- will save prep after short debounce */}
+                  </div>
                 </div>
+                {order.cookingInstructions && (
+                  <div className="text-sm text-[rgb(var(--text-muted))] mt-2">Instruction: <span className="font-medium">{order.cookingInstructions}</span></div>
+                )}
               </Card>
             ))}
           </div>
@@ -438,24 +665,52 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
                     </li>
                   ))}
                 </ul>
+                <PrepTimer prep={order.prepMinutes ?? null} updatedAt={order.updatedAt} status={order.status} />
+                {order.cookingInstructions && (
+                  <div className="text-sm text-[rgb(var(--text-muted))] mt-2">Instruction: <span className="font-medium">{order.cookingInstructions}</span></div>
+                )}
                 <div className="flex items-center justify-between text-xs text-[rgb(var(--text-muted))]">
                   <span>{fulfillmentLabel(order.fulfillmentType)}</span>
                   <span>Placed {formatRelativeTime(order.createdAt)}</span>
                 </div>
                 <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    loading={isLoading(order.id, 'COMPLETED')}
-                    onClick={() => void handleAction(order.id, 'COMPLETED')}
-                    className="w-full sm:w-auto"
-                  >
-                    Completed
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      loading={isLoading(order.id, 'EXTEND_PREP')}
+                      disabled={!!order.prepExtended || order.status === 'READY'}
+                      onClick={() => void handleAction(order.id, 'EXTEND_PREP')}
+                      className="w-full sm:w-auto"
+                    >
+                      {order.prepExtended ? 'Extended' : 'Extend +5 min'}
+                    </Button>
+
+                    {order.status !== 'READY' && (
+                      <Button
+                        type="button"
+                        loading={isLoading(order.id, 'READY')}
+                        onClick={() => void handleAction(order.id, 'READY')}
+                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        Ready
+                      </Button>
+                    )}
+
+                    <Button
+                      type="button"
+                      loading={isLoading(order.id, 'COMPLETED')}
+                      onClick={() => void handleAction(order.id, 'COMPLETED')}
+                      className="w-full sm:w-auto"
+                    >
+                      Completed
+                    </Button>
+                  </div>
                 </div>
               </Card>
             ))}
           </div>
         </Card>
+
       </div>
 
       <Card className="flex flex-wrap items-center justify-between gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
@@ -465,6 +720,79 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
         </div>
         <Link href="/vendor/history" className="btn">Open order history</Link>
       </Card>
+
+      <Card className="flex flex-wrap items-center justify-between gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
+        <div>
+          <p className="text-lg font-semibold">Vendor Analytics</p>
+          <p className="text-sm text-[rgb(var(--text-muted))]">View sales performance, peak hours, and payment insights.</p>
+        </div>
+        <Link href="/vendor/analytics" className="btn-secondary">View Analytics</Link>
+      </Card>
+
+      {/* Menu Availability Manager */}
+      <section className="space-y-4">
+        <h2 className="text-xl font-semibold">Menu Availability</h2>
+        <p className="text-sm text-[rgb(var(--text-muted))]">Toggle items to mark them as unavailable. Changes save automatically.</p>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {canteenSettings.map((canteen) => (
+            <Card key={canteen.id} className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+              <h3 className="mb-3 font-semibold">{canteen.name}</h3>
+              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                {canteen.menuItems && canteen.menuItems.length > 0 ? (
+                  canteen.menuItems.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-medium">{item.name}</p>
+                        <p className="text-xs text-[rgb(var(--text-muted))]">{item.sectionName} • {formatCurrency(item.priceCents)}</p>
+                      </div>
+                      <label className="relative inline-flex cursor-pointer items-center">
+                        <input
+                          type="checkbox"
+                          className="peer sr-only"
+                          checked={item.available}
+                          onChange={async (e) => {
+                            const newAvailable = e.target.checked
+                            // Optimistic update
+                            setCanteenSettings(prev => prev.map(c => {
+                              if (c.id !== canteen.id) return c
+                              return {
+                                ...c,
+                                menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: newAvailable } : i)
+                              }
+                            }))
+
+                            try {
+                              const res = await fetch('/api/vendor/menu-items', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ menuItemId: item.id, available: newAvailable })
+                              })
+                              if (!res.ok) throw new Error('Failed to update')
+                            } catch (err) {
+                              // Revert on error
+                              setCanteenSettings(prev => prev.map(c => {
+                                if (c.id !== canteen.id) return c
+                                return {
+                                  ...c,
+                                  menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: !newAvailable } : i)
+                                }
+                              }))
+                              setError('Failed to update availability')
+                            }
+                          }}
+                        />
+                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"></div>
+                      </label>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-sm text-[rgb(var(--text-muted))]">No items found.</p>
+                )}
+              </div>
+            </Card>
+          ))}
+        </div>
+      </section>
     </div >
   )
 }

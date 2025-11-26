@@ -18,6 +18,9 @@ type CanteenSummary = {
     closingTime: string | null
     autoMode: boolean
     manualIsOpen: boolean
+    prepTimeMinutes?: number | null
+    peakHoursStart?: string | null
+    peakHoursEnd?: string | null
 }
 
 const fetcher = async <T,>(url: string): Promise<T> => {
@@ -152,14 +155,14 @@ export default function CanteensClient() {
                                         </Badge>
                                     </div>
                                 </div>
-                                <div className="mt-4 flex items-start justify-between gap-3">
+                                    <div className="mt-4 flex items-start justify-between gap-3">
                                     <div>
                                         <h3 className="text-lg font-semibold text-[rgb(var(--text))]">{c.name}</h3>
                                         <p className="text-sm text-[rgb(var(--text-muted))]">{c.location ?? 'On campus'}</p>
                                     </div>
                                     <div className="text-right text-xs text-[rgb(var(--text-muted))]">
-                                        <p>Prep · 10m</p>
-                                        <p>Peak · 12-2 PM</p>
+                                        <p>Prep · {typeof c.prepTimeMinutes === 'number' && c.prepTimeMinutes >= 0 ? `${c.prepTimeMinutes}m` : '≈10m'}</p>
+                                        <p>{c.peakHoursStart && c.peakHoursEnd ? `Peak · ${c.peakHoursStart}-${c.peakHoursEnd}` : 'Peak · est. 12-2 PM'}</p>
                                     </div>
                                 </div>
                                 <div className="mt-4 flex flex-wrap gap-2 text-xs">

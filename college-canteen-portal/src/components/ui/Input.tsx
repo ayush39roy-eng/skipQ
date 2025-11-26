@@ -6,11 +6,11 @@ type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   hint?: string
 }
 
-export function Input({ label, hint, className, ...rest }: InputProps) {
+export function Input({ label, hint, className, inputClassName, ...rest }: InputProps & { inputClassName?: string }) {
   return (
     <label className={clsx('block space-y-1', className)}>
-      {label && <span className="block text-sm font-medium" style={{color:'rgb(var(--text))'}}>{label}</span>}
-      <input className="input" {...rest} />
+      {label && <span className="block text-sm font-medium" style={{ color: 'rgb(var(--text))' }}>{label}</span>}
+      <input className={clsx('input', inputClassName)} {...rest} />
       {hint && <span className="block text-xs text-muted">{hint}</span>}
     </label>
   )

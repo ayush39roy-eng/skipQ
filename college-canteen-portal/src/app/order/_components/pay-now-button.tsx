@@ -42,11 +42,11 @@ export default function PayNowButton({ orderId }: Props) {
   }
 
   return (
-    <div className="space-y-1">
-      <Button type="button" onClick={handleClick} disabled={loading}>
+    <div className="space-y-2">
+      <Button type="button" onClick={handleClick} disabled={loading} variant="primary" size="lg" className="w-full rounded-lg">
         {loading ? 'Redirecting…' : 'Pay Now'}
       </Button>
-      {error && <p className="text-xs text-rose-500">{error}</p>}
+      {error && <p className="text-sm text-rose-500">{error}</p>}
     </div>
   )
 }
