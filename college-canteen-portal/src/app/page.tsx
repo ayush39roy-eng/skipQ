@@ -24,11 +24,7 @@ const features = [
   }
 ]
 
-const journey = [
-  { step: '01', title: 'Discover canteens', text: 'Filter by cuisine, wait time or diet preference.' },
-  { step: '02', title: 'Order & pay online', text: 'Secure checkout with saved favourites and group carts.' },
-  { step: '03', title: 'Pick up without queues', text: 'Smart notifications let you collect right on time.' }
-]
+
 
 export default async function HomePage() {
   const session = await getSession()
@@ -71,55 +67,22 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 opacity-40 blur-3xl lg:block" aria-hidden>
           <div className="h-full w-full bg-gradient-to-br from-sky-400/40 to-emerald-400/20" />
         </div>
-        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center">
-          <div className="flex-1 space-y-6">
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-sky-200">
-              New • 2025 rollout
-            </span>
+        <div className="relative flex flex-col items-center gap-6 text-center">
+          <div className="max-w-3xl space-y-6">
             <div className="space-y-4">
-              <h1 className="text-4xl font-black tracking-tight text-white sm:text-5xl">
-                Skip queues. Delight hungry students.
+              <h1 className="text-4xl font-black tracking-tight text-white sm:text-6xl">
+                Hungry and have your work due? Preorder and skip the queue.
               </h1>
-              <p className="text-base text-white/80 sm:text-lg">
-                The SkipQ Canteen Portal unifies ordering, payments and vendor workflows so campus dining feels instant, transparent and human.
-              </p>
+
             </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href="/canteens" className="btn px-6 py-3 text-base">
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/canteens" className="btn px-8 py-4 text-lg">
                 Start Ordering
               </Link>
-              <Link href="/register" className="btn-secondary px-6 py-3 text-base">
+              <Link href="/register" className="btn-secondary px-8 py-4 text-lg">
                 Become a Vendor
               </Link>
             </div>
-            {/* <dl className="grid grid-cols-2 gap-4 text-white/80 sm:grid-cols-3">
-              <div>
-                <dt className="text-sm uppercase tracking-wide text-white/60">Orders processed</dt>
-                <dd className="text-2xl font-bold">{formatOrderCount(totalOrders)}</dd>
-              </div>
-              <div>
-                <dt className="text-sm uppercase tracking-wide text-white/60">Avg pickup time</dt>
-                <dd className="text-2xl font-bold">{avgPrepTime > 0 ? `${avgPrepTime} min` : 'N/A'}</dd>
-              </div>
-              <div>
-                <dt className="text-sm uppercase tracking-wide text-white/60">Vendors onboarded</dt>
-                <dd className="text-2xl font-bold">{vendorCount}</dd>
-              </div>
-            </dl> */}
-          </div>
-          <div className="flex-1 rounded-2xl border border-white/10 bg-[rgb(var(--bg))]/90 p-6 backdrop-blur">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-[0.3em] text-white/70">Today&apos;s flow</h2>
-            <ul className="space-y-4">
-              {journey.map((item) => (
-                <li key={item.step} className="flex items-start gap-4">
-                  <span className="text-sm font-mono text-white/60">{item.step}</span>
-                  <div>
-                    <p className="text-base font-semibold text-white">{item.title}</p>
-                    <p className="text-sm text-white/70">{item.text}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
           </div>
         </div>
       </section>

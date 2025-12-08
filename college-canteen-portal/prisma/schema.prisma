@@ -18,6 +18,7 @@ model User {
   sessions     Session[]
   orders       Order[]
   createdAt    DateTime  @default(now())
+  phone        String?
 }
 
 model Vendor {

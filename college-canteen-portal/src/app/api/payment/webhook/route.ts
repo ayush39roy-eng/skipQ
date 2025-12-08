@@ -60,6 +60,25 @@ export async function POST(req: Request) {
       data: { status: 'PAID' }
     })
 
+    // Capture user phone number if available in the payload
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const contact = (paymentEntity as any)?.contact || (payload.payload?.payment?.entity as any)?.contact
+    if (contact) {
+      try {
+        // Find the user associated with this order and update their phone
+        const order = await prisma.order.findUnique({ where: { id: payment.orderId }, select: { userId: true } })
+        if (order?.userId) {
+          await prisma.user.update({
+            where: { id: order.userId },
+            data: { phone: contact }
+          })
+          log('Updated user phone from Razorpay contact', { userId: order.userId, contact })
+        }
+      } catch (err) {
+        console.error('Failed to update user phone from webhook', err)
+      }
+    }
+
     if (updateResult.count > 0) {
       log('Payment status updated to PAID', { orderId: payment.orderId })
       // We successfully transitioned the payment to PAID; now perform downstream actions once.

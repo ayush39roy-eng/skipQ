@@ -2,28 +2,35 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Card } from '@/components/ui/Card'
 import Link from 'next/link'
+import VendorAnalyticsCharts from './VendorAnalyticsCharts'
 
 export const dynamic = 'force-dynamic'
 
-function getStartOfDay(date: Date) {
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
+// Helper to shift a date to IST (UTC+5:30)
+// We add the offset to the timestamp, so the resulting Date object's UTC methods return IST values.
+function toIST(date: Date) {
+    return new Date(date.getTime() + (5.5 * 60 * 60 * 1000))
+}
+
+function getStartOfDayIST(istDate: Date) {
+    const d = new Date(istDate)
+    d.setUTCHours(0, 0, 0, 0)
     return d
 }
 
-function getStartOfWeek(date: Date) {
-    const d = new Date(date)
-    const day = d.getDay()
-    const diff = d.getDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
-    d.setDate(diff)
-    d.setHours(0, 0, 0, 0)
+function getStartOfWeekIST(istDate: Date) {
+    const d = new Date(istDate)
+    const day = d.getUTCDay()
+    const diff = d.getUTCDate() - day + (day === 0 ? -6 : 1) // adjust when day is sunday
+    d.setUTCDate(diff)
+    d.setUTCHours(0, 0, 0, 0)
     return d
 }
 
-function getStartOfMonth(date: Date) {
-    const d = new Date(date)
-    d.setDate(1)
-    d.setHours(0, 0, 0, 0)
+function getStartOfMonthIST(istDate: Date) {
+    const d = new Date(istDate)
+    d.setUTCDate(1)
+    d.setUTCHours(0, 0, 0, 0)
     return d
 }
 
@@ -43,15 +50,18 @@ export default async function VendorAnalyticsPage() {
         select: {
             id: true,
             totalCents: true,
+            vendorTakeCents: true,
             createdAt: true
         },
         orderBy: { createdAt: 'desc' }
     })
 
-    const now = new Date()
-    const startOfDay = getStartOfDay(now)
-    const startOfWeek = getStartOfWeek(now)
-    const startOfMonth = getStartOfMonth(now)
+    const nowUTC = new Date()
+    const nowIST = toIST(nowUTC)
+
+    const startOfDayIST = getStartOfDayIST(nowIST)
+    const startOfWeekIST = getStartOfWeekIST(nowIST)
+    const startOfMonthIST = getStartOfMonthIST(nowIST)
 
     let dailySales = 0
     let weeklySales = 0
@@ -61,25 +71,20 @@ export default async function VendorAnalyticsPage() {
     const hoursMap = new Array(24).fill(0)
 
     for (const o of orders) {
-        const amount = o.totalCents
-        const d = new Date(o.createdAt)
+        // Use vendorTakeCents if available (net earnings), otherwise fallback to totalCents (gross)
+        const amount = (o.vendorTakeCents && o.vendorTakeCents > 0) ? o.vendorTakeCents : o.totalCents
+
+        // Convert order time to IST
+        const orderIST = toIST(new Date(o.createdAt))
 
         totalSales += amount
-        if (d >= startOfDay) dailySales += amount
-        if (d >= startOfWeek) weeklySales += amount
-        if (d >= startOfMonth) monthlySales += amount
+        if (orderIST >= startOfDayIST) dailySales += amount
+        if (orderIST >= startOfWeekIST) weeklySales += amount
+        if (orderIST >= startOfMonthIST) monthlySales += amount
 
-        // Peak hours (IST conversion)
-        const utcHours = d.getUTCHours()
-        const utcMinutes = d.getUTCMinutes()
-        let istHours = utcHours + 5
-        let istMinutes = utcMinutes + 30
-        if (istMinutes >= 60) {
-            istMinutes -= 60
-            istHours += 1
-        }
-        if (istHours >= 24) istHours -= 24
-
+        // Peak hours (IST)
+        // Since orderIST is already shifted, getUTCHours gives us the IST hour
+        const istHours = orderIST.getUTCHours()
         hoursMap[istHours]++
     }
 
@@ -119,6 +124,13 @@ export default async function VendorAnalyticsPage() {
                     <p className="text-2xl font-bold">{formatCurrency(monthlySales)}</p>
                 </Card>
             </div>
+
+            <VendorAnalyticsCharts orders={orders.map(o => ({
+                id: o.id,
+                totalCents: o.totalCents,
+                vendorTakeCents: o.vendorTakeCents,
+                createdAt: o.createdAt.toISOString()
+            }))} />
 
             <div className="grid gap-4 sm:grid-cols-2">
                 <Card className="p-6 space-y-4">

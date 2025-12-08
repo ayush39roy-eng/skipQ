@@ -25,6 +25,20 @@ export async function POST(req: Request) {
     const updateData: { status: string; prepMinutes?: number } = { status: 'CONFIRMED' }
     if (typeof prepMinutes === 'number' && !Number.isNaN(prepMinutes)) updateData.prepMinutes = prepMinutes
     await prisma.order.update({ where: { id: orderId }, data: updateData })
+
+    // Notify user via WhatsApp
+    try {
+      const fullOrder = await prisma.order.findUnique({ where: { id: orderId }, include: { user: true, canteen: true } })
+      if (fullOrder?.user?.phone) {
+        const prepMsg = updateData.prepMinutes ? ` Prep time: ${updateData.prepMinutes} mins.` : ''
+        await sendWhatsApp(fullOrder.user.phone, {
+          text: `Your order #${orderId.slice(-4)} at ${fullOrder.canteen.name} is CONFIRMED!${prepMsg}`
+        })
+      }
+    } catch (err) {
+      console.error('Failed to send CONFIRM notification', err)
+    }
+
   } else if (action === 'EXTEND_PREP') {
     // One-time +5 minutes buffer; only apply if not already extended
     const current = await prisma.order.findUnique({ where: { id: orderId } })
@@ -76,6 +90,19 @@ export async function POST(req: Request) {
     }
   } else if (action === 'READY') {
     await prisma.order.update({ where: { id: orderId }, data: { status: 'READY' } })
+
+    // Notify user via WhatsApp
+    try {
+      const fullOrder = await prisma.order.findUnique({ where: { id: orderId }, include: { user: true, canteen: true } })
+      if (fullOrder?.user?.phone) {
+        await sendWhatsApp(fullOrder.user.phone, {
+          text: `Your order #${orderId.slice(-4)} is READY at ${fullOrder.canteen.name}! Please pick it up.`
+        })
+      }
+    } catch (err) {
+      console.error('Failed to send READY notification', err)
+    }
+
   } else if (action === 'COMPLETED') {
     await prisma.order.update({ where: { id: orderId }, data: { status: 'COMPLETED' } })
   } else if (action === 'SET_PREP' && typeof prepMinutes === 'number' && !Number.isNaN(prepMinutes)) {

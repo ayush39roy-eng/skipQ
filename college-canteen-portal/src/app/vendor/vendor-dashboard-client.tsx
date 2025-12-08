@@ -768,7 +768,7 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
                                 body: JSON.stringify({ menuItemId: item.id, available: newAvailable })
                               })
                               if (!res.ok) throw new Error('Failed to update')
-                            } catch (err) {
+                            } catch {
                               // Revert on error
                               setCanteenSettings(prev => prev.map(c => {
                                 if (c.id !== canteen.id) return c

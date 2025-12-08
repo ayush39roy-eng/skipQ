@@ -86,12 +86,11 @@ export default function CanteensClient() {
 
     return (
         <main className="space-y-8">
-            <section className="rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[rgb(var(--surface))] via-[rgb(var(--surface-muted))] to-[rgb(var(--bg))] p-6 sm:p-10 shadow-[0_25px_60px_rgba(15,15,35,0.35)]">
+            <section className="rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[rgb(var(--surface))] via-[rgb(var(--surface-muted))] to-[rgb(var(--bg))] p-5 sm:p-6 shadow-[0_25px_60px_rgba(15,15,35,0.35)]">
                 <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="space-y-3 max-w-2xl">
-                        <p className="text-xs uppercase tracking-[0.4em] text-[rgb(var(--text-muted))]">Campus network</p>
-                        <h1 className="text-3xl font-semibold tracking-tight text-[rgb(var(--text))]">Browse every canteen on SkipQ and jump straight to ready-to-serve menus.</h1>
-                        <p className="text-sm text-[rgb(var(--text-muted))]">We spotlight proximity, speed, and signature dishes so you never wait in line again.</p>
+                    <div className="space-y-2 max-w-2xl">
+                        <h1 className="text-3xl font-semibold tracking-tight text-[rgb(var(--text))]">Find your food. Skip the queue.</h1>
+                        <p className="text-sm text-[rgb(var(--text-muted))]">Order from any campus outlet instantly.</p>
                     </div>
                     <div className="w-full max-w-md">
                         <Input
@@ -114,21 +113,21 @@ export default function CanteensClient() {
                         </div>
                     </div>
                 </div>
-                <div className="mt-8 grid grid-cols-1 gap-3 text-[rgb(var(--text))] sm:grid-cols-3">
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="mt-4 grid grid-cols-1 gap-3 text-[rgb(var(--text))] sm:grid-cols-3">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Network</p>
-                        <p className="mt-2 text-3xl font-semibold">{data.length}</p>
-                        <p className="text-sm text-[rgb(var(--text-muted))]">Active canteens on SkipQ</p>
+                        <p className="mt-1 text-2xl font-semibold">{data.length}</p>
+                        <p className="text-xs text-[rgb(var(--text-muted))]">Active canteens</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Coverage</p>
-                        <p className="mt-2 text-3xl font-semibold">{campusZones || '—'}</p>
-                        <p className="text-sm text-[rgb(var(--text-muted))]">Campus zones served</p>
+                        <p className="mt-1 text-2xl font-semibold">{campusZones || '—'}</p>
+                        <p className="text-xs text-[rgb(var(--text-muted))]">Campus zones</p>
                     </div>
-                    <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                    <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
                         <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Avg. wait</p>
-                        <p className="mt-2 text-3xl font-semibold">&lt; 5m</p>
-                        <p className="text-sm text-[rgb(var(--text-muted))]">Pickup after ordering</p>
+                        <p className="mt-1 text-2xl font-semibold">&lt; 5m</p>
+                        <p className="text-xs text-[rgb(var(--text-muted))]">Pickup time</p>
                     </div>
                 </div>
             </section>
@@ -155,7 +154,7 @@ export default function CanteensClient() {
                                         </Badge>
                                     </div>
                                 </div>
-                                    <div className="mt-4 flex items-start justify-between gap-3">
+                                <div className="mt-4 flex items-start justify-between gap-3">
                                     <div>
                                         <h3 className="text-lg font-semibold text-[rgb(var(--text))]">{c.name}</h3>
                                         <p className="text-sm text-[rgb(var(--text-muted))]">{c.location ?? 'On campus'}</p>

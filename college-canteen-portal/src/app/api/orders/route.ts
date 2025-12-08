@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   // Initialize Payment
   const hasRazorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
   let externalOrderId: string | undefined
-  let paymentLink = `/pay/${order.id}`
+  const paymentLink = `/pay/${order.id}`
 
   if (hasRazorpay) {
     try {
