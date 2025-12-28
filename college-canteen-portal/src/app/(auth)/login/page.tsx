@@ -1,17 +1,10 @@
 "use client"
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-import { Loader } from '@/components/ui/Loader'
-
-const benefits = [
-  'Real-time menus & wait times',
-  'WhatsApp-ready order alerts',
-  'Cashfree, UPI & card checkout'
-]
+import { Utensils, Gamepad2 } from 'lucide-react'
+// Note: We are not using standard UI components here to maintain the custom Neo-Brutalism styles 
+// strictly defined in the previous steps without wrapping div issues.
 
 export default function LoginPage() {
   const searchParams = useSearchParams()
@@ -55,9 +48,8 @@ export default function LoginPage() {
          
          {/* Floating Elements */}
          <div className="relative z-10 text-center space-y-6 max-w-lg">
-            <div className="inline-flex items-center justify-center p-8 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-3xl mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
-               {/* Chef Hat Icon Replacement since Lucide might not be available or we use text */}
-               <span className="text-6xl">🍔</span>
+            <div className="inline-flex items-center justify-center p-8 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-3xl mb-8 animate-float">
+               <Utensils className="w-16 h-16 text-black" strokeWidth={2.5} />
             </div>
             <h1 className="text-7xl font-black uppercase tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] leading-none text-black">
               Skip The <br/>
@@ -73,8 +65,8 @@ export default function LoginPage() {
       <div className="flex flex-col justify-center items-center p-2 bg-[#FFF8F0]">
         <div className="w-full max-w-sm space-y-3">
           <div className="text-center space-y-0.5">
-            <div className="inline-block p-2 bg-[#FFD166] border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded-full mb-1">
-               <span className="text-xl">🎮</span>
+            <div className="inline-block p-2 bg-[#FFD166] border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded-full mb-1 animate-wiggle">
+               <Gamepad2 className="w-6 h-6 text-black" strokeWidth={2.5} />
             </div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-black">Player Login</h2>
             <p className="text-slate-600 font-bold border-b-2 border-slate-200 inline-block pb-0.5 text-xs">Enter credentials to start</p>

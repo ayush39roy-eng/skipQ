@@ -1,26 +1,35 @@
 import Link from 'next/link'
 import { getSession } from '@/lib/session'
+import { Zap, Bell, CreditCard, BarChart3 } from 'lucide-react'
 
 const features = [
   {
-    title: 'Realtime menus',
-    description: 'Live availability, prep times, and allergen info straight from each canteen station.',
-    accent: 'Live sync'
+    title: 'Live sync',
+    description: 'Realtime menus, availability, prep times, and allergen info straight from each canteen station.',
+    accent: 'Realtime',
+    icon: Zap,
+    color: 'bg-yellow-400'
   },
   {
-    title: 'Faster fulfilment',
+    title: 'Automation',
     description: 'Vendors receive WhatsApp alerts with confirm / cancel buttons to keep queues short.',
-    accent: 'Automation'
+    accent: 'Faster fulfilment',
+    icon: Bell,
+    color: 'bg-green-400'
   },
   {
-    title: 'Unified payments',
+    title: 'Multi-pay',
     description: 'Cashfree, UPI, cards and staff wallets—all reconciled automatically.',
-    accent: 'Multi-pay'
+    accent: 'Unified payments',
+    icon: CreditCard,
+    color: 'bg-pink-400'
   },
   {
-    title: 'Campus-grade insights',
+    title: 'Analytics',
     description: 'Admins track rush hours, order conversion and vendor SLAs in one dashboard.',
-    accent: 'Analytics'
+    accent: 'Campus insights',
+    icon: BarChart3,
+    color: 'bg-blue-400'
   }
 ]
 
@@ -48,7 +57,7 @@ export default async function HomePage() {
         <div className="relative flex flex-col items-center gap-8 text-center z-10">
           <div className="max-w-4xl space-y-6">
             <div className="space-y-2">
-              <div className="inline-block bg-black text-white px-4 py-1 text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[4px_4px_0px_white]">
+              <div className="inline-block bg-black text-white px-4 py-1 text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[4px_4px_0px_white] animate-pulse-slow">
                 Level 1: The Canteen
               </div>
               <h1 className="text-5xl font-black tracking-tighter sm:text-7xl uppercase leading-none drop-shadow-sm">
@@ -96,28 +105,23 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Features Grid */}
-      <section className="grid gap-8 md:grid-cols-2">
+      {/* Features Grid - Clean / Mature Neo-Brutalism */}
+      <section className="grid gap-6 md:grid-cols-2">
         {features.map((feature, i) => (
-          <article key={feature.title} className={`group rounded-2xl border-4 border-black p-8 shadow-[8px_8px_0px_0px_#000000] hover:shadow-[12px_12px_0px_0px_#000000] hover:-translate-y-1 transition-all bg-white overflow-hidden relative`}>
-             <div className="absolute top-0 right-0 p-4 opacity-10 font-black text-9xl leading-none select-none pointer-events-none group-hover:opacity-20 transition-opacity">
-                {i + 1}
+          <article key={feature.title} className="group flex flex-col rounded-xl border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_#000000] hover:shadow-[6px_6px_0px_0px_#000000] hover:translate-y-[-2px] transition-all">
+             <div className="mb-4 flex items-center justify-between">
+                <div className={`w-12 h-12 flex items-center justify-center rounded-lg border-2 border-black ${feature.color} shadow-[2px_2px_0px_0px_#000000]`}>
+                    <feature.icon className="w-6 h-6 text-black" strokeWidth={2.5} />
+                </div>
+                <span className="text-xs font-bold uppercase tracking-widest border-2 border-black px-2 py-1 rounded bg-slate-100">
+                    {feature.accent}
+                </span>
              </div>
              
-             <div className="relative z-10">
-                <div className="mb-6 inline-flex items-center gap-3">
-                  <div className={`w-12 h-12 border-2 border-black rounded-lg shadow-[3px_3px_0px_0px_#000000] flex items-center justify-center text-2xl ${featureColors[i % featureColors.length]}`}>
-                    {featureIcons[i % featureIcons.length]}
-                  </div>
-                  <span className="text-sm font-black uppercase tracking-widest bg-black text-white px-2 py-1 transform -skew-x-12">
-                     {feature.accent}
-                  </span>
-                </div>
-                <h3 className="text-3xl font-black text-black uppercase mb-3">{feature.title}</h3>
-                <p className="text-lg font-bold text-slate-600 leading-relaxed border-l-4 border-slate-200 pl-4">
-                    {feature.description}
-                </p>
-            </div>
+             <h3 className="text-2xl font-black text-black uppercase mb-2">{feature.title}</h3>
+             <p className="text-base font-bold text-slate-600 leading-relaxed">
+                {feature.description}
+             </p>
           </article>
         ))}
       </section>
@@ -142,17 +146,3 @@ export default async function HomePage() {
     </div>
   )
 }
-
-const featureColors = [
-    "bg-[#FF9F1C]",
-    "bg-[#06D6A0]",
-    "bg-[#EF476F]",
-    "bg-[#118AB2]"
-]
-
-const featureIcons = [
-    "⚡",
-    "🔔",
-    "💳",
-    "📊"
-]

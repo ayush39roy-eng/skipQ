@@ -29,6 +29,25 @@ export default {
         'neo': '4px 4px 0px 0px #000000',
         'neo-lg': '6px 6px 0px 0px #000000',
         'neo-xl': '8px 8px 0px 0px #000000',
+      },
+      keyframes: {
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+        wiggle: {
+          '0%, 100%': { transform: 'rotate(-3deg)' },
+          '50%': { transform: 'rotate(3deg)' },
+        },
+        'pulse-slow': {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.8' },
+        }
+      },
+      animation: {
+        float: 'float 3s ease-in-out infinite',
+        wiggle: 'wiggle 1s ease-in-out infinite',
+        'pulse-slow': 'pulse-slow 3s ease-in-out infinite',
       }
     },
   },
