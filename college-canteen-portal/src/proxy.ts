@@ -76,7 +76,7 @@ function getClientIp(req: NextRequest): string {
   return '127.0.0.1'
 }
 
-export async function middleware(req: NextRequest) {
+export default async function proxy(req: NextRequest) {
   const url = req.nextUrl
   const path = url.pathname
 
