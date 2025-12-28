@@ -52,9 +52,6 @@ export default function SiteShell({
                        </div>
                        <span className="hidden text-xl font-black tracking-black text-black uppercase sm:inline drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">SkipQ</span>
                     </Link>
-                    <div className="hidden sm:inline-block px-2 py-0.5 bg-[#FF9F1C] border-2 border-black -skew-x-12 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">
-                        <span className="text-xs font-bold text-white skew-x-12 uppercase tracking-wide">Beta</span>
-                    </div>
                 </div>
                 <nav className="flex flex-1 flex-wrap items-center justify-end gap-3 text-sm font-bold sm:justify-end">
                     {userRole !== 'VENDOR' && (
