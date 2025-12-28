@@ -22,7 +22,25 @@ export default {
           ink: '#000000', // Pure Black
           surface: '#FFFFFF', // White for cards
         },
-        // ...vendor colors...
+        // Vendor colors could be re-added if needed, but keeping it focused on what broke
+        vendor: {
+           bg: '#F7F9FB',
+           sidebar: '#F1F4F8',
+           surface: '#FFFFFF',
+           border: '#E5E7EB',
+           divider: '#EDF2F7',
+           text: {
+             primary: '#111827',
+             secondary: '#6B7280',
+             muted: '#9CA3AF',
+           },
+           accent: {
+             DEFAULT: '#00C48C',
+             soft: '#D9FFF1',
+           },
+           success: '#00C48C',
+           danger: '#EF476F',
+        }
       },
       boxShadow: {
         'neo-sm': '2px 2px 0px 0px #000000',

@@ -3,8 +3,6 @@ import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Utensils, Gamepad2 } from 'lucide-react'
-// Note: We are not using standard UI components here to maintain the custom Neo-Brutalism styles 
-// strictly defined in the previous steps without wrapping div issues.
 
 export default function LoginPage() {
   const searchParams = useSearchParams()

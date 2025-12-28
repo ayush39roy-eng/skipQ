@@ -9,14 +9,19 @@ type BadgeProps = {
 
 export function Badge({ variant = 'default', children, className }: BadgeProps) {
   const variants: Record<string,string> = {
-    default: 'bg-[rgb(var(--surface-muted))] text-[rgb(var(--text))] border border-[rgb(var(--border))]',
-    success: 'bg-green-600/15 text-green-300 border border-green-700/50',
-    warning: 'bg-amber-600/15 text-amber-300 border border-amber-700/50',
-    danger: 'bg-rose-600/15 text-rose-300 border border-rose-700/50',
-    info: 'bg-blue-600/15 text-blue-300 border border-blue-700/50'
+    default: 'bg-black text-white hover:bg-black/80',
+    success: 'bg-[#06D6A0] text-black hover:bg-[#06D6A0]/80', // Mint Green (Neo-Brutalism)
+    warning: 'bg-[#FF9F1C] text-black hover:bg-[#FF9F1C]/80', // Orange
+    danger: 'bg-[#EF476F] text-white hover:bg-[#EF476F]/80', // Red
+    info: 'bg-[#118AB2] text-white hover:bg-[#118AB2]/80' // Blue
   }
+  
   return (
-    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium', variants[variant], className)}>
+    <span className={clsx(
+      'inline-flex items-center gap-1 rounded-md border-2 border-black px-2.5 py-0.5 text-xs font-black uppercase transition-colors shadow-[2px_2px_0px_0px_#000]',
+      variants[variant],
+      className
+    )}>
       {children}
     </span>
   )

@@ -1,6 +1,5 @@
 "use client"
 import { useEffect, useState } from 'react'
-import { Badge } from '@/components/ui/Badge'
 
 interface Props {
   orderId: string
@@ -103,31 +102,59 @@ export default function OrderStatusClient({ orderId, initialStatus, initialPrep,
     }
   }, [endAt])
 
-  const variant = ['PAID', 'CONFIRMED', 'COMPLETED'].includes(status) ? 'success' : status === 'CANCELLED' ? 'danger' : 'info'
   return (
-    <div className="space-y-2 text-sm">
-      <div className="flex items-center gap-2">Current Status: <Badge variant={variant}>{status}</Badge></div>
-      {paymentStatus && <div className="text-muted">Payment: {paymentStatus}</div>}
-      {prep != null && status !== 'CANCELLED' && (
-        <div className="text-muted">
-          <div>Prep time: <span className="font-medium">{prep} min</span></div>
-          {endAt != null && (
-            <div className="text-sm text-[rgb(var(--text-muted))] mt-1">Approx ready at <span className="font-medium">{new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> — <span className="font-medium">{remainingMinutes != null ? (remainingMinutes > 0 ? `${remainingMinutes} min` : 'Ready') : ''}</span></div>
-          )}
-        </div>
+    <div className="space-y-4">
+      {status === 'PENDING' && (
+         <div className="flex items-center gap-3 animate-pulse">
+            <div className="bg-[#FFD166] border-2 border-black text-black px-4 py-2 rounded-full font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#000]">
+              ⏳ Preparing Transaction...
+            </div>
+          </div>
       )}
 
-      {status === 'CANCELLED' && (
-        <div className="mt-2 p-2 rounded-md bg-red-50 border border-red-200 text-sm text-red-800">
-          <div className="font-medium">Refund initiated</div>
-          <div className="mt-1">Your order has been cancelled and the refund process has been initiated. The refund will be processed shortly and should reflect in your original payment method within a few business days. We will notify you once the refund is complete.</div>
-        </div>
+      {status === 'CONFIRMED' && (
+         <div className="space-y-4">
+             <div className="flex flex-wrap items-center gap-2">
+                 <div className="bg-[#06D6A0] border-2 border-black text-black px-4 py-2 rounded-lg font-black uppercase tracking-wider shadow-[2px_2px_0px_0px_#000]">
+                    Cooking In Progress
+                 </div>
+                 {remainingMinutes !== null && (
+                    <div className="bg-white border-2 border-black px-3 py-2 rounded-lg font-bold">
+                        {remainingMinutes > 0 ? `${remainingMinutes}m remaining` : 'Almost Ready'}
+                    </div>
+                 )}
+             </div>
+             {endAt && (
+                 <div className="w-full bg-slate-200 h-4 border-2 border-black rounded-full overflow-hidden relative">
+                      <div className="h-full bg-[#FF9F1C] animate-pulse" style={{ width: '60%' }}></div>
+                 </div>
+             )}
+         </div>
       )}
 
       {status === 'COMPLETED' && (
-        <div className="text-emerald-400">Vendor marked this order completed.</div>
+          <div className="flex items-center gap-2">
+            <div className="bg-black text-white border-2 border-black px-4 py-2 rounded-lg font-black uppercase tracking-wider shadow-[4px_4px_0px_0px_#06D6A0]">
+               Order Ready / Picked Up
+            </div>
+          </div>
       )}
-      {error && <div className="text-xs text-amber-500">Update error: {error}</div>}
+
+       {status === 'CANCELLED' && (
+        <div className="mt-2 p-4 rounded-xl bg-red-50 border-2 border-black text-black shadow-[4px_4px_0px_0px_#EF476F]">
+          <div className="font-black uppercase mb-1">Order Cancelled</div>
+          <div className="text-sm font-medium">Refund initiated. It will reflect in 5-7 business days.</div>
+        </div>
+      )}
+      
+      {/* Fallback for other statuses */}
+      {!['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED'].includes(status) && (
+        <div className="bg-white border-2 border-black px-4 py-2 rounded-lg font-bold shadow-[2px_2px_0px_0px_#000]">
+            Status: {status}
+        </div>
+      )}
+
+      {error && <div className="text-xs text-red-500 font-bold bg-white border border-black p-1 inline-block mt-2">Update error: {error}</div>}
     </div>
   )
 }

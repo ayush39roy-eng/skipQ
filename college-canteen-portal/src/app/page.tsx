@@ -49,32 +49,54 @@ export default async function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden rounded-[2rem] border-4 border-black bg-[#FF9F1C] px-6 py-16 shadow-[8px_8px_0px_0px_#000000] sm:px-12 sm:py-20 relative text-black group">
         
-        {/* Abstract Shapes */}
-        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[150%] bg-white/20 rotate-12 blur-3xl pointer-events-none"></div>
-        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[120%] bg-black/10 -rotate-12 blur-2xl pointer-events-none"></div>
+        {/* Abstract Shapes & "Spark" Elements */}
+        {/* Retro Grid Background */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.1)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.1)_1px,transparent_1px)] bg-[size:40px_40px] opacity-20 pointer-events-none"></div>
+        
+        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[150%] bg-white/10 rotate-12 blur-3xl pointer-events-none"></div>
+        <div className="absolute bottom-[-20%] right-[-10%] w-[40%] h-[120%] bg-black/5 -rotate-12 blur-2xl pointer-events-none"></div>
+        
+        {/* Floating Background Icons for "Live" Feel */}
+        <div className="absolute top-10 left-10 opacity-20 animate-float pointer-events-none">
+           <Zap className="w-16 h-16 text-black rotate-[-12deg]" />
+        </div>
+        <div className="absolute bottom-20 right-20 opacity-20 animate-wiggle pointer-events-none">
+           <Bell className="w-20 h-20 text-white rotate-[12deg]" />
+        </div>
+        <div className="absolute top-1/2 right-10 opacity-10 animate-float pointer-events-none" style={{ animationDelay: '1s' }}>
+           <CreditCard className="w-24 h-24 text-black rotate-[45deg]" />
+        </div>
+
         <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10 pointer-events-none"></div>
 
         <div className="relative flex flex-col items-center gap-8 text-center z-10">
           <div className="max-w-4xl space-y-6">
-            <div className="space-y-2">
-              <div className="inline-block bg-black text-white px-4 py-1 text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[4px_4px_0px_white] animate-pulse-slow">
+            <div className="space-y-4">
+              <div className="inline-block bg-black text-white px-6 py-2 text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[4px_4px_0px_white] animate-pulse-slow border-2 border-white">
                 Level 1: The Canteen
               </div>
-              <h1 className="text-5xl font-black tracking-tighter sm:text-7xl uppercase leading-none drop-shadow-sm">
+              <h1 className="text-6xl font-black tracking-tighter sm:text-8xl uppercase leading-none drop-shadow-[4px_4px_0px_rgba(255,255,255,0.5)]">
                 Hungry?<br/>
-                <span className="text-white text-stroke-2">Skip The Queue.</span>
+                <span className="text-white text-stroke-3 drop-shadow-[4px_4px_0px_#000] relative inline-block">
+                    Skip The Queue.
+                    {/* Underline Squiggle */}
+                    <svg className="absolute -bottom-4 left-0 w-full h-4 text-black" viewBox="0 0 100 10" preserveAspectRatio="none">
+                        <path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="4" fill="none" />
+                    </svg>
+                </span>
               </h1>
             </div>
-            <p className="text-xl font-bold max-w-2xl mx-auto opacity-90">
-              Pre-order from your phone, beat the rush, and level up your lunch break.
+            <p className="text-2xl font-bold max-w-2xl mx-auto opacity-90 bg-white/20 p-2 rounded-lg border-2 border-black/10 backdrop-blur-sm">
+              Pre-order from your phone, beat the rush, and <span className="text-[#EF476F] underline decoration-wavy decoration-2 underline-offset-8 font-black [text-decoration-skip-ink:none]">level up</span> your lunch break.
             </p>
 
-            <div className="flex flex-wrap justify-center gap-6 pt-4">
-              <Link href="/canteens" className="text-xl px-8 py-4 bg-white border-2 border-black font-black uppercase tracking-wide shadow-[6px_6px_0px_0px_#000000] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all rounded-xl">
-                Start Ordering
+            <div className="flex flex-wrap justify-center gap-6 pt-6">
+              <Link href="/canteens" className="text-xl px-10 py-5 bg-white border-4 border-black font-black uppercase tracking-wide shadow-[8px_8px_0px_0px_#000000] hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[8px] active:translate-y-[8px] active:shadow-none transition-all rounded-2xl flex items-center gap-2 group/btn">
+                <span>Start Ordering</span>
+                <Zap className="w-6 h-6 group-hover/btn:fill-black transition-colors" />
               </Link>
               {!session?.role && (
-                 <Link href="/register" className="text-xl px-8 py-4 bg-[#06D6A0] border-2 border-black font-black uppercase tracking-wide shadow-[6px_6px_0px_0px_#000000] hover:shadow-none hover:translate-x-[6px] hover:translate-y-[6px] transition-all rounded-xl">
+                 <Link href="/register" className="text-xl px-10 py-5 bg-[#06D6A0] text-black border-4 border-black font-black uppercase tracking-wide shadow-[8px_8px_0px_0px_#000000] hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[8px] active:translate-y-[8px] active:shadow-none transition-all rounded-2xl">
                   Join Game
                 </Link>
               )}
