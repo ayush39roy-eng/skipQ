@@ -5,7 +5,8 @@ import type { Prisma } from '@prisma/client'
 
 export const dynamic = 'force-dynamic'
 
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await requireRole(['ADMIN'])
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json()

@@ -15,7 +15,8 @@ import Link from 'next/link'
 type MenuSectionShape = { id: string; name: string; sortOrder?: number }
 type MenuItemShape = { id: string; name: string; priceCents: number; imageUrl?: string | null; available?: boolean; sectionId?: string | null; sortOrder?: number | null }
 
-export default async function CanteenPage({ params }: { params: Readonly<{ id: string }> }) {
+export default async function CanteenPage(props: { params: Promise<{ id: string }> }) {
+    const params = await props.params;
     const session = await requireRole(['ADMIN'])
     if (!session) return <p>Unauthorized</p>
 

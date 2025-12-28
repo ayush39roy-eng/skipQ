@@ -14,7 +14,7 @@ import { trainChurnAnalytics } from '@/lib/ai/churn-analytics';
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function POST(req: Request) {
     // Context for Audit
-    const ip = headers().get('x-forwarded-for') || 'unknown';
+    const ip = (await headers()).get('x-forwarded-for') || 'unknown';
     const method = 'POST';
     let authType: AuthType = 'ANONYMOUS';
     let authId = 'unknown';
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         let isAuthenticated = false;
         
         // A. Primary: API Key
-        const authHeader = headers().get('Authorization');
+        const authHeader = (await headers()).get('Authorization');
         if (authHeader?.startsWith('Bearer ')) {
             const token = authHeader.substring(7);
             const adminKeys = (process.env.ADMIN_API_KEYS || '').split(',');

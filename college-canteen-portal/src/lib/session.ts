@@ -8,14 +8,16 @@ export async function createSession(userId: string, role: 'USER' | 'VENDOR' | 'A
   const expiresAt = addHours(new Date(), 24)
   await prisma.session.create({ data: { userId, token, role, expiresAt } })
   const secure = process.env.NODE_ENV === 'production'
-  cookies().set('session', token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 })
+  const cookieStore = await cookies()
+  cookieStore.set('session', token, { httpOnly: true, sameSite: 'lax', secure, path: '/', maxAge: 60 * 60 * 24 })
   return token
 }
 
 export async function getSession() {
-  let token = cookies().get('session')?.value
+  const cookieStore = await cookies()
+  let token = cookieStore.get('session')?.value
   if (!token) {
-    const authHeader = headers().get('Authorization')
+    const authHeader = (await headers()).get('Authorization')
     if (authHeader?.startsWith('Bearer ')) {
       token = authHeader.substring(7)
     }
@@ -35,9 +37,10 @@ export async function requireRole(roles: ('USER' | 'VENDOR' | 'ADMIN')[]) {
 }
 
 export async function clearSession() {
-  const token = cookies().get('session')?.value
+  const cookieStore = await cookies()
+  const token = cookieStore.get('session')?.value
   if (token) {
     await prisma.session.deleteMany({ where: { token } })
-    cookies().delete('session')
+    cookieStore.delete('session')
   }
 }

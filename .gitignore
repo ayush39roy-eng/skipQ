@@ -35,3 +35,7 @@ dist/
 **/prisma/*.db*
 **/prisma/*.sqlite
 
+
+Antigravity.exe
+
+.agent/

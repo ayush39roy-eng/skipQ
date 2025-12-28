@@ -64,8 +64,8 @@ function getRateLimiter(path: string): Ratelimit {
 }
 
 function getClientIp(req: NextRequest): string {
-  // NextRequest has ip property in Vercel, plus standard headers
-  if (req.ip) return req.ip
+  // Use 'any' cast as ip might not be in the definition but exists in runtime on Vercel
+  if ((req as any).ip) return (req as any).ip
   
   const forwarded = req.headers.get('x-forwarded-for')
   if (forwarded) return forwarded.split(',')[0].trim()

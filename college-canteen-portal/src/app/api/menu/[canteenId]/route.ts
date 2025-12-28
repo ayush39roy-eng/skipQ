@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(_: Request, { params }: { params: { canteenId: string } }) {
+export async function GET(_: Request, props: { params: Promise<{ canteenId: string }> }) {
+  const params = await props.params;
   const { canteenId } = params
   const [canteen, items, sections] = await Promise.all([
     prisma.canteen.findUnique({

@@ -7,7 +7,8 @@ import PayNowButton from '../_components/pay-now-button'
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
 
-export default async function OrderPage({ params }: { params: { id: string } }) {
+export default async function OrderPage(props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const session = await getSession()
   if (!session) {
     redirect(`/login?next=/order/${params.id}`)
