@@ -1,35 +1,19 @@
 "use client"
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Input } from '@/components/ui/Input'
-import { Button } from '@/components/ui/Button'
-import { Card } from '@/components/ui/Card'
-
-const onboardingSteps = [
-  { title: 'Personalise menus', detail: 'Save diet preferences and top canteens for instant suggestions.' },
-  { title: 'Collect in minutes', detail: 'We notify you when the order hits the counter—no queueing.' }
-]
 
 export default function RegisterPage() {
   const searchParams = useSearchParams()
   const nextParam = searchParams.get('next') ?? '/canteens'
   const encodedNext = encodeURIComponent(nextParam)
+  
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(false)
-  const formRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    // slight delay to ensure layout is ready
-    const t = setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }, 100)
-    return () => clearTimeout(t)
-  }, [])
-
+  
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage('')
@@ -45,11 +29,14 @@ export default function RegisterPage() {
         setMessage(data.error ?? 'Registration failed')
         return
       }
+      
+      // Auto-login after registration
       const login = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
+      
       if (login.ok) {
         window.location.href = nextParam
       } else {
@@ -64,85 +51,115 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[#0f172a] via-[#111927] to-[#05070f] px-4 py-8 shadow-[0_40px_160px_-80px_rgba(76,29,149,0.8)] sm:px-10 sm:py-12 lg:px-16">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(99,102,241,0.35),transparent_45%)]" aria-hidden />
-      <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-        {/* Mobile Header - Visible only on small screens */}
-        <div className="lg:hidden text-center space-y-2 mb-[-1rem]">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-200">Join SkipQ</span>
-          <h1 className="text-2xl font-black text-white">Create account</h1>
-        </div>
-
-        {/* Desktop Sidebar - Hidden on mobile */}
-        <div className="hidden lg:block space-y-6 text-white">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-violet-200">Join SkipQ</span>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-black leading-tight sm:text-5xl">Create an account. Unlock instant dining.</h1>
-            <p className="text-base text-white/80 sm:text-lg">All your canteens, wallets, and loyalty perks live here. Personalise once and glide past the queue forever.</p>
-          </div>
-          <ol className="space-y-4">
-            {onboardingSteps.map((step, index) => (
-              <li key={step.title} className="flex gap-4">
-                <span className="text-sm font-mono text-white/50">0{index + 1}</span>
-                <div>
-                  <p className="text-base font-semibold text-white">{step.title}</p>
-                  <p className="text-sm text-white/70">{step.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-
-        </div>
-
-        <div ref={formRef}>
-          <Card className="space-y-4 border-white/10 bg-[rgb(var(--bg))]/80 p-5 text-[rgb(var(--text))] backdrop-blur sm:p-8">
-            <div className="space-y-1 lg:block hidden">
-              <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Step 1</p>
-              <h2 className="text-2xl font-semibold tracking-tight">Create account</h2>
+    <div className="min-h-screen grid lg:grid-cols-2 bg-[#FFF8F0] text-black font-sans">
+      {/* Left Side - Game Art / Branding */}
+      <div className="hidden lg:flex flex-col justify-center items-center relative p-12 bg-[#FF9F1C]/10 border-r-4 border-black border-dashed">
+         
+         {/* Floating Elements */}
+         <div className="relative z-10 text-center space-y-6 max-w-lg">
+            <div className="inline-flex items-center justify-center p-6 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-3xl mb-4 transform rotate-3 hover:rotate-0 transition-transform duration-300">
+               <span className="text-6xl">🚀</span>
             </div>
-            <form onSubmit={submit} className="space-y-4">
-              <Input label="Full name" value={name} onChange={e => setName(e.target.value)} required />
-              <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-              <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-              <Button type="submit" className="w-full" loading={loading}>{loading ? 'Creating…' : 'Sign up'}</Button>
-              <div className="relative">
+            <h1 className="text-6xl font-black uppercase tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] leading-none text-black">
+              Join The <br/>
+              <span className="text-[#FFF8F0] px-4 bg-[#06D6A0] border-2 border-black transform skew-x-6 inline-block shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-2">Squad</span>
+            </h1>
+            <p className="text-xl font-bold text-slate-700 bg-white border-2 border-black p-4 rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+              "Unlock exclusive menus & skip the line!"
+            </p>
+         </div>
+      </div>
+
+      {/* Right Side - Register Form */}
+      <div className="flex flex-col justify-center items-center p-2 bg-[#FFF8F0]">
+        <div className="w-full max-w-sm space-y-3">
+          <div className="text-center space-y-0.5">
+            <div className="inline-block p-2 bg-[#06D6A0] border-2 border-black shadow-[2px_2px_0px_rgba(0,0,0,1)] rounded-full mb-1">
+               <span className="text-xl">🆕</span>
+            </div>
+            <h2 className="text-2xl font-black uppercase tracking-tight text-black">New Player</h2>
+            <p className="text-slate-600 font-bold border-b-2 border-slate-200 inline-block pb-0.5 text-xs">Create profile to start</p>
+          </div>
+
+          <div className="bg-white p-4 border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] rounded-xl relative overflow-hidden">
+            <form onSubmit={submit} className="space-y-3 relative z-10">
+              
+              <div className="space-y-0.5">
+                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Full Name</label>
+                <input 
+                  type="text" 
+                  value={name} 
+                  onChange={e => setName(e.target.value)} 
+                  required 
+                  className="w-full bg-slate-50 border-2 border-black p-2 rounded-md font-bold focus:outline-none focus:shadow-[2px_2px_0px_#06D6A0] focus:bg-white transition-all text-sm"
+                  placeholder="Ayush Roy"
+                />
+              </div>
+
+              <div className="space-y-0.5">
+                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Email Address</label>
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  className="w-full bg-slate-50 border-2 border-black p-2 rounded-md font-bold focus:outline-none focus:shadow-[2px_2px_0px_#06D6A0] focus:bg-white transition-all text-sm"
+                  placeholder="player@skipq.com"
+                />
+              </div>
+
+              <div className="space-y-0.5">
+                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Password</label>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  className="w-full bg-slate-50 border-2 border-black p-2 rounded-md font-bold focus:outline-none focus:shadow-[2px_2px_0px_#06D6A0] focus:bg-white transition-all text-sm"
+                  placeholder="••••••••"
+                />
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={loading}
+                className="w-full bg-[#06D6A0] border-2 border-black text-black font-black uppercase tracking-widest py-2.5 rounded-lg shadow-[2px_2px_0px_0px_#000000] hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-[0px_0px_0px_0px_#000000] active:translate-x-[2px] active:translate-y-[2px] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-xs"
+              >
+                {loading ? 'CREATING...' : 'JOIN GAME'}
+              </button>
+
+              <div className="relative py-1">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-[rgb(var(--border))]"></span>
+                  <span className="w-full border-t-2 border-dashed border-slate-300"></span>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-[rgb(var(--bg))] px-2 text-[rgb(var(--text-muted))]">Or continue with</span>
+                <div className="relative flex justify-center text-[10px] uppercase font-black">
+                  <span className="bg-white px-2 text-slate-400">OR</span>
                 </div>
               </div>
-              <Button
+
+              <button
                 type="button"
-                variant="secondary"
-                className="w-full flex items-center justify-center gap-2"
+                className="w-full bg-white border-2 border-black text-black font-bold uppercase tracking-wide py-2 rounded-lg shadow-[2px_2px_0px_0px_#000000] hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-xs"
                 onClick={() => window.location.href = '/api/auth/google'}
               >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                    fill="#4285F4"
-                  />
-                  <path
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                    fill="#34A853"
-                  />
-                  <path
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                    fill="#FBBC05"
-                  />
-                  <path
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                    fill="#EA4335"
-                  />
-                </svg>
-                Google
-              </Button>
+                <span>Google Signup</span>
+              </button>
+
             </form>
-            {message && <p className="text-sm text-red-500">{message}</p>}
-            <p className="text-base text-[rgb(var(--text))]">Already have an account? <Link href={`/login?next=${encodedNext}`} className="text-violet-600 font-semibold hover:underline">Log in</Link></p>
-          </Card>
+          </div>
+
+          {message && (
+             <div className="bg-[#FF6B6B] text-white p-2 rounded-lg border-2 border-black shadow-[2px_2px_0px_0px_#000000] font-bold text-center animate-bounce text-xs">
+                {message}
+             </div>
+          )}
+
+          <p className="text-center text-slate-600 font-bold text-xs">
+            Already a Player?{' '}
+            <Link href={`/login?next=${encodedNext}`} className="text-[#06D6A0] underline decoration-2 underline-offset-2 hover:text-black transition-colors">
+              Login Here
+            </Link>
+          </p>
         </div>
       </div>
     </div>
