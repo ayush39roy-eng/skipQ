@@ -70,39 +70,39 @@ export default function LoginPage() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex flex-col justify-center items-center p-8 bg-[#FFF8F0]">
-        <div className="w-full max-w-md space-y-8">
-          <div className="text-center space-y-2">
-            <div className="inline-block p-4 bg-[#FFD166] border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-full mb-4">
-               <span className="text-3xl">🎮</span>
+      <div className="flex flex-col justify-center items-center p-4 bg-[#FFF8F0]">
+        <div className="w-full max-w-md space-y-5">
+          <div className="text-center space-y-1">
+            <div className="inline-block p-3 bg-[#FFD166] border-2 border-black shadow-[3px_3px_0px_rgba(0,0,0,1)] rounded-full mb-2">
+               <span className="text-2xl">🎮</span>
             </div>
-            <h2 className="text-4xl font-black uppercase tracking-tight text-black">Player Login</h2>
-            <p className="text-slate-600 font-bold border-b-2 border-slate-200 inline-block pb-1">Enter credentials to start</p>
+            <h2 className="text-3xl font-black uppercase tracking-tight text-black">Player Login</h2>
+            <p className="text-slate-600 font-bold border-b-2 border-slate-200 inline-block pb-1 text-sm">Enter credentials to start</p>
           </div>
 
-          <div className="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl relative overflow-hidden">
-            <form ref={formRef} onSubmit={submit} className="space-y-6 relative z-10">
+          <div className="bg-white p-6 border-4 border-black shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl relative overflow-hidden">
+            <form ref={formRef} onSubmit={submit} className="space-y-4 relative z-10">
               
-              <div className="space-y-2">
-                <label className="text-sm font-black uppercase tracking-wider ml-1">Email Address</label>
+              <div className="space-y-1">
+                <label className="text-xs font-black uppercase tracking-wider ml-1">Email Address</label>
                 <input 
                   type="email" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
                   required 
-                  className="w-full bg-slate-50 border-2 border-black p-3 rounded-lg font-bold focus:outline-none focus:shadow-[4px_4px_0px_#FF9F1C] focus:bg-white transition-all"
+                  className="w-full bg-slate-50 border-2 border-black p-2.5 rounded-lg font-bold focus:outline-none focus:shadow-[3px_3px_0px_#FF9F1C] focus:bg-white transition-all text-sm"
                   placeholder="player@skipq.com"
                 />
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-black uppercase tracking-wider ml-1">Password</label>
+              <div className="space-y-1">
+                <label className="text-xs font-black uppercase tracking-wider ml-1">Password</label>
                 <input 
                   type="password" 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 
                   required 
-                  className="w-full bg-slate-50 border-2 border-black p-3 rounded-lg font-bold focus:outline-none focus:shadow-[4px_4px_0px_#FF9F1C] focus:bg-white transition-all"
+                  className="w-full bg-slate-50 border-2 border-black p-2.5 rounded-lg font-bold focus:outline-none focus:shadow-[3px_3px_0px_#FF9F1C] focus:bg-white transition-all text-sm"
                   placeholder="••••••••"
                 />
               </div>
@@ -110,23 +110,23 @@ export default function LoginPage() {
               <button 
                 type="submit" 
                 disabled={isLoading}
-                className="w-full bg-[#FF9F1C] border-2 border-black text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[4px_4px_0px_0px_#000000] hover:shadow-[6px_6px_0px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] active:shadow-[0px_0px_0px_0px_#000000] active:translate-x-[4px] active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full bg-[#FF9F1C] border-2 border-black text-black font-black uppercase tracking-widest py-3 rounded-lg shadow-[3px_3px_0px_0px_#000000] hover:shadow-[5px_5px_0px_0px_#000000] hover:translate-x-[-1px] hover:translate-y-[-1px] active:shadow-[0px_0px_0px_0px_#000000] active:translate-x-[3px] active:translate-y-[3px] transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm"
               >
                 {isLoading ? 'LOADING...' : 'START GAME'}
               </button>
 
-              <div className="relative py-4">
+              <div className="relative py-2">
                 <div className="absolute inset-0 flex items-center">
                   <span className="w-full border-t-2 border-dashed border-slate-300"></span>
                 </div>
-                <div className="relative flex justify-center text-xs uppercase font-black">
+                <div className="relative flex justify-center text-[10px] uppercase font-black">
                   <span className="bg-white px-2 text-slate-400">OR</span>
                 </div>
               </div>
 
               <button
                 type="button"
-                className="w-full bg-white border-2 border-black text-black font-bold uppercase tracking-wide py-3 rounded-xl shadow-[4px_4px_0px_0px_#000000] hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                className="w-full bg-white border-2 border-black text-black font-bold uppercase tracking-wide py-2.5 rounded-lg shadow-[3px_3px_0px_0px_#000000] hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm"
                 onClick={() => window.location.href = '/api/auth/google'}
               >
                 <span>Google Login</span>
@@ -136,12 +136,12 @@ export default function LoginPage() {
           </div>
 
           {message && (
-             <div className="bg-[#FF6B6B] text-white p-4 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000000] font-bold text-center animate-bounce">
+             <div className="bg-[#FF6B6B] text-white p-3 rounded-lg border-2 border-black shadow-[3px_3px_0px_0px_#000000] font-bold text-center animate-bounce text-sm">
                 {message}
              </div>
           )}
 
-          <p className="text-center text-slate-600 font-bold">
+          <p className="text-center text-slate-600 font-bold text-sm">
             New Player?{' '}
             <Link href={`/register?next=${encodedNext}`} className="text-[#FF9F1C] underline decoration-4 underline-offset-4 hover:text-black transition-colors">
               Create Account
