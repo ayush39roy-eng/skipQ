@@ -23,21 +23,6 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
   const formRef = useRef<HTMLFormElement | null>(null)
 
-  useEffect(() => {
-    // On small screens, bring the login form into view so users don't have to scroll.
-    try {
-      if (typeof window !== 'undefined') {
-        const isMobile = window.matchMedia && window.matchMedia('(max-width: 640px)').matches
-        if (isMobile) {
-          // Allow layout to settle before scrolling
-          setTimeout(() => {
-            formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          }, 120)
-        }
-      }
-    } catch { }
-  }, [])
-
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     setMessage('')
@@ -50,7 +35,6 @@ export default function LoginPage() {
       })
 
       if (res.ok) {
-        // Redirect on success. Loading state will be cleared if navigation doesn't occur.
         window.location.href = nextParam
         return
       }
@@ -65,97 +49,105 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative mx-auto max-w-6xl overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 px-4 py-8 shadow-[0_30px_120px_-60px_rgba(15,118,255,0.8)] sm:px-10 sm:py-12 lg:px-16">
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-r from-sky-500/20 via-emerald-400/10 to-transparent blur-3xl" aria-hidden />
-      <div className="relative grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
-        {/* Mobile Header - Visible only on small screens */}
-        <div className="lg:hidden text-center space-y-2 mb-[-1rem]">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-sky-200">SkipQ Access</span>
-          <h1 className="text-2xl font-black text-white">Sign in</h1>
-        </div>
-
-        {/* Desktop Sidebar - Hidden on mobile */}
-        <div className="hidden lg:block space-y-6 text-white">
-          <span className="inline-flex items-center gap-2 rounded-full border border-white/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-sky-200">SkipQ Access</span>
-          <div className="space-y-4">
-            <h1 className="text-4xl font-black tracking-tight sm:text-5xl">Sign in. Skip every queue.</h1>
-            <p className="text-base text-white/80 sm:text-lg">
-              Manage orders, reconcile payments, and keep vendors in sync from one beautiful control room built for campus dining.
-            </p>
-          </div>
-          <ul className="space-y-3 text-sm text-white/80">
-            {benefits.map(item => (
-              <li key={item} className="flex items-center gap-3">
-                <span className="h-2 w-2 rounded-full bg-gradient-to-r from-sky-400 to-emerald-400" />
-                {item}
-              </li>
-            ))}
-          </ul>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-white/80 backdrop-blur">
-            <p className="text-xs uppercase tracking-[0.4em] text-white/60">Secure access</p>
-            <p className="mt-3 text-sm text-white/70">
-              Student and vendor accounts now use the credentials shared with them directly. If you need an account or reset, contact the SkipQ admin team.
-            </p>
-          </div>
-        </div>
-
-        <Card className="space-y-4 border-white/10 bg-[rgb(var(--bg))]/80 p-5 text-[rgb(var(--text))] backdrop-blur sm:p-8">
-          <div className="space-y-1 lg:block hidden">
-            <p className="text-xs uppercase tracking-[0.5em] text-[rgb(var(--text-muted))]">Account</p>
-            <h2 className="text-2xl font-semibold tracking-tight">Welcome back</h2>
-          </div>
-          <form ref={formRef} onSubmit={submit} className="space-y-4">
-            <Input label="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-            <Input label="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-            <Button type="submit" className="w-full" variant="primary" disabled={isLoading}>
-              {isLoading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <Loader size="small" />
-                  Logging in...
-                </span>
-              ) : (
-                'Login'
-              )}
-            </Button>
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-[rgb(var(--border))]"></span>
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[rgb(var(--bg))] px-2 text-[rgb(var(--text-muted))]">Or continue with</span>
-              </div>
+    <div className="min-h-screen grid lg:grid-cols-2 bg-[#FFF8F0] text-black font-sans">
+      {/* Left Side - Game Art / Branding */}
+      <div className="hidden lg:flex flex-col justify-center items-center relative p-12 bg-[#FF9F1C]/10 border-r-4 border-black border-dashed">
+         
+         {/* Floating Elements */}
+         <div className="relative z-10 text-center space-y-6 max-w-lg">
+            <div className="inline-flex items-center justify-center p-8 bg-white border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-3xl mb-8 transform -rotate-3 hover:rotate-0 transition-transform duration-300">
+               {/* Chef Hat Icon Replacement since Lucide might not be available or we use text */}
+               <span className="text-6xl">🍔</span>
             </div>
-            <Button
-              type="button"
-              variant="secondary"
-              className="w-full flex items-center justify-center gap-2"
-              onClick={() => window.location.href = '/api/auth/google'}
-            >
-              <svg className="h-5 w-5" viewBox="0 0 24 24">
-                <path
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  fill="#4285F4"
+            <h1 className="text-7xl font-black uppercase tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] leading-none text-black">
+              Skip The <br/>
+              <span className="text-[#FFF8F0] px-4 bg-[#FF9F1C] border-2 border-black transform -skew-x-6 inline-block shadow-[4px_4px_0px_rgba(0,0,0,1)] mt-2">Queue</span>
+            </h1>
+            <p className="text-2xl font-bold text-slate-700 bg-white border-2 border-black p-4 rounded-xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+              "The cheat code for your hunger!"
+            </p>
+         </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="flex flex-col justify-center items-center p-8 bg-[#FFF8F0]">
+        <div className="w-full max-w-md space-y-8">
+          <div className="text-center space-y-2">
+            <div className="inline-block p-4 bg-[#FFD166] border-2 border-black shadow-[4px_4px_0px_rgba(0,0,0,1)] rounded-full mb-4">
+               <span className="text-3xl">🎮</span>
+            </div>
+            <h2 className="text-4xl font-black uppercase tracking-tight text-black">Player Login</h2>
+            <p className="text-slate-600 font-bold border-b-2 border-slate-200 inline-block pb-1">Enter credentials to start</p>
+          </div>
+
+          <div className="bg-white p-8 border-4 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl relative overflow-hidden">
+            <form ref={formRef} onSubmit={submit} className="space-y-6 relative z-10">
+              
+              <div className="space-y-2">
+                <label className="text-sm font-black uppercase tracking-wider ml-1">Email Address</label>
+                <input 
+                  type="email" 
+                  value={email} 
+                  onChange={e => setEmail(e.target.value)} 
+                  required 
+                  className="w-full bg-slate-50 border-2 border-black p-3 rounded-lg font-bold focus:outline-none focus:shadow-[4px_4px_0px_#FF9F1C] focus:bg-white transition-all"
+                  placeholder="player@skipq.com"
                 />
-                <path
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  fill="#34A853"
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-black uppercase tracking-wider ml-1">Password</label>
+                <input 
+                  type="password" 
+                  value={password} 
+                  onChange={e => setPassword(e.target.value)} 
+                  required 
+                  className="w-full bg-slate-50 border-2 border-black p-3 rounded-lg font-bold focus:outline-none focus:shadow-[4px_4px_0px_#FF9F1C] focus:bg-white transition-all"
+                  placeholder="••••••••"
                 />
-                <path
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  fill="#EA4335"
-                />
-              </svg>
-              Google
-            </Button>
-          </form>
-          {message && <p className="text-sm text-red-500">{message}</p>}
-          <p className="text-base text-[rgb(var(--text-muted))]">New here? <Link href={`/register?next=${encodedNext}`} className="text-sky-400 hover:underline font-semibold">Create an account</Link></p>
-          <p className="text-sm text-[rgb(var(--text-muted))]">Forgot password? <Link href="/privacy" className="text-sky-400 hover:underline">Contact admin</Link></p>
-        </Card>
+              </div>
+
+              <button 
+                type="submit" 
+                disabled={isLoading}
+                className="w-full bg-[#FF9F1C] border-2 border-black text-black font-black uppercase tracking-widest py-4 rounded-xl shadow-[4px_4px_0px_0px_#000000] hover:shadow-[6px_6px_0px_0px_#000000] hover:translate-x-[-2px] hover:translate-y-[-2px] active:shadow-[0px_0px_0px_0px_#000000] active:translate-x-[4px] active:translate-y-[4px] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoading ? 'LOADING...' : 'START GAME'}
+              </button>
+
+              <div className="relative py-4">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t-2 border-dashed border-slate-300"></span>
+                </div>
+                <div className="relative flex justify-center text-xs uppercase font-black">
+                  <span className="bg-white px-2 text-slate-400">OR</span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                className="w-full bg-white border-2 border-black text-black font-bold uppercase tracking-wide py-3 rounded-xl shadow-[4px_4px_0px_0px_#000000] hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                onClick={() => window.location.href = '/api/auth/google'}
+              >
+                <span>Google Login</span>
+              </button>
+
+            </form>
+          </div>
+
+          {message && (
+             <div className="bg-[#FF6B6B] text-white p-4 rounded-xl border-2 border-black shadow-[4px_4px_0px_0px_#000000] font-bold text-center animate-bounce">
+                {message}
+             </div>
+          )}
+
+          <p className="text-center text-slate-600 font-bold">
+            New Player?{' '}
+            <Link href={`/register?next=${encodedNext}`} className="text-[#FF9F1C] underline decoration-4 underline-offset-4 hover:text-black transition-colors">
+              Create Account
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   )

@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Input } from '@/components/ui/Input'
-import { Table, THead, TBody, TR, TH, TD } from '@/components/ui/Table'
+import { Table, THead, TBody, TR as Tr, TH as Th, TD as Td } from '@/components/ui/Table'
 import { Badge } from '@/components/ui/Badge'
 import { revalidatePath } from 'next/cache'
 import Image from 'next/image'
@@ -13,9 +13,9 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 
 type MenuSectionShape = { id: string; name: string; sortOrder?: number }
-type MenuItemShape = { id: string; name: string; priceCents: number; imageUrl?: string | null; available?: boolean; sectionId?: string | null; sortOrder?: number }
+type MenuItemShape = { id: string; name: string; priceCents: number; imageUrl?: string | null; available?: boolean; sectionId?: string | null; sortOrder?: number | null }
 
-export default async function CanteenPage({ params }: { params: { id: string } }) {
+export default async function CanteenPage({ params }: { params: Readonly<{ id: string }> }) {
     const session = await requireRole(['ADMIN'])
     if (!session) return <p>Unauthorized</p>
 
@@ -28,10 +28,8 @@ export default async function CanteenPage({ params }: { params: { id: string } }
         return <div className="p-6">Canteen not found</div>
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const items = await (prisma as any).menuItem.findMany({ where: { canteenId: canteen.id }, orderBy: { sortOrder: 'asc' } }) as MenuItemShape[]
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const sections = await (prisma as any).menuSection.findMany({ where: { canteenId: canteen.id }, orderBy: { sortOrder: 'asc' } }) as MenuSectionShape[]
+    const items = await prisma.menuItem.findMany({ where: { canteenId: canteen.id }, orderBy: { sortOrder: 'asc' } })
+    const sections = await prisma.menuSection.findMany({ where: { canteenId: canteen.id }, orderBy: { sortOrder: 'asc' } })
 
     return (
         <div className="p-6 space-y-8 max-w-5xl mx-auto">
@@ -71,7 +69,8 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                 'use server'
                                 const session = await requireRole(['ADMIN'])
                                 if (!session) return
-                                const raw = String(formData.get('phones') || '')
+                                const rawStart = formData.get('phones')
+                                const raw = typeof rawStart === 'string' ? rawStart : ''
                                 const arr = raw.split(',').map(p => p.trim()).filter(Boolean)
                                 await prisma.canteen.update({ where: { id: canteen.id }, data: { notificationPhones: arr } })
                                 revalidatePath(`/admin/canteen/${canteen.id}`)
@@ -113,8 +112,10 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                             const session = await requireRole(['ADMIN'])
                             if (!session) return
                             const name = String(formData.get('name') || '').trim()
-                            const location = String(formData.get('location') || '').trim()
-                            const imageUrl = String(formData.get('imageUrl') || '').trim()
+                                const rawLoc = formData.get('location')
+                                const location = typeof rawLoc === 'string' ? rawLoc.trim() : ''
+                                const rawImg = formData.get('imageUrl')
+                                const imageUrl = typeof rawImg === 'string' ? rawImg.trim() : ''
                             if (!name || !location) return
                             await prisma.canteen.update({ where: { id: canteen.id }, data: { name, location, imageUrl: imageUrl || null } })
                             revalidatePath(`/admin/canteen/${canteen.id}`)
@@ -171,9 +172,10 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                         'use server'
                                         const session = await requireRole(['ADMIN'])
                                         if (!session) return
-                                        const name = String(formData.get('name') || '').trim()
+                                        const rawName = formData.get('name')
+                                const name = typeof rawName === 'string' ? rawName.trim() : ''
                                         if (!name) return
-                                        await (prisma as any).menuSection.update({ where: { id: s.id }, data: { name } })
+                                        await prisma.menuSection.update({ where: { id: s.id }, data: { name } })
                                         revalidatePath(`/admin/canteen/${canteen.id}`)
                                     }}>
                                         <input name="name" defaultValue={s.name} className="bg-transparent border-none text-sm font-medium focus:ring-0 w-24" />
@@ -186,9 +188,9 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                             if (!session) return
                                             const swapWith = (idx - 1) >= 0 ? sections[idx - 1] : null
                                             if (!swapWith) return
-                                            await (prisma as any).$transaction([
-                                                (prisma as any).menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
-                                                (prisma as any).menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
+                                            await prisma.$transaction([
+                                                prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
+                                                prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
                                             ])
                                             revalidatePath(`/admin/canteen/${canteen.id}`)
                                         }}>
@@ -200,9 +202,9 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                             if (!session) return
                                             const swapWith = (idx + 1) < (sections || []).length ? sections[idx + 1] : null
                                             if (!swapWith) return
-                                            await (prisma as any).$transaction([
-                                                (prisma as any).menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
-                                                (prisma as any).menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
+                                            await prisma.$transaction([
+                                                prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
+                                                prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
                                             ])
                                             revalidatePath(`/admin/canteen/${canteen.id}`)
                                         }}>
@@ -212,7 +214,7 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                             'use server'
                                             const session = await requireRole(['ADMIN'])
                                             if (!session) return
-                                            await (prisma as any).$transaction(async (tx: any) => {
+                                            await prisma.$transaction(async (tx) => {
                                                 await tx.menuItem.updateMany({ where: { sectionId: s.id }, data: { sectionId: null } })
                                                 await tx.menuSection.delete({ where: { id: s.id } })
                                             })
@@ -228,10 +230,11 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                 'use server'
                                 const session = await requireRole(['ADMIN'])
                                 if (!session) return
-                                const name = String(formData.get('name') || '').trim()
+                                const rawName = formData.get('name')
+                                const name = typeof rawName === 'string' ? rawName.trim() : ''
                                 if (!name) return
-                                const max = (sections || []).reduce((m: number, s: MenuSectionShape) => Math.max(m, s.sortOrder ?? 0), 0)
-                                await (prisma as any).menuSection.create({ data: { canteenId: canteen.id, name, sortOrder: max + 1 } })
+                                const max = (sections || []).reduce((m: number, s: any) => Math.max(m, s.sortOrder ?? 0), 0)
+                                await prisma.menuSection.create({ data: { canteenId: canteen.id, name, sortOrder: max + 1 } })
                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                             }}>
                                 <div className="flex items-center gap-2">
@@ -249,12 +252,16 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                             'use server'
                             const session = await requireRole(['ADMIN'])
                             if (!session) return
-                            const name = String(formData.get('name') || '')
-                            const priceCents = Number(formData.get('priceCents') || 0)
-                            const imageUrl = String(formData.get('imageUrl') || '')
-                            const sectionId = String(formData.get('sectionId') || '') || null
+                            const rawName = formData.get('name')
+                            const name = typeof rawName === 'string' ? rawName : ''
+                            const rawPrice = formData.get('priceCents')
+                            const priceCents = Number(rawPrice || 0)
+                            const rawImg = formData.get('imageUrl')
+                            const imageUrl = typeof rawImg === 'string' ? rawImg : ''
+                            const rawSec = formData.get('sectionId')
+                            const sectionId = typeof rawSec === 'string' ? rawSec : null
                             if (!name || !priceCents) return
-                            await (prisma as any).menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null, sectionId } })
+                            await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null, sectionId } })
                             revalidatePath(`/admin/canteen/${canteen.id}`)
                         }}>
                             <Input name="name" placeholder="Item Name" className="flex-[2]" />
@@ -272,19 +279,19 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                     <div className="overflow-hidden rounded-lg border border-[rgb(var(--border))]">
                         <Table>
                             <THead>
-                                <TR>
-                                    <TH className="w-16">Img</TH>
-                                    <TH>Name</TH>
-                                    <TH className="w-24">Price</TH>
-                                    <TH className="w-32">Section</TH>
-                                    <TH className="w-24">Status</TH>
-                                    <TH className="w-12"></TH>
-                                </TR>
+                                <Tr>
+                                    <Th className="w-16">Img</Th>
+                                    <Th>Name</Th>
+                                    <Th className="w-24">Price</Th>
+                                    <Th className="w-32">Section</Th>
+                                    <Th className="w-24">Status</Th>
+                                    <Th className="w-12"></Th>
+                                </Tr>
                             </THead>
                             <TBody>
                                 {items.map((it: MenuItemShape) => (
-                                    <TR key={it.id}>
-                                        <TD className="py-2">
+                                    <Tr key={it.id}>
+                                        <Td className="py-2">
                                             {it.imageUrl && (
                                                 <Image
                                                     src={it.imageUrl}
@@ -295,14 +302,15 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                                     className="h-10 w-10 rounded object-cover bg-[rgb(var(--surface-muted))]"
                                                 />
                                             )}
-                                        </TD>
-                                        <TD className="py-2 font-medium">
+                                        </Td>
+                                        <Td className="py-2 font-medium">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
-                                                const name = String(formData.get('name') || it.name)
-                                                await (prisma as any).menuItem.update({ where: { id: it.id }, data: { name } })
+                                                const rawName = formData.get('name')
+                                                const name = typeof rawName === 'string' ? rawName : it.name
+                                                await prisma.menuItem.update({ where: { id: it.id }, data: { name } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <div className="flex items-center gap-1">
@@ -310,14 +318,14 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                                     <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
                                                 </div>
                                             </form>
-                                        </TD>
-                                        <TD className="py-2">
+                                        </Td>
+                                        <Td className="py-2">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
                                                 const priceCents = Number(formData.get('priceCents') || it.priceCents)
-                                                await (prisma as any).menuItem.update({ where: { id: it.id }, data: { priceCents } })
+                                                await prisma.menuItem.update({ where: { id: it.id }, data: { priceCents } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <div className="flex items-center gap-1">
@@ -326,14 +334,15 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                                     <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
                                                 </div>
                                             </form>
-                                        </TD>
-                                        <TD className="py-2">
+                                        </Td>
+                                        <Td className="py-2">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
-                                                const sectionId = String(formData.get('sectionId') || '') || null
-                                                await (prisma as any).menuItem.update({ where: { id: it.id }, data: { sectionId } })
+                                                const rawSec = formData.get('sectionId')
+                                                const sectionId = typeof rawSec === 'string' ? rawSec : null
+                                                await prisma.menuItem.update({ where: { id: it.id }, data: { sectionId } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <div className="flex items-center gap-1">
@@ -344,14 +353,14 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                                     <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
                                                 </div>
                                             </form>
-                                        </TD>
-                                        <TD className="py-2">
+                                        </Td>
+                                        <Td className="py-2">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
                                                 const available = formData.get('available') === 'on'
-                                                await (prisma as any).menuItem.update({ where: { id: it.id }, data: { available } })
+                                                await prisma.menuItem.update({ where: { id: it.id }, data: { available } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <div className="flex items-center gap-2">
@@ -364,21 +373,21 @@ export default async function CanteenPage({ params }: { params: { id: string } }
                                                     <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
                                                 </div>
                                             </form>
-                                        </TD>
-                                        <TD className="py-2 text-right">
+                                        </Td>
+                                        <Td className="py-2 text-right">
                                             <form action={async () => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
-                                                await (prisma as any).menuItem.delete({ where: { id: it.id } })
+                                                await prisma.menuItem.delete({ where: { id: it.id } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <button className="text-[rgb(var(--text-muted))] hover:text-red-500 transition-colors" title="Delete Item">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
                                                 </button>
                                             </form>
-                                        </TD>
-                                    </TR>
+                                        </Td>
+                                    </Tr>
                                 ))}
                             </TBody>
                         </Table>

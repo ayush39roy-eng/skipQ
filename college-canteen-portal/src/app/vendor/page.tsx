@@ -164,6 +164,7 @@ export default async function VendorPage() {
 
   const canteensWithMenu = (vendor?.canteens ?? []).map(c => ({
     ...c,
+    manualIsOpen: c.manualIsOpen ?? false,
     menuItems: c.menuItems.map(m => ({
       ...m,
       sectionName: m.section?.name ?? 'Uncategorized'

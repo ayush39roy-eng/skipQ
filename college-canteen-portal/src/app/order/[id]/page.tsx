@@ -1,6 +1,5 @@
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { Card } from '@/components/ui/Card'
 import { getTicketNumber } from '@/lib/order-ticket'
 import OrderStatusClient from '../_components/status-client'
 import PayNowButton from '../_components/pay-now-button'
@@ -29,7 +28,7 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
   return (
     <div className="space-y-6">
       <div className="max-w-md mx-auto">
-        <Card className="p-6 rounded-2xl bg-[rgb(var(--surface))]/90 border border-[rgb(var(--border))] shadow-lg">
+        <div className="game-card rounded-2xl bg-white p-6 border-2 border-black shadow-game-md">
           <div className="flex items-start justify-between">
             <div>
               <h2 className="text-2xl font-semibold">Ticket #{getTicketNumber(order.id)}</h2>
@@ -80,18 +79,21 @@ export default async function OrderPage({ params }: { params: { id: string } }) 
               <div className="text-sm text-green-500">Payment received.</div>
             )}
           </div>
-        </Card>
+        </div>
 
         <div className="mt-6 flex items-center justify-between gap-4">
-          <Link className="btn w-1/2 text-center" href="/order">View order history</Link>
-          <Link className="btn w-1/2 text-center" href="/canteens">Browse canteens</Link>
+          <Link className="game-btn w-1/2 text-center text-sm px-4 py-2" href="/order">Order history</Link>
+          <Link className="game-btn w-1/2 text-center text-sm px-4 py-2" href="/canteens">Order More</Link>
         </div>
 
         {order.payment && order.payment.status === 'PENDING' && (
-          <Card className="space-y-2 mt-4 p-4">
+          <div className="game-card space-y-2 mt-4 p-4 rounded-xl">
             <div className="text-sm font-medium">Payment link</div>
-            <Link className="btn w-full text-center" href={order.payment.paymentLink}>Open Payment Page</Link>
-          </Card>
+{order.payment.paymentLink ? (
+  <Link className="game-btn w-full text-center py-2" href={order.payment.paymentLink}>Open Payment Page</Link>
+) : (
+  <button className="game-btn w-full text-center py-2 opacity-50 cursor-not-allowed" disabled>Payment link unavailable</button>
+)}          </div>
         )}
       </div>
     </div>

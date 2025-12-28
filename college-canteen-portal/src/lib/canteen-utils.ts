@@ -11,12 +11,15 @@ export function checkCanteenStatus(canteen: {
     closingTime: string | null
     weeklySchedule?: unknown // Json type from Prisma
     autoMode: boolean
-    manualIsOpen: boolean
+    manualIsOpen: boolean | null
 }): CanteenStatus {
+    // Treat null as false (closed) for manualIsOpen
+    const isManuallyOpen = canteen.manualIsOpen ?? false
+    
     if (!canteen.autoMode) {
         return {
-            isOpen: canteen.manualIsOpen,
-            message: canteen.manualIsOpen ? 'Open' : 'Closed'
+            isOpen: isManuallyOpen,
+            message: isManuallyOpen ? 'Open' : 'Closed'
         }
     }
 

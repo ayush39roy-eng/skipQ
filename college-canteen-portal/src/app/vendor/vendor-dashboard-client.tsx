@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { getTicketNumber } from '@/lib/order-ticket'
@@ -369,7 +368,7 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
     [orders]
   )
-  const queueState = incomingOrders.length ? `${incomingOrders.length} awaiting action` : 'Queue is clear'
+  const queueState = incomingOrders.length ? `${incomingOrders.length} awaiting action` : 'All clear'
 
   const isLoading = (orderId: string, action: string) => actionKey === `${orderId}:${action}`
 
@@ -409,390 +408,412 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
     if (prep == null || remainingMinutes == null) return null
     const start = updatedAt ? Date.parse(updatedAt) : Date.now()
     const endAt = start + (prep ?? 0) * 60_000
+    
+    // Color coding for urgency
+    const isLate = remainingMinutes <= 0
+    const isSoon = remainingMinutes > 0 && remainingMinutes <= 2
+    
     return (
-      <div className="text-sm text-[rgb(var(--text-muted))] mt-2">
-        <div>Prep time: <span className="font-medium">{prep} min</span></div>
-        <div className="text-xs mt-1">Approx ready at <span className="font-medium">{new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span> — <span className="font-medium">{remainingMinutes > 0 ? `${remainingMinutes} min` : 'Ready'}</span></div>
+      <div className={`text-xs font-medium mt-3 px-3 py-1.5 rounded-md flex items-center justify-between ${
+        isLate ? 'bg-red-50 text-red-700 border border-red-100' : isSoon ? 'bg-amber-50 text-amber-700 border border-amber-100' : 'bg-[rgb(var(--vendor-bg))] text-[rgb(var(--vendor-text-secondary))] border border-[rgb(var(--vendor-border))]'
+      }`}>
+        <span className="flex items-center gap-1.5">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          {remainingMinutes > 0 ? `${remainingMinutes} min left` : 'Due now'}
+        </span>
+        <span className="opacity-75">{new Date(endAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
       </div>
     )
   }
 
 
   return (
-    <div className="space-y-8 text-[rgb(var(--text))]">
-      <header className="space-y-2">
-        <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Vendor queue</p>
-        <h1 className="text-3xl font-semibold">Manage live orders for {vendorName ?? 'your kitchen'}.</h1>
-        <p className="text-sm text-[rgb(var(--text-muted))]">Left column lists fresh orders with full details. Confirmed tickets hop over to the right so you can mark them completed.</p>
-        {error && <p className="text-sm text-amber-400">{error}</p>}
+    <div className="space-y-8 pb-20">
+      {/* Header with Glass Effect */}
+      <header className="relative z-10">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[rgb(var(--vendor-text-primary))]">
+              Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-[rgb(var(--vendor-accent))] to-teal-500">{vendorName ?? 'Partner'}</span>
+            </h1>
+            <p className="text-[rgb(var(--vendor-text-secondary))] mt-1">Here&apos;s what&apos;s happening in your kitchen today.</p>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="px-4 py-2 bg-[rgb(var(--vendor-surface))] border border-[rgb(var(--vendor-border))] rounded-full text-sm font-medium text-[rgb(var(--vendor-text-secondary))] shadow-sm">
+                {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+             </div>
+             <Button variant="outline" onClick={() => void refresh()} className="rounded-full shadow-sm hover:border-[rgb(var(--vendor-accent))]">
+               Refresh
+             </Button>
+          </div>
+        </div>
+        {error && <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm font-medium border border-red-100">{error}</div>}
       </header>
 
-      {/* Canteen Settings Section */}
-      {
-        canteenSettings.length > 0 && (
-          <section className="space-y-6">
+      {/* Insights Section - Premium Cards */}
+      <div className="grid gap-6 sm:grid-cols-3">
+        <div className="relative group overflow-hidden rounded-2xl border border-[rgb(var(--vendor-border))] bg-[rgb(var(--vendor-surface))] p-6 shadow-sm transition-all hover:shadow-md">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[rgb(var(--vendor-text-secondary))]">Total Revenue</p>
+          <p className="mt-2 text-3xl font-bold text-[rgb(var(--vendor-text-primary))]">{formatCurrency(stats.totalRevenue)}</p>
+          <div className="mt-4 flex items-center gap-2 text-xs font-medium text-emerald-600 bg-emerald-50 w-fit px-2 py-1 rounded-md">
+             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+             <span>Today&apos;s earnings</span>
+          </div>
+        </div>
+
+        <div className="relative group overflow-hidden rounded-2xl border border-[rgb(var(--vendor-border))] bg-[rgb(var(--vendor-surface))] p-6 shadow-sm transition-all hover:shadow-md">
+           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[rgb(var(--vendor-text-secondary))]">Orders Served</p>
+          <p className="mt-2 text-3xl font-bold text-[rgb(var(--vendor-text-primary))]">{stats.totalOrders}</p>
+          <div className="mt-4 flex items-center gap-2 text-xs font-medium text-[rgb(var(--vendor-text-secondary))] bg-[rgb(var(--vendor-surface-muted))] w-fit px-2 py-1 rounded-md">
+             <span>Lifetime orders</span>
+          </div>
+        </div>
+
+        <div className="relative group overflow-hidden rounded-2xl border border-[rgb(var(--vendor-border))] bg-[rgb(var(--vendor-surface))] p-6 shadow-sm transition-all hover:shadow-md">
+           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+          </div>
+          <p className="text-xs font-bold uppercase tracking-wider text-[rgb(var(--vendor-text-secondary))]">Top Item</p>
+          <p className="mt-2 text-lg font-bold text-[rgb(var(--vendor-text-primary))] truncate">
+             {stats.popularItems[0]?.name ?? 'None yet'}
+          </p>
+          <p className="text-sm font-medium text-[rgb(var(--vendor-text-secondary))]">
+             {stats.popularItems[0]?.quantity ? `${stats.popularItems[0].quantity} sold` : 'Waiting for data'}
+          </p>
+        </div>
+      </div>
+
+      {/* Canteen Status Cards */}
+      {canteenSettings.length > 0 && (
+         <div className="grid gap-6 md:grid-cols-2">
             {canteenSettings.map(canteen => {
-              // Parse weekly schedule from JSON
-              let weeklySchedule: WeeklySchedule
-              try {
-                if (canteen.weeklySchedule) {
-                  weeklySchedule = typeof canteen.weeklySchedule === 'string'
-                    ? JSON.parse(canteen.weeklySchedule)
-                    : canteen.weeklySchedule as WeeklySchedule
-                } else {
-                  weeklySchedule = DEFAULT_WEEKLY_SCHEDULE
-                }
-              } catch {
-                weeklySchedule = DEFAULT_WEEKLY_SCHEDULE
-              }
+               // Schedule logic omitted for brevity, same as before
+               let weeklySchedule: WeeklySchedule
+               try {
+                  if (canteen.weeklySchedule) {
+                     weeklySchedule = typeof canteen.weeklySchedule === 'string' ? JSON.parse(canteen.weeklySchedule) : canteen.weeklySchedule
+                  } else weeklySchedule = DEFAULT_WEEKLY_SCHEDULE
+               } catch { weeklySchedule = DEFAULT_WEEKLY_SCHEDULE }
 
-              return (
-                <div key={canteen.id} className="space-y-4">
-                  <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-5">
-                    <div className="mb-4 flex items-center justify-between">
-                      <h3 className="font-semibold">{canteen.name} Status</h3>
-                      <Badge variant={canteen.autoMode ? 'info' : (canteen.manualIsOpen ? 'success' : 'danger')}>
-                        {canteen.autoMode ? 'Auto' : (canteen.manualIsOpen ? 'Open' : 'Closed')}
-                      </Badge>
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <label className="text-sm text-[rgb(var(--text-muted))]">Mode</label>
-                        <div className="flex items-center gap-2 rounded-lg bg-[rgb(var(--surface-muted))] p-1">
-                          <button
-                            onClick={() => handleSettingChange(canteen.id, 'autoMode', true)}
-                            className={`rounded-md px-3 py-1 text-xs font-medium transition ${canteen.autoMode ? 'bg-[rgb(var(--accent))] text-white' : 'text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text))]'}`}
-                          >
-                            Auto
-                          </button>
-                          <button
-                            onClick={() => handleSettingChange(canteen.id, 'autoMode', false)}
-                            className={`rounded-md px-3 py-1 text-xs font-medium transition ${!canteen.autoMode ? 'bg-[rgb(var(--accent))] text-white' : 'text-[rgb(var(--text-muted))] hover:text-[rgb(var(--text))]'}`}
-                          >
-                            Manual
-                          </button>
+               return (
+                  <div key={canteen.id} className="rounded-2xl border border-[var(--vendor-border)] bg-[var(--vendor-surface)] p-6 shadow-sm">
+                     <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                           <div className={`h-3 w-3 rounded-full ${canteen.manualIsOpen ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`}></div>
+                           <h3 className="font-bold text-lg text-[var(--vendor-text-primary)]">{canteen.name}</h3>
                         </div>
-                      </div>
+                        <Badge variant={canteen.autoMode ? 'info' : 'default'} className="uppercase tracking-wider text-[10px]">
+                           {canteen.autoMode ? 'Auto Schedule' : 'Manual Mode'}
+                        </Badge>
+                     </div>
 
-                      {!canteen.autoMode && (
-                        <div className="flex items-center justify-between">
-                          <label className="text-sm text-[rgb(var(--text-muted))]">Manual Override</label>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', true)}
-                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${canteen.manualIsOpen ? 'border-green-500 bg-green-500/10 text-green-500' : 'border-[rgb(var(--border))] text-[rgb(var(--text-muted))]'}`}
-                            >
-                              Open
-                            </button>
-                            <button
-                              onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', false)}
-                              className={`rounded-md border px-3 py-1 text-xs font-medium transition ${!canteen.manualIsOpen ? 'border-red-500 bg-red-500/10 text-red-500' : 'border-[rgb(var(--border))] text-[rgb(var(--text-muted))]'}`}
-                            >
-                              Closed
-                            </button>
-                          </div>
+                     <div className="space-y-4">
+                        <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--vendor-bg)] border border-[var(--vendor-border)]">
+                           <label className="text-sm font-medium text-[var(--vendor-text-secondary)]">Operation Mode</label>
+                           <div className="flex bg-[var(--vendor-surface)] rounded-lg p-1 border border-[var(--vendor-border)]">
+                              <button
+                                 onClick={() => handleSettingChange(canteen.id, 'autoMode', true)}
+                                 className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${canteen.autoMode ? 'bg-[var(--vendor-text-primary)] text-[var(--vendor-bg)] shadow-sm' : 'text-[var(--vendor-text-secondary)] hover:text-[var(--vendor-text-primary)]'}`}
+                              >
+                                 Auto
+                              </button>
+                              <button
+                                 onClick={() => handleSettingChange(canteen.id, 'autoMode', false)}
+                                 className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all ${!canteen.autoMode ? 'bg-[var(--vendor-text-primary)] text-[var(--vendor-bg)] shadow-sm' : 'text-[var(--vendor-text-secondary)] hover:text-[var(--vendor-text-primary)]'}`}
+                              >
+                                 Manual
+                              </button>
+                           </div>
                         </div>
-                      )}
-                    </div>
-                  </Card>
 
-                  {canteen.autoMode && (
-                    <WeeklyScheduleEditor
-                      canteenName={canteen.name}
-                      initialSchedule={weeklySchedule}
-                      onSave={(schedule) => handleWeeklyScheduleSave(canteen.id, schedule)}
-                    />
-                  )}
-                </div>
-              )
+                        {!canteen.autoMode && (
+                           <div className="flex items-center justify-between p-3 rounded-xl bg-[var(--vendor-bg)] border border-[var(--vendor-border)]">
+                              <label className="text-sm font-medium text-[var(--vendor-text-secondary)]">Status Override</label>
+                              <div className="flex gap-2">
+                                 <button
+                                    onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', true)}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all border ${canteen.manualIsOpen ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                                 >
+                                    Open
+                                 </button>
+                                 <button
+                                    onClick={() => handleSettingChange(canteen.id, 'manualIsOpen', false)}
+                                    className={`px-4 py-1.5 text-xs font-bold rounded-lg transition-all border ${!canteen.manualIsOpen ? 'bg-red-50 border-red-200 text-red-700' : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                                 >
+                                    Close
+                                 </button>
+                              </div>
+                           </div>
+                        )}
+                        
+                        {canteen.autoMode && (
+                           <div className="pt-2">
+                             <WeeklyScheduleEditor
+                               canteenName={canteen.name}
+                               initialSchedule={weeklySchedule}
+                               onSave={(schedule) => handleWeeklyScheduleSave(canteen.id, schedule)}
+                             />
+                           </div>
+                        )}
+                     </div>
+                  </div>
+               )
             })}
-          </section>
-        )
-      }
+         </div>
+      )}
 
-      {/* Insights Section */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Payout</p>
-          <p className="mt-2 text-2xl font-semibold">{formatCurrency(stats.totalRevenue)}</p>
-          <p className="text-xs text-[rgb(var(--text-muted))]">After SkipQ commission</p>
-        </Card>
-        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Orders</p>
-          <p className="mt-2 text-2xl font-semibold">{stats.totalOrders}</p>
-          <p className="text-xs text-[rgb(var(--text-muted))]">Total served</p>
-        </Card>
-        <Card className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
-          <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Top Items</p>
-          <ul className="mt-2 space-y-1 text-sm">
-            {stats.popularItems.length > 0 ? (
-              stats.popularItems.map((item, i) => (
-                <li key={i} className="flex justify-between">
-                  <span className="truncate">{item.name}</span>
-                  <span className="font-medium text-[rgb(var(--text-muted))]">{item.quantity}</span>
-                </li>
-              ))
-            ) : (
-              <li className="text-[rgb(var(--text-muted))]">No data yet</li>
-            )}
-          </ul>
-        </Card>
-      </div>
+      {/* Main Order Queue - 2 Columns */}
+      <div className="grid gap-8 lg:grid-cols-[1.8fr_1.2fr]">
+        
+        {/* Left Column: Incoming */}
+        <div className="space-y-5">
+           <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold flex items-center gap-2">
+                 Incoming Orders
+                 {incomingOrders.length > 0 && <span className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white animate-pulse">{incomingOrders.length}</span>}
+              </h2>
+              <span className="text-xs font-medium text-[var(--vendor-text-secondary)] tracking-wide uppercase">{queueState}</span>
+           </div>
 
-      <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
-        <Card className="space-y-5 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]/80">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-semibold">Incoming orders</h2>
-              <p className="text-sm text-[rgb(var(--text-muted))]">{queueState}</p>
-            </div>
-            <Badge variant={incomingOrders.length ? 'warning' : 'success'}>
-              {incomingOrders.length ? `${incomingOrders.length} waiting` : 'All clear'}
-            </Badge>
-          </div>
-          <div className="space-y-4">
+           <div className="space-y-4">
             {incomingOrders.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-[rgb(var(--border))] p-8 text-center text-sm text-[rgb(var(--text-muted))]">
-                No new orders yet. Keep notifications on—WhatsApp will buzz when students pay.
+              <div className="flex flex-col items-center justify-center rounded-3xl border-2 border-dashed border-[var(--vendor-border)] bg-[var(--vendor-bg)]/50 p-12 text-center">
+                <div className="h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                </div>
+                <h3 className="text-slate-900 font-semibold mb-1">Queue is empty</h3>
+                <p className="text-slate-500 text-sm max-w-xs">New orders will pop up here with a sound alert.</p>
               </div>
             )}
+            
             {incomingOrders.map((order) => (
-              <Card key={order.id} className="space-y-4 border border-[rgb(var(--accent))]/30 bg-[rgb(var(--surface-muted))]/30">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
-                    <p className="mt-1 text-xl font-semibold">Ticket #{getTicketNumber(order.id)}</p>
-                    <p className="text-sm text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)} • {customerName(order.user?.name)}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-                    <p className="mt-2 text-lg font-semibold">{formatCurrency(order.totalCents)}</p>
-                    <p className="text-xs text-[rgb(var(--text-muted))]">{fulfillmentLabel(order.fulfillmentType)}</p>
-                  </div>
-                </div>
-                <ul className="divide-y divide-[rgb(var(--border))] rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))]/40 text-sm">
-                  {order.items.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between px-3 py-2">
-                      <span>{item.menuItem?.name ?? 'Menu item'} × {item.quantity}</span>
-                      <span className="font-medium">₹{((item.priceCents * item.quantity) / 100).toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                  <Button type="button" className="w-full sm:w-auto" loading={isLoading(order.id, 'CONFIRM')} onClick={() => void handleAction(order.id, 'CONFIRM')}>Confirm</Button>
-                  <Button type="button" variant="outline" className="w-full sm:w-auto" loading={isLoading(order.id, 'CANCELLED')} onClick={() => void handleAction(order.id, 'CANCELLED')}>Cancel</Button>
-                  <label className="sr-only" htmlFor={`prep-${order.id}`}>Prep minutes</label>
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      aria-label="Decrease prep minutes"
-                      onClick={() => {
-                        setPrepInputs((prev) => {
-                          const cur = Number(prev[order.id]) || (order.prepMinutes ?? 5)
-                          const next = Math.max(5, cur - 5)
-                          return { ...prev, [order.id]: String(next) }
-                        })
-                      }}
-                      className="rounded-md border px-3 py-1 text-sm font-medium"
-                    >
-                      –
-                    </button>
+              <div key={order.id} className="group relative overflow-hidden rounded-2xl border border-[rgb(var(--vendor-border))] bg-[rgb(var(--vendor-surface))] shadow-sm transition-all hover:shadow-md hover:border-[rgb(var(--vendor-accent-muted))]">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-[rgb(var(--vendor-accent))] to-teal-500"></div>
+                <div className="p-5">
+                   {/* Header of Card */}
+                   <div className="flex items-start justify-between mb-4">
+                      <div>
+                         <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-bold uppercase tracking-wider text-[rgb(var(--vendor-accent-dark))] bg-[rgb(var(--vendor-accent-muted))] px-2 py-0.5 rounded-full">{order.canteen.name}</span>
+                            <span className="text-xs text-[rgb(var(--vendor-text-secondary))]">• {formatRelativeTime(order.createdAt)}</span>
+                         </div>
+                         <h3 className="text-lg font-bold text-[rgb(var(--vendor-text-primary))]">
+                           {customerName(order.user?.name)} 
+                           <span className="text-[rgb(var(--vendor-text-secondary))] font-normal mx-1">Order</span> 
+                           #{getTicketNumber(order.id)}
+                         </h3>
+                      </div>
+                      <div className="text-right">
+                         <div className="text-xl font-bold text-[rgb(var(--vendor-text-primary))]">{formatCurrency(order.totalCents)}</div>
+                         <div className="text-xs font-medium text-[rgb(var(--vendor-text-secondary))] uppercase tracking-wide">{fulfillmentLabel(order.fulfillmentType)}</div>
+                      </div>
+                   </div>
 
-                    <div className="w-20 text-center font-medium">
-                      {(Number(prepInputs[order.id]) || order.prepMinutes || 5) + ' min'}
-                    </div>
+                   {/* Items List */}
+                   <div className="bg-[rgb(var(--vendor-bg))] rounded-xl p-3 mb-5 border border-[rgb(var(--vendor-border))] space-y-2">
+                     {order.items.map((item) => (
+                        <div key={item.id} className="flex items-start justify-between text-sm">
+                           <div className="flex items-start gap-2">
+                              <span className="font-bold text-[rgb(var(--vendor-text-primary))] h-5 w-5 flex items-center justify-center bg-[rgb(var(--vendor-surface))] rounded border border-[rgb(var(--vendor-border))] text-xs shadow-sm">
+                                {item.quantity}
+                              </span>
+                              <span className="text-[rgb(var(--vendor-text-primary))] font-medium">{item.menuItem?.name ?? 'Unknown Item'}</span>
+                           </div>
+                           <span className="text-[rgb(var(--vendor-text-secondary))]">₹{((item.priceCents * item.quantity)/100).toFixed(2)}</span>
+                        </div>
+                     ))}
+                   </div>
 
-                    <button
-                      type="button"
-                      aria-label="Increase prep minutes"
-                      onClick={() => {
-                        setPrepInputs((prev) => {
-                          const cur = Number(prev[order.id]) || (order.prepMinutes ?? 5)
-                          const next = cur + 5
-                          return { ...prev, [order.id]: String(next) }
-                        })
-                      }}
-                      className="rounded-md border px-3 py-1 text-sm font-medium"
-                    >
-                      +
-                    </button>
+                   {order.cookingInstructions && (
+                     <div className="mb-4 text-sm bg-orange-50 text-orange-800 px-3 py-2 rounded-lg border border-orange-100 flex gap-2 items-start">
+                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span className="italic">&quot;{order.cookingInstructions}&quot;</span>
+                     </div>
+                   )}
 
-                    {/* Set Prep button removed — +/- will save prep after short debounce */}
-                  </div>
-                </div>
-                {order.cookingInstructions && (
-                  <div className="text-sm text-[rgb(var(--text-muted))] mt-2">Instruction: <span className="font-medium">{order.cookingInstructions}</span></div>
-                )}
-              </Card>
-            ))}
-          </div>
-        </Card>
-
-        <Card className="space-y-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold">Confirmed tickets</h2>
-              <p className="text-sm text-[rgb(var(--text-muted))]">Move to completed once handed off.</p>
-            </div>
-            <Badge variant={confirmedOrders.length ? 'info' : 'success'}>
-              {confirmedOrders.length ? `${confirmedOrders.length} active` : 'None in prep'}
-            </Badge>
-          </div>
-          <div className="space-y-3">
-            {confirmedOrders.length === 0 && (
-              <div className="rounded-2xl border border-dashed border-[rgb(var(--border))] p-6 text-center text-sm text-[rgb(var(--text-muted))]">
-                Confirmed orders will appear here for quick completion.
-              </div>
-            )}
-            {confirmedOrders.map((order) => (
-              <Card key={order.id} className="space-y-3 border border-[rgb(var(--accent))]/30 bg-[rgb(var(--surface-muted))]/20 p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-semibold">{order.canteen.name}</p>
-                    <p className="text-xs text-[rgb(var(--text-muted))]">Ticket #{getTicketNumber(order.id)} • {customerName(order.user?.name)}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={statusVariant(order.status)}>{order.status}</Badge>
-                    <p className="text-sm font-semibold">{formatCurrency(order.totalCents)}</p>
-                  </div>
-                </div>
-                <ul className="divide-y divide-[rgb(var(--border))] rounded-xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))]/40 text-sm">
-                  {order.items.map((item) => (
-                    <li key={item.id} className="flex items-center justify-between px-3 py-2">
-                      <span>{item.menuItem?.name ?? 'Menu item'} × {item.quantity}</span>
-                      <span className="font-medium">₹{((item.priceCents * item.quantity) / 100).toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <PrepTimer prep={order.prepMinutes ?? null} updatedAt={order.updatedAt} status={order.status} />
-                {order.cookingInstructions && (
-                  <div className="text-sm text-[rgb(var(--text-muted))] mt-2">Instruction: <span className="font-medium">{order.cookingInstructions}</span></div>
-                )}
-                <div className="flex items-center justify-between text-xs text-[rgb(var(--text-muted))]">
-                  <span>{fulfillmentLabel(order.fulfillmentType)}</span>
-                  <span>Placed {formatRelativeTime(order.createdAt)}</span>
-                </div>
-                <div className="flex justify-end">
-                  <div className="flex gap-2">
-                    <Button
-                      type="button"
-                      loading={isLoading(order.id, 'EXTEND_PREP')}
-                      disabled={!!order.prepExtended || order.status === 'READY'}
-                      onClick={() => void handleAction(order.id, 'EXTEND_PREP')}
-                      className="w-full sm:w-auto"
-                    >
-                      {order.prepExtended ? 'Extended' : 'Extend +5 min'}
-                    </Button>
-
-                    {order.status !== 'READY' && (
-                      <Button
-                        type="button"
-                        loading={isLoading(order.id, 'READY')}
-                        onClick={() => void handleAction(order.id, 'READY')}
-                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
+                   {/* Actions */}
+                   <div className="flex flex-wrap items-center gap-3">
+                      <Button 
+                         variant="primary"
+                         loading={isLoading(order.id, 'CONFIRM')} 
+                         onClick={() => void handleAction(order.id, 'CONFIRM')}
+                         className="flex-1 py-6 rounded-xl"
                       >
-                        Ready
+                         Accept Order
                       </Button>
-                    )}
-
-                    <Button
-                      type="button"
-                      loading={isLoading(order.id, 'COMPLETED')}
-                      onClick={() => void handleAction(order.id, 'COMPLETED')}
-                      className="w-full sm:w-auto"
-                    >
-                      Completed
-                    </Button>
-                  </div>
+                      <Button 
+                         variant="secondary"
+                         loading={isLoading(order.id, 'CANCELLED')} 
+                         onClick={() => void handleAction(order.id, 'CANCELLED')}
+                         className="flex-shrink-0 border-[rgb(var(--vendor-border))] hover:bg-red-50 hover:text-red-600 hover:border-red-200 rounded-xl py-6 px-4"
+                      >
+                         Reject
+                      </Button>
+                      
+                      {/* Prep Time Adjuster */}
+                      <div className="flex items-center bg-[rgb(var(--vendor-surface))] border border-[rgb(var(--vendor-border))] rounded-xl p-1 shadow-sm">
+                         <button 
+                           onClick={() => setPrepInputs(prev => ({...prev, [order.id]: String(Math.max(5, (Number(prev[order.id]) || (order.prepMinutes || 5)) - 5)) }))}
+                           className="w-8 h-8 flex items-center justify-center hover:bg-[rgb(var(--vendor-bg))] rounded-lg text-[rgb(var(--vendor-text-secondary))]"
+                         >-</button>
+                         <span className="w-12 text-center text-sm font-bold text-[rgb(var(--vendor-text-primary))]">{(Number(prepInputs[order.id]) || order.prepMinutes || 5)}m</span>
+                         <button 
+                           onClick={() => setPrepInputs(prev => ({...prev, [order.id]: String((Number(prev[order.id]) || (order.prepMinutes || 5)) + 5) }))}
+                           className="w-8 h-8 flex items-center justify-center hover:bg-[rgb(var(--vendor-bg))] rounded-lg text-[rgb(var(--vendor-text-secondary))]"
+                         >+</button>
+                      </div>
+                   </div>
                 </div>
-              </Card>
+              </div>
             ))}
-          </div>
-        </Card>
+           </div>
+        </div>
+
+        {/* Right Column: In Progress/Ready */}
+        <div className="space-y-5">
+           <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-800">In Kitchen / Ready</h2>
+              <Badge variant="default" className="bg-white">{confirmedOrders.length}</Badge>
+           </div>
+           
+           <div className="space-y-3">
+            {confirmedOrders.length === 0 && (
+               <div className="rounded-3xl border border-[var(--vendor-border)] bg-[var(--vendor-surface)] p-8 text-center">
+                  <p className="text-slate-400 font-medium">No active orders</p>
+               </div>
+            )}
+            
+            {confirmedOrders.map((order) => (
+              <div key={order.id} className="rounded-xl border border-[rgb(var(--vendor-border))] bg-[rgb(var(--vendor-surface))] p-4 shadow-sm relative overflow-hidden">
+                 {order.status === 'READY' && <div className="absolute top-0 right-0 w-20 h-20 bg-[rgb(var(--vendor-accent-muted))] rounded-bl-full pointer-events-none"></div>}
+                 
+                 <div className="flex justify-between items-start mb-3">
+                    <div>
+                       <div className="font-bold text-[rgb(var(--vendor-text-primary))] text-lg">#{getTicketNumber(order.id)}</div>
+                       <div className="text-xs text-[rgb(var(--vendor-text-secondary))]">{order.canteen.name} • {fulfillmentLabel(order.fulfillmentType)}</div>
+                    </div>
+                    <Badge variant={statusVariant(order.status)} className="rounded-md">{order.status}</Badge>
+                 </div>
+
+                 <div className="border-t border-b border-[rgb(var(--vendor-border))] py-3 my-3 space-y-1">
+                    {order.items.map((item) => (
+                       <div key={item.id} className="flex justify-between text-sm">
+                          <span className="text-[rgb(var(--vendor-text-secondary))]"><span className="font-bold text-[rgb(var(--vendor-text-primary))]">{item.quantity}x</span> {item.menuItem?.name}</span>
+                       </div>
+                    ))}
+                 </div>
+
+                 <PrepTimer prep={order.prepMinutes ?? null} updatedAt={order.updatedAt} status={order.status} />
+
+                 <div className="mt-4 flex gap-2">
+                    {order.status !== 'READY' && (
+                       <Button 
+                          variant="primary"
+                          onClick={() => void handleAction(order.id, 'READY')}
+                          loading={isLoading(order.id, 'READY')}
+                          className="flex-1 shadow-sm"
+                        >
+                          Mark Ready
+                        </Button>
+                    )}
+                    <Button 
+                       onClick={() => void handleAction(order.id, 'COMPLETED')}
+                       loading={isLoading(order.id, 'COMPLETED')}
+                       variant={order.status === 'READY' ? 'primary' : 'secondary'}
+                       className="flex-1"
+                    >
+                       Done
+                    </Button>
+                    <Button
+                       onClick={() => void handleAction(order.id, 'EXTEND_PREP')}
+                       loading={isLoading(order.id, 'EXTEND_PREP')}
+                       disabled={!!order.prepExtended || order.status === 'READY'}
+                       variant="outline"
+                       className="px-2 border-[rgb(var(--vendor-border))]"
+                       title="Extend prep 5m"
+                    >
+                       +5
+                    </Button>
+                 </div>
+              </div>
+            ))}
+           </div>
+        </div>
 
       </div>
 
-      <Card className="flex flex-wrap items-center justify-between gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
-        <div>
-          <p className="text-lg font-semibold">Need the full ledger?</p>
-          <p className="text-sm text-[rgb(var(--text-muted))]">We trimmed history from this screen. Jump into the history view whenever you need audits or payouts.</p>
+      {/* Menu Manager */}
+      <section className="pt-10 border-t border-[var(--vendor-border)]">
+        <div className="flex items-center justify-between mb-6">
+           <div>
+              <h2 className="text-xl font-bold">Quick Menu</h2>
+              <p className="text-sm text-slate-500">Toggle item availability instantly.</p>
+           </div>
+           <Link href="/vendor/menu" className="text-sm font-medium text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+              Full Menu Manager <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+           </Link>
         </div>
-        <Link href="/vendor/history" className="btn">Open order history</Link>
-      </Card>
 
-      <Card className="flex flex-wrap items-center justify-between gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))]">
-        <div>
-          <p className="text-lg font-semibold">Vendor Analytics</p>
-          <p className="text-sm text-[rgb(var(--text-muted))]">View sales performance, peak hours, and payment insights.</p>
-        </div>
-        <Link href="/vendor/analytics" className="btn-secondary">View Analytics</Link>
-      </Card>
-
-      {/* Menu Availability Manager */}
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">Menu Availability</h2>
-        <p className="text-sm text-[rgb(var(--text-muted))]">Toggle items to mark them as unavailable. Changes save automatically.</p>
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {canteenSettings.map((canteen) => (
-            <Card key={canteen.id} className="border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
-              <h3 className="mb-3 font-semibold">{canteen.name}</h3>
-              <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                {canteen.menuItems && canteen.menuItems.length > 0 ? (
-                  canteen.menuItems.map((item) => (
-                    <div key={item.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium">{item.name}</p>
-                        <p className="text-xs text-[rgb(var(--text-muted))]">{item.sectionName} • {formatCurrency(item.priceCents)}</p>
-                      </div>
-                      <label className="relative inline-flex cursor-pointer items-center">
-                        <input
-                          type="checkbox"
-                          className="peer sr-only"
-                          checked={item.available}
-                          onChange={async (e) => {
-                            const newAvailable = e.target.checked
-                            // Optimistic update
-                            setCanteenSettings(prev => prev.map(c => {
-                              if (c.id !== canteen.id) return c
-                              return {
-                                ...c,
-                                menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: newAvailable } : i)
-                              }
-                            }))
+             <div key={canteen.id} className="rounded-2xl border border-[var(--vendor-border)] bg-[var(--vendor-surface)] overflow-hidden">
+                <div className="bg-slate-50 dark:bg-slate-800 px-4 py-3 border-b border-[var(--vendor-border)] font-bold text-slate-700 dark:text-slate-200">
+                   {canteen.name}
+                </div>
+                <div className="p-2 max-h-80 overflow-y-auto space-y-1 scrollbar-thin">
+                   {canteen.menuItems && canteen.menuItems.length > 0 ? (
+                      canteen.menuItems.map((item) => (
+                         <div key={item.id} className="flex items-center justify-between p-2 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors group">
+                            <div className="flex-1 min-w-0 pr-3">
+                               <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{item.name}</p>
+                               <p className="text-xs text-slate-400 truncate">{item.sectionName} • {formatCurrency(item.priceCents)}</p>
+                            </div>
+                            <label className="relative inline-flex cursor-pointer items-center">
+                               <input 
+                                 type="checkbox" 
+                                 className="peer sr-only" 
+                                 checked={item.available}
+                                 onChange={async (e) => {
+                                    const newAvailable = e.target.checked
+                                    // Optimistic update
+                                    setCanteenSettings(prev => prev.map(c => {
+                                       if (c.id !== canteen.id) return c
+                                       return { ...c, menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: newAvailable } : i) }
+                                    }))
 
-                            try {
-                              const res = await fetch('/api/vendor/menu-items', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ menuItemId: item.id, available: newAvailable })
-                              })
-                              if (!res.ok) throw new Error('Failed to update')
-                            } catch {
-                              // Revert on error
-                              setCanteenSettings(prev => prev.map(c => {
-                                if (c.id !== canteen.id) return c
-                                return {
-                                  ...c,
-                                  menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: !newAvailable } : i)
-                                }
-                              }))
-                              setError('Failed to update availability')
-                            }
-                          }}
-                        />
-                        <div className="peer h-6 w-11 rounded-full bg-gray-200 after:absolute after:left-[2px] after:top-[2px] after:h-5 after:w-5 after:rounded-full after:border after:border-gray-300 after:bg-white after:transition-all after:content-[''] peer-checked:bg-blue-600 peer-checked:after:translate-x-full peer-checked:after:border-white peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:border-gray-600 dark:bg-gray-700 dark:peer-focus:ring-blue-800"></div>
-                      </label>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-[rgb(var(--text-muted))]">No items found.</p>
-                )}
-              </div>
-            </Card>
+                                    try {
+                                       const res = await fetch('/api/vendor/menu-items', {
+                                          method: 'POST',
+                                          headers: { 'Content-Type': 'application/json' },
+                                          body: JSON.stringify({ menuItemId: item.id, available: newAvailable })
+                                       })
+                                       if (!res.ok) throw new Error('Failed to update')
+                                    } catch {
+                                       // Revert on error
+                                       setCanteenSettings(prev => prev.map(c => {
+                                          if (c.id !== canteen.id) return c
+                                          return { ...c, menuItems: c.menuItems.map(i => i.id === item.id ? { ...i, available: !newAvailable } : i) }
+                                       }))
+                                       setError('Failed to update availability')
+                                    }
+                                 }}
+                               />
+                               <div className="peer h-5 w-9 rounded-full bg-slate-200 dark:bg-slate-700 after:absolute after:left-[2px] after:top-[2px] after:h-4 after:w-4 after:rounded-full after:bg-white after:shadow-sm after:transition-all peer-checked:bg-emerald-500 peer-checked:after:translate-x-full peer-focus:outline-none focus:ring-2 focus:ring-emerald-500/20"></div>
+                            </label>
+                         </div>
+                      ))
+                   ) : <div className="p-4 text-center text-sm text-slate-400">No items</div>}
+                </div>
+             </div>
           ))}
         </div>
       </section>
-    </div >
+    </div>
   )
 }

@@ -20,6 +20,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Order not paid yet' }, { status: 409 })
   }
 
+  // Validate action against allowlist
+  const ALLOWED_ACTIONS = ['CONFIRM', 'EXTEND_PREP', 'CANCELLED', 'READY', 'COMPLETED', 'SET_PREP']
+  if (!ALLOWED_ACTIONS.includes(action)) {
+    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+  }
+
   if (action === 'CONFIRM') {
     // Persist prepMinutes if provided along with confirmation
     const updateData: { status: string; prepMinutes?: number } = { status: 'CONFIRMED' }

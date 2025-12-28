@@ -107,8 +107,8 @@ async function resolvePaymentLink(orderId: string) {
           amountCents: order.totalCents,
           currency: 'INR',
           notes: {
-            userId: order.userId,
-            userEmail: order.user.email
+            userId: order.userId ?? 'guest',
+            userEmail: order.user?.email ?? 'guest@skipq.app'
           }
         })
         externalOrderId = rzpOrder.id

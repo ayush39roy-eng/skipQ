@@ -19,7 +19,7 @@ export function MobileCartPill(props: Props) {
             <div className="fixed bottom-6 left-4 right-4 z-50 lg:hidden">
                 <button
                     onClick={() => setIsOpen(true)}
-                    className="flex w-full items-center justify-between rounded-full bg-[rgb(var(--accent))] px-4 py-3 text-white shadow-lg shadow-[rgb(var(--accent))]/40 transition active:scale-95"
+                    className="game-btn flex w-full items-center justify-between rounded-xl px-4 py-3 text-black shadow-lg transition active:scale-95"
                 >
                     <div className="flex flex-col items-start">
                         <span className="text-xs font-medium uppercase opacity-90">{totalItems} items</span>

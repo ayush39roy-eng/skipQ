@@ -24,8 +24,9 @@ export async function POST(req: Request) {
     const ok = await bcrypt.compare(password, user.passwordHash)
     if (!ok) return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 })
     const role: Role = isRole(user.role) ? user.role : 'USER'
-    await createSession(user.id, role)
-    return NextResponse.json({ ok: true })
+    const token = await createSession(user.id, role)
+    // Return token for mobile/API clients
+    return NextResponse.json({ ok: true, role, token })
   } catch (error) {
     console.error('Login failed', error)
     return NextResponse.json({ error: 'Failed to login' }, { status: 500 })

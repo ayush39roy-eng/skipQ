@@ -41,6 +41,46 @@ export const dynamic = 'force-dynamic'
 export async function POST(req: Request) {
   const session = await requireRole(['USER'])
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Require idempotency key to prevent duplicate orders from network retries
+  const idempotencyKey = req.headers.get('x-idempotency-key')
+  if (!idempotencyKey) {
+    return NextResponse.json({ error: 'Missing X-Idempotency-Key header' }, { status: 400 })
+  }
+
+  // Validate idempotency key format (should be UUID or similar)
+  if (idempotencyKey.length < 16 || idempotencyKey.length > 64) {
+    return NextResponse.json({ error: 'Invalid idempotency key format' }, { status: 400 })
+  }
+
+  // Check for existing order with this idempotency key for this user
+  const existingOrder = await prisma.order.findFirst({
+    where: { 
+      idempotencyKey,
+      userId: session.userId 
+    },
+    include: {
+      payment: true,
+      items: { include: { menuItem: true } }
+    }
+  })
+
+  if (existingOrder) {
+    // Return cached response for duplicate request
+    return NextResponse.json({
+      id: existingOrder.id,
+      amount: existingOrder.totalCents,
+      currency: 'INR',
+      payment: existingOrder.payment ? {
+        id: existingOrder.payment.id,
+        status: existingOrder.payment.status,
+        razorpayOrderId: existingOrder.payment.provider === 'razorpay' ? existingOrder.payment.externalOrderId : undefined,
+        keyId: existingOrder.payment.provider === 'razorpay' ? process.env.RAZORPAY_KEY_ID : undefined
+      } : null,
+      _idempotent: true // Flag indicating this is a cached response
+    })
+  }
+
   const body = parseOrderBody(await req.json())
   if (!body) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
   const { canteenId, items, fulfillmentType, cookingInstructions } = body
@@ -74,6 +114,7 @@ export async function POST(req: Request) {
 
   const order = await prisma.order.create({
     data: {
+      idempotencyKey, // Store idempotency key for duplicate detection
       userId: session.userId,
       canteenId,
       vendorId: canteen.vendorId,
@@ -89,6 +130,7 @@ export async function POST(req: Request) {
   // Initialize Payment
   const hasRazorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
   let externalOrderId: string | undefined
+  let paymentRecord
   const paymentLink = `/pay/${order.id}`
 
   if (hasRazorpay) {
@@ -105,7 +147,7 @@ export async function POST(req: Request) {
       })
       externalOrderId = rzpOrder.id
 
-      await prisma.payment.create({
+      paymentRecord = await prisma.payment.create({
         data: {
           orderId: order.id,
           amountCents: order.totalCents,
@@ -118,9 +160,11 @@ export async function POST(req: Request) {
       console.error('Failed to initialize Razorpay order:', error)
       // Don't fail the order creation, just log error. User can retry payment later.
     }
-  } else {
-    // Manual payment fallback
-    await prisma.payment.create({
+  } 
+  
+  if (!paymentRecord) {
+    // Manual payment fallback (or if Razorpay failed)
+    paymentRecord = await prisma.payment.create({
       data: {
         orderId: order.id,
         amountCents: order.totalCents,
@@ -130,12 +174,34 @@ export async function POST(req: Request) {
     })
   }
 
-  return NextResponse.json({ id: order.id })
+  return NextResponse.json({
+    id: order.id,
+    amount: order.totalCents,
+    currency: 'INR',
+    payment: {
+        id: paymentRecord.id,
+        status: paymentRecord.status,
+        razorpayOrderId: paymentRecord.provider === 'razorpay' ? paymentRecord.externalOrderId : undefined,
+        keyId: paymentRecord.provider === 'razorpay' ? process.env.RAZORPAY_KEY_ID : undefined
+    }
+  })
 }
 
 export async function GET() {
   const session = await requireRole(['USER'])
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const orders = await prisma.order.findMany({ where: { userId: session.userId }, orderBy: { createdAt: 'desc' } })
+  const orders = await prisma.order.findMany({
+    where: { userId: session.userId },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      payment: true,
+      canteen: true,
+      items: {
+        include: {
+          menuItem: true
+        }
+      }
+    }
+  })
   return NextResponse.json(orders)
 }

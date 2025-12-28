@@ -8,7 +8,18 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
   const session = await getSession()
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const order = await prisma.order.findUnique({ where: { id: params.id }, include: { payment: true } })
+  const order = await prisma.order.findUnique({
+    where: { id: params.id },
+    include: {
+      items: {
+        include: {
+          menuItem: true
+        }
+      },
+      canteen: true,
+      payment: true
+    }
+  })
   if (!order) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const isOwner = session.userId === order.userId
@@ -26,5 +37,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     prepExtended: !!order.prepExtended,
     paymentStatus: order.payment?.status ?? null,
     updatedAt: order.updatedAt,
+    createdAt: order.createdAt,
+    fulfillmentType: order.fulfillmentType,
+    items: order.items,
+    canteen: order.canteen,
+    payment: order.payment,
+    totalCents: order.totalCents
   })
 }

@@ -2,8 +2,6 @@
 import { useEffect, useMemo, useState, useCallback, useRef, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
-import { Card } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import { Stepper } from '@/components/ui/Stepper'
 import { Input } from '@/components/ui/Input'
 import { Badge } from '@/components/ui/Badge'
@@ -192,7 +190,7 @@ function CanteenMenuContent() {
 
   return (
     <div className="space-y-8">
-      <section className="rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-[rgb(var(--surface))] via-[rgb(var(--surface-muted))] to-[rgb(var(--bg))] p-4 sm:p-6 shadow-[0_25px_60px_rgba(15,15,35,0.35)]">
+      <section className="game-card rounded-3xl p-4 sm:p-6">
         <div className="relative aspect-[2/1] w-full overflow-hidden rounded-3xl border border-white/10 sm:aspect-[21/6]">
           <Image
             src={heroImage}
@@ -211,20 +209,20 @@ function CanteenMenuContent() {
           </div>
         </div>
         <div className="mt-6 grid grid-cols-1 gap-4 text-[rgb(var(--text))] sm:grid-cols-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Menu size</p>
-            <p className="mt-2 text-3xl font-semibold">{items.length}</p>
-            <p className="text-sm text-[rgb(var(--text-muted))]">Curated dishes live now</p>
+          <div className="rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0px_0px_#000000]">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-bold">Menu size</p>
+            <p className="mt-2 text-3xl font-black">{items.length}</p>
+            <p className="text-sm text-gray-600 font-semibold">Curated dishes live now</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Average</p>
-            <p className="mt-2 text-3xl font-semibold">₹{priceStats.avg}</p>
-            <p className="text-sm text-[rgb(var(--text-muted))]">Typical item cost</p>
+          <div className="rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0px_0px_#000000]">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-bold">Average</p>
+            <p className="mt-2 text-3xl font-black">₹{priceStats.avg}</p>
+            <p className="text-sm text-gray-600 font-semibold">Typical item cost</p>
           </div>
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Range</p>
-            <p className="mt-2 text-3xl font-semibold">₹{priceStats.min} – ₹{priceStats.max}</p>
-            <p className="text-sm text-[rgb(var(--text-muted))]">Budget to indulgent</p>
+          <div className="rounded-2xl border-2 border-black bg-white p-4 shadow-[2px_2px_0px_0px_#000000]">
+            <p className="text-xs uppercase tracking-[0.3em] text-gray-500 font-bold">Range</p>
+            <p className="mt-2 text-3xl font-black">₹{priceStats.min} – ₹{priceStats.max}</p>
+            <p className="text-sm text-gray-600 font-semibold">Budget to indulgent</p>
           </div>
         </div>
         {/* Quick filters removed — only sort buttons are shown below */}
@@ -232,9 +230,9 @@ function CanteenMenuContent() {
 
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 lg:flex-row">
         <section className="flex-1 min-w-0">
-          <div className="rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
+          <div className="game-card rounded-2xl p-4">
             <div className="space-y-1">
-              <span className="block text-sm font-medium" style={{ color: 'rgb(var(--text))' }}>Search menu</span>
+              <span className="block text-sm font-bold text-black" style={{ color: 'rgb(var(--text))' }}>Search menu</span>
               <div className="relative rounded-xl shadow-lg transition-shadow hover:shadow-xl">
                 <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
                   <svg className="h-5 w-5 text-[rgb(var(--accent))]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -256,7 +254,7 @@ function CanteenMenuContent() {
                   key={mode}
                   type="button"
                   onClick={() => setSortMode(mode)}
-                  className={`rounded-full px-4 py-1.5 text-sm transition ${sortMode === mode ? 'bg-[rgb(var(--accent))] text-white' : 'border border-[rgb(var(--border))] text-[rgb(var(--text))]'}`}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-bold transition border-2 border-black ${sortMode === mode ? 'bg-black text-white' : 'bg-white text-black hover:bg-gray-100'}`}
                 >
                   {mode === 'popular' ? 'Chef picks' : 'Lowest price'}
                 </button>
@@ -297,7 +295,7 @@ function CanteenMenuContent() {
 
           <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
             {filtered.map((it) => (
-              <Card key={it.id} className={`group overflow-hidden border border-[rgb(var(--border))] transition hover:border-[rgb(var(--accent))] hover:shadow-xl ${!it.available ? 'opacity-60 grayscale' : ''}`}>
+              <div key={it.id} className={`game-card group overflow-hidden rounded-xl transition-all duration-200 p-0 ${!it.available ? 'opacity-60 grayscale' : ''}`}>
                 <div className="relative h-48 w-full overflow-hidden rounded-2xl">
                   <Image
                     src={it.imageUrl || '/placeholder.svg'}
@@ -325,14 +323,14 @@ function CanteenMenuContent() {
                 <div className="mt-4 flex items-center justify-between">
                   <span></span>
                   {!it.available ? (
-                    <button className="btn" disabled>Unavailable</button>
+                    <button className="rounded-lg border-2 border-black bg-gray-200 px-4 py-2 font-bold text-gray-500" disabled>Unavailable</button>
                   ) : (cart[it.id] ?? 0) === 0 ? (
-                    <button className="btn" onClick={() => setCart((c) => ({ ...c, [it.id]: 1 }))}>Add</button>
+                    <button className="game-btn px-6 py-2 text-xs" onClick={() => setCart((c) => ({ ...c, [it.id]: 1 }))}>Add</button>
                   ) : (
                     <Stepper value={cart[it.id] ?? 0} onChange={(v) => setCart((c) => ({ ...c, [it.id]: v }))} />
                   )}
                 </div>
-              </Card>
+              </div>
             ))}
             {filtered.length === 0 && (
               <div className="col-span-full rounded-2xl border border-dashed border-[rgb(var(--border))] p-12 text-center">
@@ -344,7 +342,7 @@ function CanteenMenuContent() {
         </section>
 
         <aside className="w-full lg:w-80 xl:w-96">
-          <Card className="flex flex-col justify-between space-y-4 border border-[rgb(var(--accent))]/20 bg-[rgb(var(--surface))]/70 backdrop-blur self-start">
+          <div className="game-card flex flex-col justify-between space-y-4 rounded-xl p-5 self-start">
             {(cartRestored || searchParams.get('resume')) && (
               <div className="rounded-2xl border border-emerald-400/40 bg-emerald-400/10 px-3 py-2 text-xs text-emerald-100">
                 Cart restored after login. Review items and checkout to finish payment.
@@ -407,7 +405,7 @@ function CanteenMenuContent() {
               <div className="flex justify-between text-base font-semibold"><span>Total</span><span>₹{(grandTotalCents / 100).toFixed(2)}</span></div>
             </div>
             <div className="mt-4">
-              <Button variant="primary" size="lg" disabled={subtotalCents <= 0 || isCheckingOut} onClick={order} className="w-full rounded-xl">
+              <button onClick={order} disabled={subtotalCents <= 0 || isCheckingOut} className="game-btn w-full rounded-xl py-3 text-lg">
                 {isCheckingOut ? (
                   <span className="flex items-center justify-center gap-2">
                     <Loader size="small" />
@@ -416,10 +414,10 @@ function CanteenMenuContent() {
                 ) : (
                   'Checkout & Pay'
                 )}
-              </Button>
+              </button>
             </div>
             <div className="mt-3 text-xs text-[rgb(var(--text-muted))]">By checking out you agree to the canteen&apos;s prep time and receive WhatsApp notifications when your order is ready.</div>
-          </Card>
+          </div>
         </aside>
       </div>
       <MobileCartPill

@@ -63,9 +63,9 @@ export default async function HomePage() {
 
   return (
     <div className="space-y-14">
-      <section className="relative overflow-hidden rounded-3xl border border-[rgb(var(--border))] bg-gradient-to-br from-sky-500/20 via-purple-500/10 to-transparent px-5 py-8 shadow-[0_25px_70px_-35px_rgba(15,118,255,0.6)] sm:px-8 sm:py-10">
-        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 opacity-40 blur-3xl lg:block" aria-hidden>
-          <div className="h-full w-full bg-gradient-to-br from-sky-400/40 to-emerald-400/20" />
+      <section className="relative overflow-hidden rounded-3xl border-2 border-black bg-gradient-to-br from-brand-primary to-brand-secondary px-5 py-8 shadow-game-md sm:px-8 sm:py-10">
+        <div className="pointer-events-none absolute inset-y-0 right-0 hidden w-1/2 opacity-20 blur-3xl lg:block" aria-hidden>
+          <div className="h-full w-full bg-gradient-to-br from-white to-brand-accent" />
         </div>
         <div className="relative flex flex-col items-center gap-6 text-center">
           <div className="max-w-3xl space-y-6">
@@ -75,11 +75,11 @@ export default async function HomePage() {
               </h1>
 
             </div>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Link href="/canteens" className="btn px-8 py-4 text-lg">
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/canteens" className="game-btn text-lg">
                 Start Ordering
               </Link>
-              <Link href="/register" className="btn-secondary px-8 py-4 text-lg">
+              <Link href="/register" className="inline-flex items-center justify-center font-bold text-black border-2 border-black bg-white shadow-game-sm hover:shadow-game-md hover:-translate-y-0.5 active:translate-y-0.5 active:shadow-game-sm transition-all px-8 py-3 rounded-lg text-lg">
                 Become a Vendor
               </Link>
             </div>
@@ -108,13 +108,13 @@ export default async function HomePage() {
 
       <section className="grid gap-6 md:grid-cols-2">
         {features.map(feature => (
-          <article key={feature.title} className="group rounded-2xl border border-[rgb(var(--border))] bg-[rgb(var(--bg-alt))] p-6 transition hover:border-sky-400/60 hover:bg-sky-400/10">
-            <div className="mb-4 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-sky-400">
-              <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+          <article key={feature.title} className="game-card group rounded-xl p-6 transition">
+            <div className="mb-4 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.1em] text-black">
+              <span className="h-2 w-2 rounded-full bg-brand-primary border border-black" />
               {feature.accent}
             </div>
-            <h3 className="text-xl font-semibold text-[rgb(var(--text))]">{feature.title}</h3>
-            <p className="mt-2 text-sm text-[rgb(var(--text-muted))]">{feature.description}</p>
+            <h3 className="text-xl font-bold text-black">{feature.title}</h3>
+            <p className="mt-2 text-sm font-medium text-gray-600">{feature.description}</p>
           </article>
         ))}
       </section>

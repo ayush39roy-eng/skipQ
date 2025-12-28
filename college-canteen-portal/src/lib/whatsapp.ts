@@ -60,14 +60,20 @@ function formatWhatsAppAddress(raw: string) {
   return trimmed.startsWith('whatsapp:') ? trimmed : `whatsapp:${trimmed}`
 }
 
-function resolveProvider(): Provider {
+function resolveProvider(): Provider | null {
   const declared = process.env.WHATSAPP_PROVIDER as Provider | undefined
   if (declared === 'meta' || declared === 'twilio' || declared === 'gupshup') return declared
 
   // Auto-detect
   if (process.env.GUPSHUP_API_KEY && process.env.GUPSHUP_SRC_NAME) return 'gupshup'
   const hasTwilio = process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN && process.env.TWILIO_WHATSAPP_FROM
-  return hasTwilio ? 'twilio' : 'meta'
+
+  // Only default to Meta if keys are actually present, otherwise return null
+  const hasMeta = process.env.WHATSAPP_META_TOKEN && process.env.WHATSAPP_META_PHONE_NUMBER_ID
+  if (hasTwilio) return 'twilio'
+  if (hasMeta) return 'meta'
+
+  return null
 }
 
 type TwilioClient = ReturnType<typeof twilio>
@@ -123,7 +129,7 @@ async function sendViaTwilio(to: string, payload: TwilioPayload) {
     hasVariables: Boolean(payload.templateVariables)
   })
 
-    try {
+  try {
     const messageOptions: Parameters<TwilioClient['messages']['create']>[0] = {
       from,
       to: toWhatsApp,
@@ -209,6 +215,13 @@ async function sendViaGupshup(to: string, payload: { text: string, buttons?: { i
 export async function sendWhatsApp(to: string, payload: { text?: string, buttons?: { id: string, title: string }[], header?: string, templateVariables?: Record<string, unknown> | string }) {
   const provider = resolveProvider()
   if (!to) return
+
+  if (!provider) {
+    console.log('[WhatsApp] No provider configured. Skipping message dispatch.')
+    void writeLog('WhatsAppSkipped', { to, reason: 'No provider configured' })
+    return
+  }
+
   try {
     log('Preparing message', { provider, to, hasButtons: Boolean(payload.buttons?.length) })
 
@@ -242,7 +255,7 @@ export async function sendWhatsApp(to: string, payload: { text?: string, buttons
     }
     log('Message dispatched', { provider, to })
   } catch (error) {
-    console.warn('WhatsApp not configured, falling back to log:', payload, error)
+    console.warn('WhatsApp send failed:', payload, error)
     void writeLog('WhatsAppError', { provider, to, reason: error instanceof Error ? error.message : String(error) })
   }
 }

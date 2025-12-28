@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { validateRequest } from 'twilio'
 import { writeLog } from '@/lib/log-writer'
+import { logAudit } from '@/lib/audit'
 
 type Action = 'COMPLETE' | 'CANCEL'
 
@@ -123,8 +124,68 @@ export async function POST(req: Request) {
     let ButtonPayload = ''
 
     if (contentType.includes('application/json')) {
-      // Gupshup or Meta
-      const json = await req.json()
+      // Gupshup or Meta - MUST verify signature
+      const rawBody = await req.text()
+      const gupshupSignature = req.headers.get('x-gupshup-signature') || ''
+      const gupshupSecret = process.env.GUPSHUP_WEBHOOK_SECRET || ''
+
+      // Verify Gupshup signature using HMAC-SHA256
+      if (gupshupSecret) {
+        const crypto = await import('crypto')
+        const expectedSignature = crypto
+          .createHmac('sha256', gupshupSecret)
+          .update(rawBody)
+          .digest('hex')
+        
+        // Timing-safe comparison to prevent timing attacks
+        const signatureValid = gupshupSignature.length === expectedSignature.length &&
+          crypto.timingSafeEqual(
+            Buffer.from(gupshupSignature),
+            Buffer.from(expectedSignature)
+          )
+
+        if (!signatureValid) {
+          console.warn('[WhatsApp Webhook] Invalid Gupshup signature', {
+            received: gupshupSignature.substring(0, 10) + '...',
+            ip: req.headers.get('x-forwarded-for') || 'unknown'
+          })
+          
+          // Log unauthorized attempt to audit
+          void logAudit({
+            action: 'WEBHOOK_SIGNATURE_INVALID',
+            result: 'DENIED',
+            method: 'POST',
+            authType: 'ANONYMOUS',
+            ip: req.headers.get('x-forwarded-for') || undefined,
+            metadata: { provider: 'gupshup', endpoint: '/api/webhooks/whatsapp' }
+          })
+
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+            status: 401, 
+            headers: { 'Content-Type': 'application/json' } 
+          })
+        }
+      } else {
+        // No secret configured - reject for security (fail-closed)
+        console.error('[WhatsApp Webhook] GUPSHUP_WEBHOOK_SECRET not configured - rejecting request')
+        
+        void logAudit({
+          action: 'WEBHOOK_SECRET_MISSING',
+          result: 'DENIED',
+          method: 'POST',
+          authType: 'ANONYMOUS',
+          ip: req.headers.get('x-forwarded-for') || undefined,
+          metadata: { provider: 'gupshup', endpoint: '/api/webhooks/whatsapp' }
+        })
+
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+          status: 401, 
+          headers: { 'Content-Type': 'application/json' } 
+        })
+      }
+
+      // Parse the verified body
+      const json = JSON.parse(rawBody)
       void writeLog('WhatsAppWebhookJSON', json)
 
       // Gupshup structure

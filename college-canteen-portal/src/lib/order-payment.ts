@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendWhatsApp, buildOrderButtons } from '@/lib/whatsapp'
 import { writeLog } from '@/lib/log-writer'
 import { getTicketNumber } from '@/lib/order-ticket'
+import { logAudit } from '@/lib/audit'
 
 const orderInclude = Prisma.validator<Prisma.OrderDefaultArgs>()({
   include: {
@@ -13,14 +14,6 @@ const orderInclude = Prisma.validator<Prisma.OrderDefaultArgs>()({
 })
 
 export type OrderWithRelations = Prisma.OrderGetPayload<typeof orderInclude>
-
-async function ensureOrder(orderId: string) {
-  const order = await prisma.order.findUnique({ where: { id: orderId }, ...orderInclude })
-  if (!order) {
-    throw new Error(`Order ${orderId} not found`)
-  }
-  return order
-}
 
 function summarizeItems(order: OrderWithRelations) {
   if (!order.items.length) return 'Items pending'
@@ -68,7 +61,7 @@ async function notifyPaid(order: OrderWithRelations) {
     'cancel_payload': `0|${order.id}`
   }
 
-  await Promise.allSettled(phones.map(async (to) => {
+  const results = await Promise.allSettled(phones.map(async (to) => {
     try {
       await sendWhatsApp(to, {
         header: 'Paid Order',
@@ -77,36 +70,130 @@ async function notifyPaid(order: OrderWithRelations) {
         templateVariables
       })
       void writeLog('WhatsApp', { event: 'order-paid', to, orderId: order.id })
+      
+      // Log successful notification to audit
+      void logAudit({
+        action: 'WHATSAPP_NOTIFICATION_SENT',
+        result: 'ALLOWED',
+        method: 'INTERNAL',
+        authType: 'ANONYMOUS',
+        metadata: { orderId: order.id, to, event: 'order-paid' }
+      })
+      
+      return { success: true, to }
     } catch (err) {
       console.error(`Failed to notify ${to} for order ${ticketNumber}:`, err)
       void writeLog('WhatsAppError', { event: 'order-paid', to, orderId: order.id, error: err instanceof Error ? err.message : String(err) })
+      
+      // Log failed notification to audit for visibility
+      void logAudit({
+        action: 'WHATSAPP_NOTIFICATION_FAILED',
+        result: 'INTERNAL_ERROR',
+        method: 'INTERNAL',
+        authType: 'ANONYMOUS',
+        metadata: { 
+          orderId: order.id, 
+          to, 
+          event: 'order-paid',
+          error: err instanceof Error ? err.message : String(err)
+        }
+      })
+      
+      return { success: false, to, error: err }
     }
   }))
+  
+  return results
 }
 
+/**
+ * Mark an order as paid using an atomic transaction.
+ * 
+ * This function ensures that Payment and Order status updates happen atomically,
+ * preventing partial state updates if the process crashes mid-operation.
+ * 
+ * WhatsApp notifications are sent AFTER the transaction commits successfully.
+ */
 export async function markOrderAsPaid(orderId: string) {
-  const order = await ensureOrder(orderId)
-  if (order.payment?.status === 'PAID' && order.status === 'PAID') {
-    return { alreadyPaid: true as const, order }
-  }
-
-  const now = new Date()
-  if (order.payment) {
-    await prisma.payment.update({ where: { orderId }, data: { status: 'PAID', paidAt: now } })
-  } else {
-    await prisma.payment.create({
-      data: {
-        orderId,
-        amountCents: order.totalCents,
-        paymentLink: '',
-        provider: 'manual',
-        status: 'PAID',
-        paidAt: now
+  // Use an interactive transaction to ensure atomicity
+  const result = await prisma.$transaction(async (tx) => {
+    // Fetch the order within the transaction context
+    const order = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        items: { include: { menuItem: true } },
+        canteen: { include: { vendor: true } }
       }
     })
+
+    if (!order) {
+      throw new Error(`Order ${orderId} not found`)
+    }
+
+    // Idempotency check: if already paid, return early
+    if (order.payment?.status === 'PAID' && order.status === 'PAID') {
+      return { alreadyPaid: true as const, order }
+    }
+
+    const now = new Date()
+
+    // Update or create payment record
+    if (order.payment) {
+      await tx.payment.update({
+        where: { orderId },
+        data: { status: 'PAID', paidAt: now }
+      })
+    } else {
+      await tx.payment.create({
+        data: {
+          orderId,
+          amountCents: order.totalCents,
+          paymentLink: '',
+          provider: 'manual',
+          status: 'PAID',
+          paidAt: now
+        }
+      })
+    }
+
+    // Update order status
+    await tx.order.update({
+      where: { id: orderId },
+      data: { status: 'PAID' }
+    })
+
+    // Fetch the updated order (within transaction to ensure consistency)
+    const updatedOrder = await tx.order.findUnique({
+      where: { id: orderId },
+      include: {
+        payment: true,
+        items: { include: { menuItem: true } },
+        canteen: { include: { vendor: true } }
+      }
+    })
+
+    return { alreadyPaid: false as const, order: updatedOrder! }
+  })
+
+  // IMPORTANT: Side effects (WhatsApp notifications) happen AFTER the transaction commits
+  // This ensures we only notify if the database state is consistent
+  if (!result.alreadyPaid && result.order) {
+    try {
+      await notifyPaid(result.order)
+    } catch (err) {
+      // Log notification failure but don't fail the operation
+      // The database state is already consistent
+      console.error('Failed to send payment notification:', err)
+      void logAudit({
+        action: 'PAYMENT_NOTIFICATION_FAILED',
+        result: 'INTERNAL_ERROR',
+        method: 'INTERNAL',
+        authType: 'ANONYMOUS',
+        metadata: { orderId, error: err instanceof Error ? err.message : String(err) }
+      })
+    }
   }
-  await prisma.order.update({ where: { id: orderId }, data: { status: 'PAID' } })
-  const updated = await ensureOrder(orderId)
-  await notifyPaid(updated)
-  return { alreadyPaid: false as const, order: updated }
+
+  return result
 }

@@ -78,6 +78,17 @@ export async function POST(req: Request) {
 
     // Prefer verifying the payment record if client provided a payment id
     if (paymentId) {
+      // DEV ONLY: Allow simulated payments
+      if (paymentId.startsWith('pay_simulated_')) {
+        if (process.env.NODE_ENV !== 'development') {
+           console.warn(`SECURITY ALERT: Attempted simulated payment in non-dev env. Order: ${orderId}, IP: ${req.headers.get('x-forwarded-for')}`);
+           return NextResponse.json({ error: 'Simulated payments not allowed' }, { status: 403 });
+        }
+        console.log('⚠️ Simulating payment success for:', orderId);
+        await markOrderAsPaid(orderId);
+        return NextResponse.json({ ok: true });
+      }
+
       const rzpPayment = await getRazorpayPayment(paymentId)
       if (!rzpPayment) {
         console.warn('Payment confirm (POST): Razorpay payment not found', { orderId, paymentId })
