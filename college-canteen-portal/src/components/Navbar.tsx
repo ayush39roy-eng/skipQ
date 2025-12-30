@@ -47,8 +47,8 @@ export function Navbar({ session }: NavbarProps) {
                     </Link>
                 </div>
 
-                {/* Navigation Zone - centered if possible, but right aligned for now */}
-                <nav className="flex items-center gap-1 sm:gap-2">
+                {/* Navigation Zone */}
+                <nav className="flex items-center gap-1 overflow-x-auto no-scrollbar sm:gap-2">
                     {navItems.map((item) => {
                         const isActive = pathname === item.href
                         return (
@@ -56,10 +56,10 @@ export function Navbar({ session }: NavbarProps) {
                                 key={item.href}
                                 href={item.href}
                                 className={clsx(
-                                    "rounded-lg px-3 py-2 text-sm font-bold transition-all border-2 border-transparent",
+                                    "whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold transition-all border-2 flex-shrink-0",
                                     isActive 
-                                        ? "bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(0,255,0,0.5)]" 
-                                        : "text-gray-600 hover:border-black hover:bg-gray-50 hover:text-black"
+                                        ? "bg-game-primary text-black border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]" 
+                                        : "text-gray-600 border-transparent hover:border-black hover:bg-game-bg hover:text-black"
                                 )}
                             >
                                 {item.label}

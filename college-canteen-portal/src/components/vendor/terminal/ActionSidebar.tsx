@@ -14,6 +14,7 @@ interface ActionSidebarProps {
   onRemoveFromCart: (itemId: string) => void
   onClearCart: () => void
   onPlaceOrder: (paymentMode: PaymentMode, fulfillmentType: FulfillmentType) => void
+  vendorMode?: string
 }
 
 export function ActionSidebar({
@@ -23,7 +24,8 @@ export function ActionSidebar({
   cart,
   onRemoveFromCart,
   onClearCart,
-  onPlaceOrder
+  onPlaceOrder,
+  vendorMode
 }: ActionSidebarProps) {
   const [fulfillmentType, setFulfillmentType] = useState<FulfillmentType>('DINE_IN')
   const cartTotal = cart.reduce((acc, c) => acc + (c.item.priceCents * c.qty), 0)
@@ -128,6 +130,19 @@ export function ActionSidebar({
   }
 
   // -- CART VIEW --
+  if (vendorMode === 'ORDERS_ONLY') {
+    return (
+      <div className="flex w-[380px] flex-col bg-vendor-surface border-l border-vendor-border h-full shadow-lg z-20 text-vendor-text-primary p-6 justify-center items-center text-center">
+         <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-4">
+             <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mx-auto mb-2"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
+             <h3 className="font-bold">POS Restricted</h3>
+         </div>
+         <p className="text-vendor-text-secondary text-sm">Your account is in <strong>Orders Only</strong> mode.</p>
+         <p className="text-vendor-text-secondary text-sm mt-1">You cannot place walk-in orders securely.</p>
+      </div>
+    )
+  }
+
   return (
     <div className="flex w-[380px] flex-col bg-vendor-surface border-l border-vendor-border h-full shadow-lg z-20 text-vendor-text-primary">
        <div className="p-6 border-b border-vendor-border">

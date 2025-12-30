@@ -1,4 +1,5 @@
 import type { Config } from 'tailwindcss'
+import plugin from 'tailwindcss/plugin'
 
 export default {
   content: [
@@ -69,5 +70,16 @@ export default {
       }
     },
   },
-  plugins: [],
+  plugins: [
+    plugin(function ({ matchUtilities, theme }) {
+      matchUtilities(
+        {
+          'text-stroke': (value: string) => ({
+            '-webkit-text-stroke-width': value,
+          }),
+        },
+        { values: { ...theme('borderWidth'), '3': '3px' } }
+      )
+    }),
+  ],
 } satisfies Config

@@ -1,0 +1,8 @@
+ID | Name | Mode
+6919bb5d417c0d4a0c044518 | Main Vendor | FULL_POS
+691cf9dfdba799f02511eb14 | Raydee Cafe | FULL_POS
+691ee20fda41c696149ae1c7 | Main Vendor | FULL_POS
+6922c096addeed30663371ed | test vendor | FULL_POS
+693807b19a09c4ca3fde3deb | spice garden | FULL_POS
+69530516401008e700941349 | Geo Vendor | FULL_POS
+6953058586457351d235ce94 | Geo Vendor | FULL_POS

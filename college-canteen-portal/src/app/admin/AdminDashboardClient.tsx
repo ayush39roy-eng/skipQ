@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
 import { FormSubmitButton } from '@/components/ui/FormSubmitButton'
+import { VendorMode } from '@/types/vendor'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs'
 import AdminAnalyticsCharts from './AdminAnalyticsCharts'
 import Image from 'next/image'
@@ -22,7 +23,7 @@ type AdminDashboardProps = {
     orders: any[] // Using any for complex Prisma types for simplicity in client component
     recentOrders: any[]
     topCanteens: any[]
-    vendors: any[]
+    vendors: (any & { mode: VendorMode })[]
     vendorUsers: any[]
     canteens: any[]
     actions: {
@@ -30,6 +31,8 @@ type AdminDashboardProps = {
         updateVendor: (formData: FormData) => Promise<void>
         updateVendorCredentials: (formData: FormData) => Promise<void>
         createCanteen: (formData: FormData) => Promise<void>
+        updateVendorMode: (formData: FormData) => Promise<void>
+        deleteVendor: (formData: FormData) => Promise<void>
     }
 }
 
@@ -124,7 +127,9 @@ export default function AdminDashboardClient({
                                                     <span className="font-mono text-xs text-[rgb(var(--text-muted))]">#{o.id.slice(0, 8)}</span>
                                                     <span className="text-sm font-medium">{o.canteen.name}</span>
                                                 </div>
-                                                <div className="text-xs text-[rgb(var(--text-muted))] mt-0.5">{o.user.email}</div>
+                                                <div className="text-xs text-[rgb(var(--text-muted))] mt-0.5">
+                                                    {o.user?.email || o.guestName || 'Guest'}
+                                                </div>
                                                 {instr?.trim() && <div className="text-xs text-amber-500 mt-1">Note: {instr.slice(0, 40)}{instr.length > 40 ? '…' : ''}</div>}
                                             </div>
                                             <div className="text-right">
@@ -245,6 +250,50 @@ export default function AdminDashboardClient({
                                                     <input type="checkbox" name="whatsappEnabled" defaultChecked={v.whatsappEnabled} />
                                                     <span>WhatsApp Alerts</span>
                                                 </label>
+                                            </div>
+                                            
+                                            <div className="border border-[rgb(var(--border))] rounded p-3">
+                                                 <label className="block text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-muted))] mb-2">Vendor Mode</label>
+                                                 <div className="flex gap-4">
+                                                     <label className="flex items-center gap-2 cursor-pointer">
+                                                         <input type="radio" name="mode" value={VendorMode.ORDERS_ONLY} defaultChecked={v.mode === VendorMode.ORDERS_ONLY} 
+                                                            onChange={e => {
+                                                                const formData = new FormData()
+                                                                formData.append('vendorId', v.id)
+                                                                formData.append('mode', VendorMode.ORDERS_ONLY)
+                                                                actions.updateVendorMode(formData)
+                                                            }}
+                                                         />
+                                                         <span className="text-sm">Orders Only</span>
+                                                     </label>
+                                                     <label className="flex items-center gap-2 cursor-pointer">
+                                                         <input type="radio" name="mode" value={VendorMode.FULL_POS} defaultChecked={v.mode === VendorMode.FULL_POS}
+                                                            onChange={e => {
+                                                                const formData = new FormData()
+                                                                formData.append('vendorId', v.id)
+                                                                formData.append('mode', VendorMode.FULL_POS)
+                                                                actions.updateVendorMode(formData)
+                                                            }}
+                                                         />
+                                                         <span className="text-sm font-bold text-amber-600">Full POS</span>
+                                                     </label>
+                                                 </div>
+                                                </div>
+
+                                            <div className="pt-3 border-t border-[rgb(var(--border))] mt-3 flex justify-end">
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        if (confirm(`Are you sure you want to PERMANENTLY delete "${v.name}"?\n\nThis will delete:\n- The Vendor Account\n- All Login Credentials\n- All Linked Canteens\n- All Menu Items\n\nThis action cannot be undone.`)) {
+                                                            const fd = new FormData()
+                                                            fd.append('vendorId', v.id)
+                                                            await actions.deleteVendor(fd)
+                                                        }
+                                                    }}
+                                                    className="text-xs font-semibold text-red-500 hover:text-red-600 hover:underline"
+                                                >
+                                                    Delete Vendor & Credentials
+                                                </button>
                                             </div>
                                         </div>
                                     </form>

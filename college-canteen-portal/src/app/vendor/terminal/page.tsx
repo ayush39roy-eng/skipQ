@@ -16,17 +16,43 @@ export default async function TerminalPage() {
   const vendorId = session.user.vendorId
   console.log("TerminalPage: Fetching for VendorID:", vendorId)
 
-  // Pre-fetch Canteen ID to ensure reliable item lookup
-  const canteen = await prisma.canteen.findFirst({
+  // Pre-fetch Canteen ID and Full Vendor/Canteen Details for Settings
+  // Fix: Handle vendors with multiple canteens by picking the one with the most items (or first)
+  const canteens = await (prisma.canteen as any).findMany({
       where: { vendorId },
-      select: { id: true }
-  })
+      select: { 
+          id: true, 
+          name: true,
+          location: true,
+          notificationPhones: true,
+          manualIsOpen: true,
+          autoMode: true,
+          weeklySchedule: true,
+          vendor: { 
+              select: { 
+                  id: true,
+                  name: true,
+                  phone: true, 
+                  whatsappEnabled: true,
+                  mode: true,
+                  users: { select: { email: true }, take: 1 } 
+                } 
+            },
+            _count: { select: { menuItems: true } }
+        }
+  }) as any[] // Keep the any cast for now due to complex typing
+
+  // Sort by menu item count descending to find the "active" canteen
+  const canteen = canteens.sort((a, b) => (b._count?.menuItems || 0) - (a._count?.menuItems || 0))[0] as any
   
   if (!canteen) {
     redirect('/vendor/settings?setup=required')
   }
 
   const canteenId = canteen.id
+  const vendorMode = (canteen.vendor.mode as unknown) as string
+  console.log(`[TERMINAL] Vendor ${vendorId} Canteen ${canteenId} Mode: ${vendorMode}`)
+
 
   // Parallel Data Fetching
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -38,8 +64,11 @@ export default async function TerminalPage() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let analyticsRaw: any[] = []
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let inventoryItemsRaw: any[] = []
+
   try {
-    [menuItemsRaw, activeOrdersRaw, transactionsRaw, analyticsRaw] = await Promise.all([
+    [menuItemsRaw, activeOrdersRaw, transactionsRaw, analyticsRaw, inventoryItemsRaw] = await Promise.all([
     // 1. Menu Items (Filtered by Canteen)
     canteenId ? prisma.menuItem.findMany({
       where: { canteenId },
@@ -106,6 +135,12 @@ export default async function TerminalPage() {
       include: {
         items: { include: { menuItem: true } }
       }
+    }),
+
+    // 5. Inventory Items
+    prisma.inventoryItem.findMany({
+        where: { vendorId },
+        orderBy: { name: 'asc' }
     })
     ])
   } catch (error) {
@@ -214,6 +249,26 @@ export default async function TerminalPage() {
         initialLedger={initialLedger}
         analyticsData={analyticsData}
         vendorId={vendorId}
+        vendorMode={vendorMode}
+        inventoryItems={inventoryItemsRaw}
+        settingsData={{
+            vendor: {
+                id: vendorId,
+                name: canteen.vendor.name,
+                email: canteen.vendor.users[0]?.email || 'N/A',
+                phone: canteen.vendor.phone,
+                whatsappEnabled: canteen.vendor.whatsappEnabled
+            },
+            canteen: {
+                id: canteenId,
+                name: canteen.name,
+                location: canteen.location,
+                notificationPhones: canteen.notificationPhones,
+                isOpen: canteen.manualIsOpen ?? false,
+                autoMode: canteen.autoMode,
+                weeklySchedule: canteen.weeklySchedule
+            }
+        }}
       />
     </div>
   )

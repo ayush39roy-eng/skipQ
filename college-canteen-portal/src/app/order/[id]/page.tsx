@@ -5,7 +5,7 @@ import OrderStatusClient from '../_components/status-client'
 import PayNowButton from '../_components/pay-now-button'
 import { getSession } from '@/lib/session'
 import { redirect } from 'next/navigation'
-import { CheckCircle2, Clock, MapPin, Receipt } from 'lucide-react'
+import { CheckCircle2, Receipt } from 'lucide-react'
 
 export default async function OrderPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

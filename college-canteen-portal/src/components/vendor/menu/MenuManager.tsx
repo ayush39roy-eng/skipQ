@@ -12,9 +12,10 @@ import { Badge } from '@/components/ui/Badge'
 interface MenuManagerProps {
   items: VendorItem[]
   vendorId: string
+  inventoryItems: { id: string; name: string; unit: string }[]
 }
 
-export default function MenuManager({ items: initialItems, vendorId: _vendorId }: MenuManagerProps) {
+export default function MenuManager({ items: initialItems, vendorId: _vendorId, inventoryItems }: MenuManagerProps) {
   const [items, setItems] = useState<VendorItem[]>(initialItems)
   const [searchQuery, setSearchQuery] = useState('')
   const [filterSection, setFilterSection] = useState('All')
@@ -59,7 +60,7 @@ export default function MenuManager({ items: initialItems, vendorId: _vendorId }
     }
   }
 
-  const handleSaveItem = async (data: { name: string; section: string; priceCents: number; isVegetarian: boolean; available: boolean; imageUrl?: string; description?: string; id?: string }) => {
+  const handleSaveItem = async (data: { name: string; section: string; priceCents: number; isVegetarian: boolean; available: boolean; imageUrl?: string; description?: string; id?: string; recipeItems?: { inventoryItemId: string; quantity: number }[] }) => {
       const res = await upsertMenuItem({
           ...data,
           id: editingItem?.id 
@@ -112,6 +113,7 @@ export default function MenuManager({ items: initialItems, vendorId: _vendorId }
         onSave={handleSaveItem}
         initialData={editingItem}
         sections={sections.filter(s => s !== 'All')}
+        inventoryItems={inventoryItems}
       />
 
       <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">

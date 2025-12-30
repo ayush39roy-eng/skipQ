@@ -1,7 +1,9 @@
 import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { Card } from '@/components/ui/Card'
+import { redirect } from 'next/navigation'
 import VendorDashboardClient from './vendor-dashboard-client'
+import { VendorMode } from '@/types/vendor'
 
 export const dynamic = 'force-dynamic'
 
@@ -45,7 +47,12 @@ type OrderWithRelations = {
 }
 
 
-export default async function VendorPage() {
+export default async function VendorPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const params = await searchParams
   const session = await requireRole(['VENDOR'])
   if (!session) {
     return <p className="text-[rgb(var(--text))]">Unauthorized</p>
@@ -66,6 +73,7 @@ export default async function VendorPage() {
       where: { id: vendorId },
       select: {
         name: true,
+        mode: true,
         canteens: {
           select: {
             id: true,
@@ -88,7 +96,7 @@ export default async function VendorPage() {
           }
         }
       }
-    }),
+    } as any),
     prisma.order.findMany({
       where: {
         vendorId,
@@ -162,14 +170,19 @@ export default async function VendorPage() {
     }))
   }))
 
-  const canteensWithMenu = (vendor?.canteens ?? []).map(c => ({
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const canteensWithMenu = ((vendor as any)?.canteens ?? []).map((c: any) => ({
     ...c,
     manualIsOpen: c.manualIsOpen ?? false,
-    menuItems: c.menuItems.map(m => ({
+    menuItems: c.menuItems.map((m: any) => ({
       ...m,
       sectionName: m.section?.name ?? 'Uncategorized'
     }))
   }))
+
+  if ((vendor as any)?.mode === 'FULL_POS' && !params?.dashboard) {
+      redirect('/vendor/terminal')
+  }
 
   return <VendorDashboardClient vendorName={vendor?.name ?? null} canteens={canteensWithMenu} initialOrders={initialOrders} stats={dashboardStats} />
 }

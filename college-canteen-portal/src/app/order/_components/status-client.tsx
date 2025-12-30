@@ -16,91 +16,35 @@ export default function OrderStatusClient({ orderId, initialStatus, initialPrep,
   const [updatedAt, setUpdatedAt] = useState<number | null>(null)
   const [endAt, setEndAt] = useState<number | null>(null)
   const [remainingMinutes, setRemainingMinutes] = useState<number | null>(null)
+  const [progress, setProgress] = useState(0)
 
+  // ... (existing effects)
+
+  // Update progress bar
   useEffect(() => {
-    let active = true
-    let currentController: AbortController | null = null
-
-    const tick = async () => {
-      if (currentController) currentController.abort()
-      const controller = new AbortController()
-      currentController = controller
-      const timeout = setTimeout(() => controller.abort(), 10_000)
-      try {
-        const res = await fetch(`/api/orders/${orderId}`, { signal: controller.signal })
-        if (!res.ok) throw new Error('Failed status fetch')
-        const data = await res.json()
-        if (!active) return
-        setStatus(data.status)
-        setPrep(data.prepMinutes)
-        setUpdatedAt(data.updatedAt ? Date.parse(data.updatedAt) : null)
-        setPaymentStatus(data.paymentStatus)
-        setError(null)
-      } catch (err) {
-        const isAbort = err instanceof DOMException && err.name === 'AbortError'
-        if (active && !isAbort) {
-          const message = err instanceof Error ? err.message : 'Status update failed'
-          setError(message)
-        }
-      } finally {
-        clearTimeout(timeout)
-        if (currentController === controller) {
-          currentController = null
-        }
-      }
-    }
-
-    const interval = setInterval(tick, 5000)
-    void tick()
-    return () => {
-      active = false
-      clearInterval(interval)
-      
-      if (currentController) currentController.abort()
-    }
-  }, [orderId])
-
-  // Recompute endAt whenever prep or updatedAt or status changes
-  useEffect(() => {
-    if (prep != null && updatedAt && status === 'CONFIRMED') {
-      const computed = updatedAt + prep * 60_000
-      setEndAt(computed)
-      const diff = computed - Date.now()
-      setRemainingMinutes(Math.max(0, Math.ceil(diff / 60000)))
-    } else {
-      setEndAt(null)
-      setRemainingMinutes(null)
-    }
-  }, [prep, updatedAt, status])
-
-  // Update remaining minutes while an endAt is set
-  useEffect(() => {
-    if (!endAt) {
-      setRemainingMinutes(null)
+    if (status !== 'CONFIRMED' || !updatedAt || !endAt) {
+      setProgress(0)
       return
     }
-    const update = () => {
-      const diff = endAt - Date.now()
-      setRemainingMinutes(Math.max(0, Math.ceil(diff / 60000)))
+
+    const updateProgress = () => {
+      const now = Date.now()
+      const totalDuration = endAt - updatedAt
+      const elapsed = now - updatedAt
+      
+      if (totalDuration <= 0) {
+        setProgress(100)
+        return
+      }
+
+      const percent = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100))
+      setProgress(percent)
     }
 
-    // initial update
-    update()
-
-    // schedule first aligned tick at the next minute boundary, then run every 60s
-    let intervalId: number | null = null
-    const now = Date.now()
-    const msToNextMinute = 60000 - (now % 60000)
-    const timeoutId = window.setTimeout(() => {
-      update()
-      intervalId = window.setInterval(update, 60000) as unknown as number
-    }, msToNextMinute)
-
-    return () => {
-      clearTimeout(timeoutId as unknown as number)
-      if (intervalId != null) clearInterval(intervalId)
-    }
-  }, [endAt])
+    updateProgress()
+    const interval = setInterval(updateProgress, 1000)
+    return () => clearInterval(interval)
+  }, [status, updatedAt, endAt])
 
   return (
     <div className="space-y-4">
@@ -126,7 +70,10 @@ export default function OrderStatusClient({ orderId, initialStatus, initialPrep,
              </div>
              {endAt && (
                  <div className="w-full bg-slate-200 h-4 border-2 border-black rounded-full overflow-hidden relative">
-                      <div className="h-full bg-[#FF9F1C] animate-pulse" style={{ width: '60%' }}></div>
+                      <div 
+                        className="h-full bg-[#FF9F1C] transition-all duration-1000 ease-linear" 
+                        style={{ width: `${progress}%` }}
+                      ></div>
                  </div>
              )}
          </div>

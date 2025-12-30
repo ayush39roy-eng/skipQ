@@ -14,7 +14,7 @@ model User {
   passwordHash String?
   role         String    @default("USER")
   vendor       Vendor?   @relation(fields: [vendorId], references: [id])
-  vendorId     String?
+  vendorId     String?   @db.ObjectId
   sessions     Session[]
   orders       Order[]
   createdAt    DateTime  @default(now())
@@ -34,12 +34,33 @@ model Vendor {
   canteens  Canteen[]
   orders    Order[]
   
-  // New RMS Relations
+  // RMS Relations
   inventory InventoryItem[]
   staff     Staff[]
-  transactions Transaction[]
   
+  // Financials
+  ledgerEntries  LedgerEntry[]
+  ledgerClosures LedgerClosure[]
+  transactions   Transaction[] // Deprecated, keeping for temporary compat
+
   createdAt DateTime  @default(now())
+  
+  mode      VendorMode @default(ORDERS_ONLY)
+}
+
+enum VendorMode {
+  ORDERS_ONLY
+  FULL_POS
+}
+
+model AdminActionLog {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId   String
+  vendorId  String   @db.ObjectId
+  actionType String
+  oldMode   String?
+  newMode   String?
+  timestamp DateTime @default(now())
 }
 
 model Canteen {
@@ -47,34 +68,32 @@ model Canteen {
   name      String
   location  String
   vendor    Vendor     @relation(fields: [vendorId], references: [id])
-  vendorId  String
-  // Optional additional notification phone numbers (E.164) for WhatsApp alerts.
+  vendorId  String     @db.ObjectId
   notificationPhones String[] @default([])
   
   // Timings and Status
-  openingTime   String?   // Format: "HH:mm" (24-hour) - DEPRECATED, use weeklySchedule
-  closingTime   String?   // Format: "HH:mm" (24-hour) - DEPRECATED, use weeklySchedule
+  openingTime   String?   
+  closingTime   String?   
   
-  // Weekly schedule: JSON array of 7 objects (Mon-Sun)
+  // Weekly schedule: JSON array of 7 objects
   weeklySchedule Json?     @default("[{\"day\":\"Monday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Tuesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Wednesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Thursday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Friday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Saturday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Sunday\",\"isOpen\":false,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"}]")
   
-  manualIsOpen  Boolean?  @default(true) // Override
-  autoMode      Boolean   @default(true) // Follow schedule?
-  posMarkup     Float     @default(0.05) // Configurable markup for POS orders
+  manualIsOpen  Boolean?  @default(true) 
+  autoMode      Boolean   @default(true) 
+  posMarkup     Float     @default(0.05) 
   imageUrl      String?
 
   menuItems MenuItem[]
   menuSections MenuSection[]
   orders    Order[]
   
-  // Shifts can be specific to a canteen location
   shifts    Shift[]
 }
 
 model MenuSection {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   canteen   Canteen  @relation(fields: [canteenId], references: [id])
-  canteenId String
+  canteenId String     @db.ObjectId
   name      String
   sortOrder Int      @default(0)
   items     MenuItem[]
@@ -83,49 +102,86 @@ model MenuSection {
 model MenuItem {
   id         String      @id @default(auto()) @map("_id") @db.ObjectId
   canteen    Canteen     @relation(fields: [canteenId], references: [id])
-  canteenId  String
+  canteenId  String      @db.ObjectId
   section    MenuSection? @relation(fields: [sectionId], references: [id])
-  sectionId  String?
+  sectionId  String?     @db.ObjectId
   name       String
   priceCents Int
+  
+  // Tax & Pricing Rules
+  taxRate        Float   @default(0.0) // Percentage (e.g., 5.0 for 5%)
+  isTaxInclusive Boolean @default(true) 
+  
   available  Boolean     @default(true)
   isVegetarian Boolean   @default(true)
   imageUrl   String?
   description String?
   sortOrder  Int?        @default(0)
-  orderItems OrderItem[]
   
-  // Recipe linkage
+  orderItems OrderItem[]
   recipe     Recipe?
+  
+  modifierGroups ModifierGroup[]
+}
+
+model ModifierGroup {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId String @db.ObjectId
+  
+  name String 
+  minSelection Int @default(0)
+  maxSelection Int @default(1)
+  
+  modifiers Modifier[]
+}
+
+model Modifier {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  group ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId String @db.ObjectId
+  
+  name String
+  priceCents Int @default(0)
+  available Boolean @default(true)
 }
 
 model Order {
   id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  idempotencyKey   String?       @unique // Prevents duplicate orders from network retries
+  idempotencyKey   String?       @unique // GAP 1: Enforce unique
+  
   user             User?         @relation(fields: [userId], references: [id])
-  userId           String?
-  // Guest checkout support
+  userId           String?       @db.ObjectId
   guestName        String?
   
   canteen          Canteen       @relation(fields: [canteenId], references: [id])
-  canteenId        String
+  canteenId        String        @db.ObjectId
   vendor           Vendor?       @relation(fields: [vendorId], references: [id])
-  vendorId         String?
+  vendorId         String?       @db.ObjectId
+  
   items            OrderItem[]
   status           String        @default("PENDING")
   source           String        @default("ONLINE") // "ONLINE" or "COUNTER"
   fulfillmentType  String        @default("TAKEAWAY")
+  
+  // Snapshot Totals (Calculated Backend Side)
+  subtotalCents    Int           @default(0)
+  taxCents         Int           @default(0)
   totalCents       Int           @default(0)
+  
   commissionCents  Int           @default(0)
   vendorTakeCents  Int           @default(0)
+  
   prepMinutes      Int?
   prepExtended     Boolean      @default(false)
   cookingInstructions String?
+  
   payment          Payment?
+  ledgerEntries    LedgerEntry[]
+  
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   
-  // Link to specific staff member who took/processed order
   staff      Staff?        @relation(fields: [staffId], references: [id])
   staffId    String?       @db.ObjectId
 }
@@ -133,20 +189,28 @@ model Order {
 model OrderItem {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   order       Order    @relation(fields: [orderId], references: [id])
-  orderId     String
+  orderId     String   @db.ObjectId
   menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
-  menuItemId  String
+  menuItemId  String   @db.ObjectId
+  
   quantity    Int
-  priceCents  Int
+  priceCents  Int // Snapshot of Base Price
+  
+  // Snapshot Data for Audit
+  taxRate        Float   @default(0)
+  taxAmountCents Int     @default(0)
+  totalCents     Int     @default(0) // (Base + Modifiers) * Qty
+  
+  modifiersSnapshot Json? // Array of { name, priceCents, quantity }
 }
 
 model Payment {
   id              String   @id @default(auto()) @map("_id") @db.ObjectId
   order           Order    @relation(fields: [orderId], references: [id])
-  orderId         String   @unique
+  orderId         String   @unique @db.ObjectId
   amountCents     Int
   status          String   @default("PENDING")
-  provider        String   @default("stub") // "CASH", "UPI", "RAZORPAY"
+  provider        String   @default("stub") 
   paymentLink     String?
   externalOrderId String? 
   paidAt          DateTime?
@@ -155,7 +219,7 @@ model Payment {
 model Session {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   user      User     @relation(fields: [userId], references: [id])
-  userId    String
+  userId    String   @db.ObjectId
   token     String   @unique
   role      String
   createdAt DateTime @default(now())
@@ -164,53 +228,67 @@ model Session {
 
 model AiInsights {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  type      String   // "ASSOCIATION_RULES", "DAILY_FORECAST", "MENU_MATRIX", "CHURN_LIST"
-  vendorId  String?
+  type      String   
+  vendorId  String?  @db.ObjectId
   isLatest  Boolean  @default(false)
   data      Json     
   createdAt DateTime @default(now())
 }
 
-// --- NEW RMS MODELS ---
+// --- RMS & INVENTORY ---
 
 model InventoryItem {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId    String
+  vendorId    String   @db.ObjectId
   name        String
-  category    String   // "Raw Material", "Packaging", "Ready to Eat"
-  unit        String   // "kg", "liters", "units", "packs"
+  category    String   
+  unit        String   
   quantity    Float    @default(0)
-  minThreshold Float   @default(5) // Low stock alert level
-  costPerUnit Int?     // In cents, for COGS calculation
+  minThreshold Float   @default(5) 
+  costPerUnit Int?     
   updatedAt   DateTime @updatedAt
   
   recipeItems RecipeItem[]
+  logs        InventoryLog[]
+}
+
+model InventoryLog {
+  id              String        @id @default(auto()) @map("_id") @db.ObjectId
+  inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
+  inventoryItemId String        @db.ObjectId
+  
+  changeAmount    Float
+  reason          String        // "ORDER", "WASTAGE", "MANUAL", "RESTOCK"
+  referenceId     String?       // Order ID or other ref
+  performedBy     String?       // User ID
+  
+  createdAt       DateTime      @default(now())
 }
 
 model Recipe {
   id          String       @id @default(auto()) @map("_id") @db.ObjectId
   menuItem    MenuItem     @relation(fields: [menuItemId], references: [id])
-  menuItemId  String       @unique
+  menuItemId  String       @unique @db.ObjectId
   items       RecipeItem[]
 }
 
 model RecipeItem {
   id              String        @id @default(auto()) @map("_id") @db.ObjectId
   recipe          Recipe        @relation(fields: [recipeId], references: [id])
-  recipeId        String
+  recipeId        String        @db.ObjectId
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
-  inventoryItemId String
-  quantity        Float         // How much of the inventory unit is used?
+  inventoryItemId String        @db.ObjectId
+  quantity        Float         
 }
 
 model Staff {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   vendor    Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId  String
+  vendorId  String   @db.ObjectId
   name      String
-  role      String   // "OWNER", "MANAGER", "CASHIER", "COOK"
-  pinHash   String   // Bcrypt hash of the 4-6 digit PIN
+  role      String   
+  pinHash   String   
   active    Boolean  @default(true)
   shifts    Shift[]
   orders    Order[]
@@ -219,20 +297,64 @@ model Staff {
 model Shift {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
   staff     Staff    @relation(fields: [staffId], references: [id])
-  staffId   String
+  staffId   String   @db.ObjectId
   canteen   Canteen? @relation(fields: [canteenId], references: [id])
-  canteenId String?
+  canteenId String?  @db.ObjectId
   startTime DateTime @default(now())
   endTime   DateTime?
-  cashStart Int      @default(0) // Cash in drawer at start
-  cashEnd   Int?     // Cash in drawer at end
+  cashStart Int      @default(0) 
+  cashEnd   Int?     
 }
 
+// --- FINANCIAL LEDGER (AUDITABLE) ---
+
+model LedgerEntry {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  vendor      Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId    String   @db.ObjectId
+  
+  order       Order?   @relation(fields: [orderId], references: [id])
+  orderId     String?  @db.ObjectId
+  
+  type        String   // "SALE", "REFUND", "FEE", "TAX_PAYMENT", "PAYOUT"
+  timestamp   DateTime @default(now())
+
+  // Double Entry accounting basics
+  grossAmount Int // Input Money
+  taxAmount   Int // Liability
+  platformFee Int // Expense
+  netAmount   Int // Receivable/Cash
+  
+  paymentMode String // "CASH", "UPI", "RAZORPAY"
+  description String?
+  
+  // GAP 2: Linking refunds to original
+  referenceEntryId String? @db.ObjectId 
+}
+
+model LedgerClosure {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  vendor    Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId  String   @db.ObjectId
+  
+  date        DateTime // Midnight timestamp
+  closedAt    DateTime @default(now())
+  closedBy    String?
+  
+  // Frozen Totals
+  totalGrossCents Int
+  totalNetCents   Int
+  orderCount      Int
+  
+  @@unique([vendorId, date])
+}
+
+// Deprecated - Keeping for non-breaking changes temporarily
 model Transaction {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
   vendorId    String   @db.ObjectId
-  type        String   // "SALE", "EXPENSE", "PAYOUT", "REFUND"
+  type        String   
   amountCents Int
   description String
   createdAt   DateTime @default(now())
@@ -254,10 +376,10 @@ model AuditLog {
   timestamp DateTime @default(now())
   ip        String?
   method    String
-  authType  String   // "API_KEY", "SESSION", "ANONYMOUS"
-  authId    String?  // key_id or user_id
+  authType  String   
+  authId    String?  
   action    String
-  result    String   // "ALLOWED", "DENIED", "RATE_LIMITED", "CONFLICT"
+  result    String   
   metadata  Json?
 }
 
@@ -265,13 +387,13 @@ model TrainingJob {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   startedAt   DateTime  @default(now())
   completedAt DateTime?
-  trigger     String    // "CRON", "ADMIN_DASHBOARD"
-  status      String    // "RUNNING", "COMPLETED", "FAILED"
+  trigger     String    
+  status      String    
   error       String?
 }
 
 model JobLock {
-  id        String   @id @map("_id") // "TRAINING_LOCK"
+  id        String   @id @map("_id") 
   isLocked  Boolean  @default(false)
   lockedAt  DateTime @updatedAt
   lockedBy  String?

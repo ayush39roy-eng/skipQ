@@ -86,8 +86,9 @@ export default function RegisterPage() {
             <form onSubmit={submit} className="space-y-3 relative z-10">
               
               <div className="space-y-0.5">
-                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Full Name</label>
+                <label htmlFor="fullName" className="text-[10px] font-black uppercase tracking-wider ml-1">Full Name</label>
                 <input 
+                  id="fullName"
                   type="text" 
                   value={name} 
                   onChange={e => setName(e.target.value)} 
@@ -98,8 +99,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-0.5">
-                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Email Address</label>
+                <label htmlFor="email" className="text-[10px] font-black uppercase tracking-wider ml-1">Email Address</label>
                 <input 
+                  id="email"
                   type="email" 
                   value={email} 
                   onChange={e => setEmail(e.target.value)} 
@@ -110,8 +112,9 @@ export default function RegisterPage() {
               </div>
 
               <div className="space-y-0.5">
-                <label className="text-[10px] font-black uppercase tracking-wider ml-1">Password</label>
+                <label htmlFor="password" className="text-[10px] font-black uppercase tracking-wider ml-1">Password</label>
                 <input 
+                  id="password"
                   type="password" 
                   value={password} 
                   onChange={e => setPassword(e.target.value)} 

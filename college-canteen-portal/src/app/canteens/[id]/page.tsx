@@ -27,6 +27,7 @@ function CanteenMenuContent() {
   const [cartRestored, setCartRestored] = useState(false)
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [cookingInstruction, setCookingInstruction] = useState('')
+  const [checkoutKey, setCheckoutKey] = useState<string | null>(null)
   const sectionsScrollerRef = useRef<HTMLDivElement | null>(null)
   const sectionsInnerRef = useRef<HTMLDivElement | null>(null)
   const sectionsScrollbarRef = useRef<HTMLDivElement | null>(null)
@@ -153,13 +154,16 @@ function CanteenMenuContent() {
       .map(([menuItemId, quantity]) => ({ menuItemId, quantity }))
     if (orderItems.length === 0) return
 
+    const idempotencyKey = checkoutKey ?? crypto.randomUUID()
+    if (!checkoutKey) setCheckoutKey(idempotencyKey)
+
     setIsCheckingOut(true)
     const payload = { canteenId: id, items: orderItems, fulfillmentType, cookingInstructions: cookingInstruction }
     const res = await fetch('/api/orders', {
       method: 'POST',
-      headers: { 
+      headers: {
         'Content-Type': 'application/json',
-        'X-Idempotency-Key': crypto.randomUUID()
+        'X-Idempotency-Key': idempotencyKey
       },
       body: JSON.stringify(payload)
     })
@@ -172,6 +176,7 @@ function CanteenMenuContent() {
     }
     const data = await res.json().catch(() => ({}))
     if (res.ok && data?.id) {
+      setCheckoutKey(null)
       window.location.href = `/pay/${data.id}`
       return
     }
@@ -180,9 +185,17 @@ function CanteenMenuContent() {
   }
 
   const handleCartAdjustment = (itemId: string, delta: number) => {
+    const item = items.find(i => i.id === itemId)
+    if (!item) return
+    if (delta > 0 && !item.available) return
+
     setCart((prev) => {
         const current = prev[itemId] || 0;
         const next = Math.max(0, current + delta);
+        if (next === 0) {
+            const { [itemId]: _, ...rest } = prev;
+            return rest;
+        }
         return { ...prev, [itemId]: next };
     });
   };
@@ -278,7 +291,11 @@ function CanteenMenuContent() {
                                               <Minus className="w-4 h-4" />
                                           </button>
                                           <span className="font-black w-6 text-center">{cart[item.id]}</span>
-                                          <button onClick={() => handleCartAdjustment(item.id, 1)} className="w-8 h-8 flex items-center justify-center bg-white border-2 border-black rounded hover:bg-green-100 active:translate-y-[1px]">
+                                          <button 
+                                              disabled={!item.available}
+                                              onClick={() => handleCartAdjustment(item.id, 1)} 
+                                              className={`w-8 h-8 flex items-center justify-center bg-white border-2 border-black rounded ${!item.available ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 active:translate-y-[1px]'}`}
+                                          >
                                               <Plus className="w-4 h-4" />
                                           </button>
                                      </div>

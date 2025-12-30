@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Toast, ToastType } from '@/components/ui/Toast'
 import { updateCanteenStatus, updateVendorProfile, updateCanteenSchedule, updateCanteenSettings } from '@/app/vendor/actions'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { Button } from '@/components/ui/Button'
 
 interface SettingsDashboardProps {
@@ -157,9 +158,17 @@ export default function SettingsDashboard({ vendor: initialVendor, canteen: init
     <div className="flex-1 min-h-screen pb-20">
       {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
-      <header className="mb-8">
-         <h1 className="text-3xl font-bold tracking-tight text-[var(--vendor-text-primary)]">Store Settings</h1>
-         <p className="text-[var(--vendor-text-secondary)] mt-1">Configure your canteen profile and operations.</p>
+      <header className="mb-8 flex justify-between items-center">
+         <div>
+            <h1 className="text-3xl font-bold tracking-tight text-[var(--vendor-text-primary)]">Store Settings</h1>
+            <p className="text-[var(--vendor-text-secondary)] mt-1">Configure your canteen profile and operations.</p>
+         </div>
+         <Link href="/vendor/terminal">
+            <Button variant="outline" className="gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                Back to Terminal
+            </Button>
+         </Link>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { VendorMode } from '@/lib/vendor-mode'
 import { requireRole } from '@/lib/session'
 import { revalidatePath } from 'next/cache'
 import bcrypt from 'bcryptjs'
@@ -9,7 +10,7 @@ export default async function AdminPage() {
   if (!session) return <p>Unauthorized</p>
 
   const [vendors, vendorUsers, stats, recentOrders, canteens, allOrders] = await Promise.all([
-    prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true } }),
+    prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true, mode: true } }),
     prisma.user.findMany({
       where: { role: 'VENDOR' },
       select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
@@ -102,6 +103,80 @@ export default async function AdminPage() {
     revalidatePath('/admin')
   }
 
+  async function updateVendorMode(formData: FormData) {
+    'use server'
+    const session = await requireRole(['ADMIN'])
+    if (!session) return
+    const vendorId = String(formData.get('vendorId'))
+    const mode = String(formData.get('mode')) as VendorMode
+    
+    if (!vendorId || !mode) return
+    
+    // Get old mode for logging
+    const vendor = await prisma.vendor.findUnique({ where: { id: vendorId }, select: { mode: true } })
+    if (!vendor) return
+
+    if (vendor.mode === mode) return
+
+    await prisma.$transaction([
+        prisma.vendor.update({
+            where: { id: vendorId },
+            data: { mode }
+        }),
+        prisma.adminActionLog.create({
+            data: {
+                adminId: session.user.id,
+                vendorId: vendorId,
+                actionType: 'VENDOR_MODE_CHANGE',
+                oldMode: vendor.mode,
+                newMode: mode
+            }
+        })
+    ])
+
+    revalidatePath('/admin')
+    revalidatePath('/vendor')
+    revalidatePath('/vendor/terminal')
+    console.log(`[ADMIN] Updated Vendor ${vendorId} to mode ${mode}`)
+  }
+
+  async function deleteVendor(formData: FormData) {
+    'use server'
+    const session = await requireRole(['ADMIN'])
+    if (!session) return
+    const vendorId = String(formData.get('vendorId'))
+    if (!vendorId) return
+
+    try {
+        await prisma.$transaction(async (tx) => {
+            // 1. Delete Linked Users
+            await tx.user.deleteMany({ where: { vendorId } })
+            
+            // 2. Delete Inventory & Staff
+            await tx.inventoryItem.deleteMany({ where: { vendorId } })
+            await tx.staff.deleteMany({ where: { vendorId } })
+            await tx.ledgerEntry.deleteMany({ where: { vendorId } })
+            
+            // 3. Delete Canteens (and Cascade)
+            const canteens = await tx.canteen.findMany({ where: { vendorId } })
+            for (const c of canteens) {
+                await tx.menuItem.deleteMany({ where: { canteenId: c.id } })
+                await tx.menuSection.deleteMany({ where: { canteenId: c.id } })
+                await tx.shift.deleteMany({ where: { canteenId: c.id } })
+                // Orders? If we want full cleanup.
+                await tx.order.deleteMany({ where: { canteenId: c.id } })
+            }
+            await tx.canteen.deleteMany({ where: { vendorId } })
+
+            // 4. Delete Vendor
+            await tx.vendor.delete({ where: { id: vendorId } })
+        })
+        revalidatePath('/admin')
+    } catch (error) {
+        console.error('Delete Vendor Error:', error)
+    }
+  }
+
   return (
     <AdminDashboardClient
       stats={{
@@ -124,7 +199,9 @@ export default async function AdminPage() {
         createVendor,
         updateVendor,
         updateVendorCredentials,
-        createCanteen
+        createCanteen,
+        updateVendorMode,
+        deleteVendor
       }}
     />
   )

@@ -5,8 +5,11 @@ import { Prisma } from '@prisma/client'
 import { revalidatePath } from 'next/cache'
 import { PaymentMode, FulfillmentType } from '@/types/vendor'
 import { getSession } from '@/lib/session'
+import { requireVendorMode, VendorMode } from '@/lib/vendor-mode'
 
 // -- ORDERS --
+
+import { OrderService } from './services/order-service'
 
 export async function createPosOrder(
   vendorId: string,
@@ -16,16 +19,18 @@ export async function createPosOrder(
   paymentStatus: 'PENDING' | 'SUCCESS' | 'FAILED' = 'PENDING'
 ) {
   try {
-    if (!items.length) return { success: false, error: 'Order must contain at least one item' }
-    if (items.some(i => i.quantity <= 0 || i.priceCents < 0)) {
-      return { success: false, error: 'Invalid item quantity or price' }
-    }
-
     const session = await getSession()
     if (!session || session.role !== 'VENDOR') return { success: false, error: 'Unauthorized' }
     
     // Double check vendorId match
     if (session.user.vendorId !== vendorId) return { success: false, error: 'Forbidden' }
+
+    // Enforce Vendor Mode
+    try {
+        await requireVendorMode(vendorId, VendorMode.FULL_POS)
+    } catch (e: any) {
+        return { success: false, error: e.message }
+    }
 
     // Fetch the canteen associated with this vendor
     const canteen = await prisma.canteen.findFirst({ where: { vendorId } })
@@ -33,57 +38,31 @@ export async function createPosOrder(
         return { success: false, error: 'No canteen found for this vendor' }
     }
 
-    const subtotalCents = items.reduce((acc, item) => acc + (item.priceCents * item.quantity), 0)
-    // Use configured markup or fallback to 5%
-    const markup = canteen.posMarkup ?? 0.05
-    const totalCents = Math.round(subtotalCents * (1 + markup))
-    
-    // Create the Order
-    const order = await prisma.order.create({
-      data: {
+    // Delegate to OrderService
+    const result = await OrderService.placeOrder({
         vendorId,
         canteenId: canteen.id,
-        status: 'ACCEPTED',
+        items: items.map(i => ({ 
+            menuItemId: i.itemId, 
+            quantity: i.quantity 
+        })),
         source: 'COUNTER',
-        fulfillmentType,
-        totalCents,
-        commissionCents: 0, 
-        vendorTakeCents: totalCents,
-        payment: {
-          create: {
-            amountCents: totalCents,
-            status: paymentStatus, 
-            provider: paymentMode
-          }
-        },
-        items: {
-          create: items.map(i => ({
-             menuItemId: i.itemId,
-             quantity: i.quantity,
-             priceCents: i.priceCents
-          }))
-        }
-      },
-      include: {
-         items: { include: { menuItem: true } }
-      }
+        fulfillmentType: fulfillmentType as 'DINE_IN' | 'TAKEAWAY', // Cast to strict type
+        paymentMode: paymentMode as any, // OrderService needs updating to support 'HOLD' or map strict types
+        idempotencyKey: `POS-${Date.now()}-${Math.random().toString(36).slice(2)}`, // Generate unique key for POS
+        staffId: session.user.id
     })
 
-    // Create a Transaction Record
-    await prisma.transaction.create({
-        data: {
-            vendorId,
-            type: 'SALE',
-            amountCents: totalCents,
-            description: `POS Order #${order.id.slice(-4).toUpperCase()}`
-        }
-    })
+    if (result.success) {
+         revalidatePath('/vendor/terminal')
+         return { success: true, orderId: result.orderId }
+    } else {
+        throw new Error('Order placement failed')
+    }
 
-    revalidatePath('/vendor/terminal')
-    return { success: true, orderId: order.id }
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create POS order:', error)
-    return { success: false, error: 'Failed to create order' }
+    return { success: false, error: error.message || 'Failed to create order' }
   }
 }
 
@@ -132,6 +111,7 @@ export async function upsertMenuItem(data: {
     available: boolean
     imageUrl?: string
     description?: string
+    recipeItems?: { inventoryItemId: string; quantity: number }[]
 }) {
     try {
         const session = await getSession()
@@ -146,8 +126,6 @@ export async function upsertMenuItem(data: {
              })
              if (section) sectionId = section.id
              else {
-                 // Create new section
-                 // We need to find the canteen ID first. Usually linked to vendor.
                  const canteen = await prisma.canteen.findFirst({ where: { vendorId } })
                  if (canteen) {
                      const newSection = await prisma.menuSection.create({
@@ -161,54 +139,81 @@ export async function upsertMenuItem(data: {
         const canteen = await prisma.canteen.findFirst({ where: { vendorId } })
         if (!canteen) return { success: false, error: 'No canteen found' }
 
-        if (data.id) {
-            // Update - Verify ownership first
-            const existingItem = await prisma.menuItem.findUnique({
-                where: { id: data.id },
-                include: { canteen: true }
-            })
-            
-            if (!existingItem) {
-                return { success: false, error: 'Item not found' }
-            }
-            
-            if (existingItem.canteen.vendorId !== vendorId) {
-                 return { success: false, error: 'Unauthorized' }
+        // Use transaction to handle Item + Recipe
+        await prisma.$transaction(async (tx) => {
+            let itemId = data.id
+
+            if (data.id) {
+                // Update - Verify ownership
+                const existingItem = await tx.menuItem.findUnique({
+                    where: { id: data.id },
+                    include: { canteen: true }
+                })
+                
+                if (!existingItem) throw new Error('Item not found')
+                if (existingItem.canteen.vendorId !== vendorId) throw new Error('Unauthorized')
+    
+                await tx.menuItem.update({
+                    where: { id: data.id },
+                    data: {
+                        name: data.name,
+                        priceCents: data.priceCents,
+                        sectionId,
+                        isVegetarian: data.isVegetarian,
+                        available: data.available,
+                        imageUrl: data.imageUrl,
+                        description: data.description
+                    }
+                })
+            } else {
+                const newItem = await tx.menuItem.create({
+                    data: {
+                        canteenId: canteen.id,
+                        name: data.name,
+                        priceCents: data.priceCents,
+                        sectionId,
+                        isVegetarian: data.isVegetarian,
+                        available: data.available,
+                        imageUrl: data.imageUrl,
+                        description: data.description
+                    }
+                })
+                itemId = newItem.id
             }
 
-            await prisma.menuItem.update({
-                where: { id: data.id },
-                data: {
-                    name: data.name,
-                    priceCents: data.priceCents,
-                    sectionId,
-                    isVegetarian: data.isVegetarian,
-                    available: data.available,
-                    imageUrl: data.imageUrl,
-                    description: data.description
+            // Handle Recipe
+            if (data.recipeItems && itemId) {
+                // 1. Find existing Recipe or Create
+                // Simplest strategy: Delete existing items and recreate.
+                
+                // First, ensure Recipe exists
+                let recipe = await tx.recipe.findUnique({ where: { menuItemId: itemId } })
+                if (!recipe) {
+                    recipe = await tx.recipe.create({ data: { menuItemId: itemId } })
                 }
-            })
-        } else {
-            await prisma.menuItem.create({
-                data: {
-                    canteenId: canteen.id,
-                    name: data.name,
-                    priceCents: data.priceCents,
-                    sectionId,
-                    isVegetarian: data.isVegetarian,
-                    available: data.available,
-                    imageUrl: data.imageUrl,
-                    description: data.description
+
+                // Delete old items
+                await tx.recipeItem.deleteMany({ where: { recipeId: recipe.id } })
+
+                // Create new items
+                if (data.recipeItems.length > 0) {
+                    await tx.recipeItem.createMany({
+                        data: data.recipeItems.map(ri => ({
+                            recipeId: recipe.id,
+                            inventoryItemId: ri.inventoryItemId,
+                            quantity: ri.quantity
+                        }))
+                    })
                 }
-            })
-        }
+            }
+        })
 
         revalidatePath('/vendor/menu')
         revalidatePath('/vendor/terminal')
         return { success: true }
-    } catch (error) {
+    } catch (error: any) {
         console.error('Upsert Item Error', error)
-        return { success: false, error: 'Failed to save item' }
+        return { success: false, error: error.message || 'Failed to save item' }
     }
 }
 
@@ -262,9 +267,18 @@ export async function deleteMenuItem(itemId: string) {
              return { success: false, error: 'Unauthorized' }
         }
 
-        // 3. Delete
-        await prisma.menuItem.delete({
-            where: { id: itemId }
+        // 3. Delete in Transaction (To clean up recipe)
+        await prisma.$transaction(async (tx) => {
+             // Find recipe
+             const recipe = await tx.recipe.findUnique({ where: { menuItemId: itemId } })
+             if (recipe) {
+                 await tx.recipeItem.deleteMany({ where: { recipeId: recipe.id } })
+                 await tx.recipe.delete({ where: { id: recipe.id } })
+             }
+             
+             await tx.menuItem.delete({
+                where: { id: itemId }
+             })
         })
         
         revalidatePath('/vendor/menu')
@@ -286,6 +300,13 @@ export async function updateInventoryQuantity(itemId: string, quantity: number) 
 
     const vendorId = session.user.vendorId
     if (!vendorId) return { success: false, error: 'No vendor profile' }
+
+    // Enforce Vendor Mode
+    try {
+        await requireVendorMode(vendorId, VendorMode.FULL_POS)
+    } catch (e: any) {
+        return { success: false, error: e.message }
+    }
     
     const item = await prisma.inventoryItem.findFirst({
       where: { id: itemId, vendorId }
@@ -310,6 +331,13 @@ export async function createInventoryItem(vendorId: string, data: { name: string
     const session = await getSession()
     if (!session || session.role !== 'VENDOR') return { success: false, error: 'Unauthorized' }
 
+    // Enforce Vendor Mode
+    try {
+        await requireVendorMode(vendorId, VendorMode.FULL_POS)
+    } catch (e: any) {
+        return { success: false, error: e.message }
+    }
+
     // Validation
     const name = data.name?.trim()
     if (!name) return { success: false, error: 'Name is required' }
@@ -328,7 +356,7 @@ export async function createInventoryItem(vendorId: string, data: { name: string
         return { success: false, error: `Invalid unit. Allowed: ${VALID_UNITS.join(', ')}` }
     }
 
-    const VALID_CATEGORIES = ['PRODUCE', 'DAIRY', 'MEAT', 'GROCERY', 'BEVERAGES', 'PACKAGING', 'CLEANING', 'BAKERY', 'SPICES', 'OTHER']
+    const VALID_CATEGORIES = ['RAW MATERIAL', 'PACKAGING', 'READY TO EAT', 'PRODUCE', 'DAIRY', 'MEAT', 'GROCERY', 'BEVERAGES', 'CLEANING', 'BAKERY', 'SPICES', 'OTHER']
     if (!VALID_CATEGORIES.includes(data.category?.toUpperCase())) {
         return { success: false, error: `Invalid category. Allowed: ${VALID_CATEGORIES.join(', ')}` }
     }
@@ -361,6 +389,13 @@ export async function updateInventoryItem(itemId: string, data: { name?: string;
     const vendorId = session.user.vendorId
     if (!vendorId) return { success: false, error: 'No vendor profile' }
 
+    // Enforce Vendor Mode
+    try {
+        await requireVendorMode(vendorId, VendorMode.FULL_POS)
+    } catch (e: any) {
+        return { success: false, error: e.message }
+    }
+
     // Enforce ownership
     const existing = await prisma.inventoryItem.findFirst({
       where: { id: itemId, vendorId }
@@ -388,8 +423,15 @@ export async function deleteInventoryItem(itemId: string) {
         const session = await getSession()
         if (!session || session.role !== 'VENDOR') return { success: false, error: 'Unauthorized' }
         
-        const vendorId = session.user.vendorId
-        if (!vendorId) return { success: false, error: 'No vendor profile' }
+    const vendorId = session.user.vendorId
+    if (!vendorId) return { success: false, error: 'No vendor profile' }
+
+    // Enforce Vendor Mode
+    try {
+        await requireVendorMode(vendorId, VendorMode.FULL_POS)
+    } catch (e: any) {
+        return { success: false, error: e.message }
+    }
 
         // Use deleteMany to ensure we only delete if the vendor owns this item
         const result = await prisma.inventoryItem.deleteMany({

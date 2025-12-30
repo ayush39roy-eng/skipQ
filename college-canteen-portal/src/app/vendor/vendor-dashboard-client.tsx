@@ -442,6 +442,11 @@ export default function VendorDashboardClient({ vendorName, initialOrders, stats
              <div className="px-4 py-2 bg-[rgb(var(--vendor-surface))] border border-[rgb(var(--vendor-border))] rounded-full text-sm font-medium text-[rgb(var(--vendor-text-secondary))] shadow-sm">
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
              </div>
+             <Link href="/vendor/terminal">
+               <Button variant="primary" className="rounded-full shadow-sm">
+                  Open Terminal
+               </Button>
+             </Link>
              <Button variant="outline" onClick={() => void refresh()} className="rounded-full shadow-sm hover:border-[rgb(var(--vendor-accent))]">
                Refresh
              </Button>

@@ -43,7 +43,9 @@ export default function CanteensClient() {
 
     const topLocations = useMemo(() => {
         if (!data) return [] as string[]
-        const ordered = Array.from(new Set(data.map((c) => c.location || 'Central')))
+        // Exclude null/undefined/empty locations
+        const validLocations = data.map(c => c.location).filter((loc): loc is string => !!loc)
+        const ordered = Array.from(new Set(validLocations))
         return ordered.slice(0, 4)
     }, [data])
 
@@ -57,8 +59,9 @@ export default function CanteensClient() {
 
     if (!data) {
         return (
-            <div className="min-h-screen flex items-center justify-center">
-                 <Loader2 className="w-16 h-16 animate-spin text-black" />
+            <div className="min-h-screen flex items-center justify-center" role="status" aria-live="polite">
+                 <Loader2 className="w-16 h-16 animate-spin text-black" aria-hidden="true" />
+                 <span className="sr-only">Loading kitchens...</span>
             </div>
         )
     }
@@ -155,9 +158,9 @@ export default function CanteensClient() {
                                     </div>
 
                                     <div className="mt-auto pt-4 border-t-2 border-dashed border-gray-300">
-                                         <button className="w-full py-3 bg-[#FFD166] border-2 border-black font-black uppercase tracking-widest text-sm shadow-[2px_2px_0px_0px_#000] group-hover:bg-[#FF9F1C] group-hover:text-white transition-colors">
+                                         <div className="w-full py-3 bg-[#FFD166] border-2 border-black font-black uppercase tracking-widest text-sm shadow-[2px_2px_0px_0px_#000] group-hover:bg-[#FF9F1C] group-hover:text-white transition-colors text-center">
                                             {status.isOpen ? 'Enter Shop' : 'View Menu'}
-                                         </button>
+                                         </div>
                                     </div>
                                 </div>
                             </div>

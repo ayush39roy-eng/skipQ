@@ -3,6 +3,22 @@ export type OrderSource = 'ONLINE' | 'COUNTER'
 export type PaymentMode = 'CASH' | 'UPI' | 'CARD' | 'HOLD'
 export type FulfillmentType = 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY'
 
+export enum VendorMode {
+  ORDERS_ONLY = 'ORDERS_ONLY',
+  FULL_POS = 'FULL_POS'
+}
+
+export interface RecipeInfo {
+  items: {
+      inventoryItemId: string
+      quantity: number
+      inventoryItem?: {
+          name: string
+          unit: string
+      }
+  }[]
+}
+
 export interface VendorItem {
   id: string
   name: string
@@ -10,6 +26,9 @@ export interface VendorItem {
   section?: string | null
   isVegetarian: boolean
   available: boolean
+  imageUrl?: string | null
+  description?: string
+  recipe?: RecipeInfo | null
 }
 
 export interface VendorOrderItem {

@@ -23,6 +23,7 @@ export default async function VendorMenuPage() {
   const canteenIds = canteens.map(c => c.id)
   console.log('[VendorMenu] Found Canteens:', canteenIds)
 
+  // 2. Fetch Menu Items with Recipe Info
   const rawItems = await prisma.menuItem.findMany({
     where: { canteenId: { in: canteenIds } },
     select: {
@@ -32,11 +33,31 @@ export default async function VendorMenuPage() {
         section: { select: { name: true } },
         available: true,
         isVegetarian: true, 
-        imageUrl: true
+        imageUrl: true,
+        description: true,
+        recipe: {
+            select: {
+                items: {
+                    select: {
+                        inventoryItemId: true,
+                        quantity: true,
+                        inventoryItem: {
+                            select: { name: true, unit: true }
+                        }
+                    }
+                }
+            }
+        }
     },
     orderBy: { name: 'asc' }
   })
-  console.log('[VendorMenu] Found Items:', rawItems.length)
+  
+  // 3. Fetch All Inventory Items for the Dropdown
+  const inventoryItems = await prisma.inventoryItem.findMany({
+      where: { vendorId },
+      select: { id: true, name: true, unit: true },
+      orderBy: { name: 'asc' }
+  })
 
   // Normalize
   const items: VendorItem[] = rawItems.map(i => ({
@@ -46,8 +67,19 @@ export default async function VendorMenuPage() {
     section: i.section?.name || 'Other',
     available: i.available,
     isVegetarian: i.isVegetarian,
-    imageUrl: i.imageUrl
+    imageUrl: i.imageUrl,
+    description: i.description || undefined,
+    recipe: i.recipe ? {
+        items: i.recipe.items.map(ri => ({
+            inventoryItemId: ri.inventoryItemId,
+            quantity: ri.quantity,
+            inventoryItem: {
+                name: ri.inventoryItem.name,
+                unit: ri.inventoryItem.unit
+            }
+        }))
+    } : null
   }))
 
-  return <MenuManager items={items} vendorId={vendorId} />
+  return <MenuManager items={items} vendorId={vendorId} inventoryItems={inventoryItems} />
 }

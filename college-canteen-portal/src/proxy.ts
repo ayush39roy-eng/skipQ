@@ -4,11 +4,15 @@ import { Ratelimit } from '@upstash/ratelimit'
 import { Redis } from '@upstash/redis'
 
 // Initialize Redis once for Edge runtime
+// Check Upstash configuration at module load
+if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be configured')
+}
+
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 })
-
 // Rate limiters for different endpoint types (Edge-compatible)
 const authLimiter = new Ratelimit({
   redis,
@@ -63,7 +67,7 @@ function getRateLimiter(path: string): Ratelimit {
   return generalLimiter
 }
 
-function getClientIp(req: NextRequest): string {
+function getClientIp(req: NextRequest): string | null {
   // Use 'any' cast as ip might not be in the definition but exists in runtime on Vercel
   if ((req as any).ip) return (req as any).ip
   
@@ -73,7 +77,7 @@ function getClientIp(req: NextRequest): string {
   const realIp = req.headers.get('x-real-ip')
   if (realIp) return realIp.trim()
   
-  return '127.0.0.1'
+  return null
 }
 
 export default async function proxy(req: NextRequest) {
@@ -99,6 +103,13 @@ export default async function proxy(req: NextRequest) {
     }
 
     const ip = getClientIp(req)
+    if (!ip) {
+      console.warn('[RateLimit] No client IP found - returning 400')
+      return new NextResponse(JSON.stringify({ error: 'Client IP required' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      })
+    }
     const limiter = getRateLimiter(path)
 
     try {

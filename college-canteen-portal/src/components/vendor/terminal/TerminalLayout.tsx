@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { VendorItem, VendorOrder, LedgerEntry, PaymentMode, FulfillmentType } from '@/types/vendor'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter, usePathname } from 'next/navigation'
+import Link from 'next/link'
+import { VendorMode } from '@/types/vendor'
 
 // Server Actions
 import { createPosOrder, updateOrderStatus } from '@/app/vendor/actions'
@@ -14,6 +16,9 @@ import { LedgerView } from './LedgerView'
 import { ActionSidebar } from './ActionSidebar'
 import { Toast, ToastType } from '@/components/ui/Toast'
 import { AnalyticsDashboard } from './AnalyticsDashboard'
+import SettingsDashboard from '../settings/SettingsDashboard'
+import MenuManager from '../menu/MenuManager'
+import InventoryDashboard from '../inventory/InventoryDashboard'
 
 interface TerminalLayoutProps {
   menuItems: VendorItem[]
@@ -28,6 +33,27 @@ interface TerminalLayoutProps {
     hourlyTraffic: { hour: string; sales: number }[]
     topItems: { name: string; count: number }[]
   }
+  vendorMode: string
+  settingsData: {
+      vendor: {
+          id: string
+          name: string
+          email: string
+          phone: string | null
+          whatsappEnabled: boolean
+      }
+      canteen: {
+          id: string
+          name: string
+          location: string
+          notificationPhones: string[]
+          isOpen: boolean
+          autoMode: boolean
+          weeklySchedule: any
+      }
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  inventoryItems: any[]
 }
 
 export function TerminalLayout({ 
@@ -35,15 +61,20 @@ export function TerminalLayout({
   initialOrders,
   initialLedger,
   vendorId,
-  analyticsData
+  analyticsData,
+
+  vendorMode,
+  settingsData,
+  inventoryItems
 }: TerminalLayoutProps) {
   
   // -- URL STATE --
   const searchParams = useSearchParams()
+
   const rawView = searchParams.get('view') 
-  const viewMode = (rawView === 'ORDERS' || rawView === 'POS' || rawView === 'LEDGER' || rawView === 'ANALYTICS' || rawView === 'REPORTS') 
+  const viewMode = (rawView === 'ORDERS' || rawView === 'POS' || rawView === 'LEDGER' || rawView === 'ANALYTICS' || rawView === 'REPORTS' || rawView === 'SETTINGS' || rawView === 'MENU' || rawView === 'INVENTORY') 
     ? rawView 
-    : 'POS'
+    : (vendorMode === 'ORDERS_ONLY' ? 'ORDERS' : 'POS')
 
   // -- INTERNAL STATE --
   const [orders, setOrders] = useState<VendorOrder[]>(initialOrders)
@@ -182,7 +213,76 @@ export function TerminalLayout({
 
   // -- RENDER MATRIX --
   return (
-    <div className="flex h-screen w-full bg-vendor-bg text-vendor-text-primary font-sans overflow-hidden items-stretch">
+    <div className="flex h-screen w-full bg-vendor-bg text-vendor-text-primary font-sans overflow-hidden flex-col">
+      {/* HEADER / NAVIGATION TABS */}
+      <header className="bg-vendor-surface border-b border-vendor-border px-6 py-3 flex items-center justify-between shrink-0 z-50">
+          <div className="flex items-center gap-6">
+              <h1 className="font-bold text-lg tracking-tight">Terminal</h1>
+              
+              <nav className="flex bg-vendor-bg p-1 rounded-xl border border-vendor-border">
+                  {vendorMode !== 'ORDERS_ONLY' && (
+                    <Link 
+                      href="?view=POS" 
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'POS' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                    >
+                      Point of Sale
+                    </Link>
+                  )}
+                  
+                  <Link 
+                    href="?view=ORDERS" 
+                    className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'ORDERS' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                  >
+                    Orders
+                  </Link>
+
+                  {vendorMode !== 'ORDERS_ONLY' && (
+                    <>
+                      <Link 
+                        href="?view=LEDGER" 
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'LEDGER' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                      >
+                        Ledger
+                      </Link>
+                      <Link 
+                        href="?view=ANALYTICS" 
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'ANALYTICS' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                      >
+                        Analytics
+                      </Link>
+                      <Link 
+                        href="?view=INVENTORY" 
+                        className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'INVENTORY' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                      >
+                        Inventory
+                      </Link>
+                    </>
+                  )}
+
+                  <Link 
+                     href="?view=MENU" 
+                     className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${viewMode === 'MENU' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                  >
+                     Menu
+                  </Link>
+                  
+                  <Link 
+                     href="?view=SETTINGS" 
+                     className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1 ${viewMode === 'SETTINGS' ? 'bg-white shadow-sm text-vendor-text-primary' : 'text-vendor-text-secondary hover:text-vendor-text-primary'}`}
+                  >
+                     Settings
+                  </Link>
+              </nav>
+          </div>
+          <div className="flex items-center gap-3">
+             <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-lg border border-green-100">
+                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span className="text-xs font-bold">Online</span>
+             </div>
+          </div>
+      </header>
+
+      <div className="flex-1 flex overflow-hidden relative items-stretch">
 
       
       {/* Toast Container */}
@@ -215,6 +315,7 @@ export function TerminalLayout({
             onRemoveFromCart={handleRemoveFromCart}
             onClearCart={handleClearCart}
             onPlaceOrder={handlePlaceOrder}
+            vendorMode={vendorMode}
           />
         </>
       )}
@@ -238,6 +339,7 @@ export function TerminalLayout({
                 onRemoveFromCart={()=>{}}
                 onClearCart={()=>{}}
                 onPlaceOrder={()=>{}}
+                vendorMode={vendorMode}
             />
           )}
         </>
@@ -292,6 +394,32 @@ export function TerminalLayout({
          </div>
       )}
 
+      {/* VIEW: SETTINGS */}
+      {viewMode === 'SETTINGS' && (
+         <div className="flex-1 h-full overflow-y-auto bg-vendor-bg p-8">
+             <SettingsDashboard vendor={settingsData.vendor} canteen={settingsData.canteen} />
+         </div>
+      )}
+
+      {/* VIEW: MENU */}
+      {viewMode === 'MENU' && (
+         <div className="flex-1 h-full overflow-y-auto bg-vendor-bg p-8">
+             <MenuManager 
+                items={menuItems} 
+                vendorId={vendorId} 
+                inventoryItems={inventoryItems.map(i => ({ id: i.id, name: i.name, unit: i.unit }))}
+             />
+         </div>
+      )}
+
+      {/* VIEW: INVENTORY */}
+      {viewMode === 'INVENTORY' && (
+         <div className="flex-1 h-full overflow-y-auto bg-vendor-bg">
+             <InventoryDashboard items={inventoryItems} vendorId={vendorId} />
+         </div>
+      )}
+
+      </div>
     </div>
   )
 }
