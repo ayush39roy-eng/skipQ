@@ -21,7 +21,7 @@ async function main() {
       const cid = o.canteenId
       const created = o.createdAt
 
-      let cidType = typeof cid
+      let cidType: string = typeof cid
       let cidVal = cid
       if (cid && cid.$oid) {
           cidType = "ObjectId (Wrapped)"
