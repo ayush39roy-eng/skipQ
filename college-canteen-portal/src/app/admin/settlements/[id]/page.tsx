@@ -72,22 +72,24 @@ export default function SettlementDetailPage({ params }: { params: Promise<{ id:
         <div className="header-actions">
           <button 
             className="btn btn-primary" 
-            onClick={() => window.open(`/api/admin/settlements/${settlement.id}/export?format=excel`, '_blank')}
+            onClick={() => window.open(`/api/admin/settlements/${settlement.id}/statement?format=pdf`, '_blank')}
           >
-            📊 Download Excel Report
+            📄 Download Statement (PDF)
           </button>
           <button 
             className="btn btn-secondary" 
-            onClick={() => window.open(`/api/admin/settlements/${settlement.id}/export?format=bank`, '_blank')}
+            onClick={() => window.open(`/api/admin/settlements/${settlement.id}/statement?format=csv`, '_blank')}
           >
-            💰 Bank Transfer CSV
+            📊 Statement CSV
           </button>
-          {/* <button 
+          <button 
             className="btn btn-secondary" 
-            onClick={() => window.open(`/api/admin/settlements/${settlement.id}/invoice`, '_blank')}
+            disabled={true}
+            style={{ opacity: 0.5, cursor: 'not-allowed' }}
+            title="Use the new Statement PDF instead"
           >
-            📄 Download Tax Invoice
-          </button> */}
+            💰 Bank Transfer (Old)
+          </button>
           <button className="btn btn-secondary" onClick={() => router.push('/admin/settlements')}>
             ← Back
           </button>
