@@ -1,0 +1,18 @@
+﻿  
+  paymentMode String // "CASH", "UPI", "RAZORPAY"
+  description String?
+  
+  // Order Type & Fee Tracking (for audit trail)
+  orderType          String? // 'SELF_ORDER' or 'PRE_ORDER'
+  platformFeeRate    Float? // Snapshot of rate used (0.015 or 0.03)
+  
+  // Settlement Tracking
+  settlementStatus   SettlementStatus @default(UNSETTLED)
+  settlementBatch    SettlementBatch? @relation(fields: [settlementBatchId], references: [id])
+  settlementBatchId  String? @db.ObjectId
+  
+  // GAP 2: Linking refunds to original
+  referenceEntryId String? @db.ObjectId 
+}
+
+model LedgerClosure {

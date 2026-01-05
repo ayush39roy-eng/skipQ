@@ -15,6 +15,28 @@ export async function PATCH(req: Request, props: { params: Promise<{ id: string 
   if (typeof body.priceCents === 'number') data.priceCents = body.priceCents
   if (typeof body.available === 'boolean') data.available = body.available
   if (typeof body.imageUrl === 'string' || body.imageUrl === null) data.imageUrl = body.imageUrl
+  const before = await prisma.menuItem.findUnique({ where: { id: params.id } })
   const updated = await prisma.menuItem.update({ where: { id: params.id }, data })
+
+  // Audit Log
+  const { logAudit } = await import('@/lib/audit')
+  const { getRequestId, getClientIp } = await import('@/lib/request-context')
+  
+  await logAudit({
+    action: 'MENU_ITEM_UPDATE',
+    result: 'SUCCESS',
+    severity: 'WARN', // Menu changes affect revenue/pricing
+    entityType: 'MENU_ITEM',
+    entityId: params.id,
+    authType: 'SESSION',
+    authId: session.userId,
+    method: 'PATCH',
+    reqId: await getRequestId(),
+    ip: await getClientIp(),
+    before,
+    after: updated,
+    metadata: { changes: body }
+  })
+
   return NextResponse.json(updated)
 }

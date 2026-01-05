@@ -121,11 +121,44 @@ export async function POST(req: Request) {
         // Default: conservative — return 500 so provider may retry once.
         return NextResponse.json({ error: 'Processing error' }, { status: 500 })
       }
-    } else {
       log('Payment already PAID or handled', { orderId: payment.orderId })
       // Nothing to do — payment was already PAID or another process handled it.
       return NextResponse.json({ ok: true })
     }
+  } else if (event === 'payment.failed') {
+    const externalOrderId = orderEntity?.id || paymentEntity?.order_id
+    if (!externalOrderId) return NextResponse.json({ ok: true })
+    
+    const payment = await prisma.payment.findFirst({ where: { externalOrderId } })
+    if (!payment) return NextResponse.json({ ok: true })
+
+    const errorEntity = (payload.payload?.payment?.entity as any)
+    log('Payment Failed Webhook', { paymentId: payment.id, reason: errorEntity?.error_description })
+
+    await prisma.payment.updateMany({
+       where: { id: payment.id, status: { not: 'PAID' } },
+       data: { status: 'FAILED' }
+    })
+
+    // Audit the failure
+    const { logAudit } = await import('@/lib/audit')
+    
+    await logAudit({
+      action: 'PAYMENT_FAILED',
+      result: 'FAILED',
+      severity: 'WARN',
+      entityType: 'PAYMENT',
+      entityId: payment.id,
+      authType: 'SYSTEM',
+      authId: 'razorpay-webhook',
+      method: 'WEBHOOK',
+      reqId: 'hook_' + Date.now(),
+      ip: '0.0.0.0',
+      metadata: { 
+        reason: errorEntity?.error_description,
+        code: errorEntity?.error_code
+      }
+    })
   }
 
   return NextResponse.json({ ok: true })

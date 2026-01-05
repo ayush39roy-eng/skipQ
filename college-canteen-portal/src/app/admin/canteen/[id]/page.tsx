@@ -33,99 +33,64 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
     const sections = await prisma.menuSection.findMany({ where: { canteenId: canteen.id }, orderBy: { sortOrder: 'asc' } })
 
     return (
-        <div className="p-6 space-y-8 max-w-5xl mx-auto">
-            <div className="flex items-center gap-4 mb-6">
-                <Link href="/admin" className="text-sm text-[rgb(var(--text-muted))] hover:underline">← Back to Dashboard</Link>
+        <div className="max-w-5xl mx-auto space-y-8 pb-12">
+            <div className="flex items-center justify-between pt-6">
+                 <Link href="/admin" className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 transition-colors font-medium">
+                    <span className="text-lg">←</span> Back to Dashboard
+                </Link>
             </div>
 
-            <Card className="overflow-hidden border-[rgb(var(--border))] shadow-sm">
-                {/* Canteen Header */}
-                <div className="bg-[rgb(var(--surface-muted))]/30 p-4 sm:p-6 border-b border-[rgb(var(--border))]">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                        <div className="flex items-center gap-4">
-                            {canteen.imageUrl ? (
-                                <Image
-                                    src={canteen.imageUrl}
-                                    alt={canteen.name}
-                                    width={80}
-                                    height={80}
-                                    unoptimized
-                                    className="h-20 w-20 rounded-lg object-cover shadow-sm bg-white"
-                                />
-                            ) : (
-                                <div className="h-20 w-20 rounded-lg bg-[rgb(var(--surface-muted))] flex items-center justify-center text-[rgb(var(--text-muted))] text-xs">
-                                    No Image
-                                </div>
-                            )}
-                            <div>
-                                <h2 className="text-xl font-bold">{canteen.name}</h2>
-                                <p className="text-sm text-[rgb(var(--text-muted))] flex items-center gap-1">
-                                    📍 {canteen.location}
+            <div className="space-y-8">
+                {/* Section 1: Canteen Details & Settings */}
+                <div className="space-y-6">
+                    <Card className="overflow-hidden border-slate-200 shadow-sm p-0">
+                        <div className="p-6 bg-white">
+                            <div className="flex flex-col items-center text-center">
+                                {canteen.imageUrl ? (
+                                    <Image
+                                        src={canteen.imageUrl}
+                                        alt={canteen.name}
+                                        width={120}
+                                        height={120}
+                                        unoptimized
+                                        className="h-32 w-32 rounded-2xl object-cover shadow-md bg-slate-50 mb-4"
+                                    />
+                                ) : (
+                                    <div className="h-32 w-32 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 mb-4">
+                                        <span className="text-xs font-medium uppercase tracking-wider">No Image</span>
+                                    </div>
+                                )}
+                                <h1 className="text-xl font-bold text-slate-900">{canteen.name}</h1>
+                                <p className="text-sm text-slate-500 mt-1 flex items-center justify-center gap-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    {canteen.location}
                                 </p>
                             </div>
-                        </div>
 
-                        <div className="flex flex-col gap-2 items-end">
-                            <form className="flex items-center gap-2" action={async (formData: FormData) => {
-                                'use server'
-                                const session = await requireRole(['ADMIN'])
-                                if (!session) return
-                                const rawStart = formData.get('phones')
-                                const raw = typeof rawStart === 'string' ? rawStart : ''
-                                const arr = raw.split(',').map(p => p.trim()).filter(Boolean)
-                                await prisma.canteen.update({ where: { id: canteen.id }, data: { notificationPhones: arr } })
-                                revalidatePath(`/admin/canteen/${canteen.id}`)
-                            }}>
-                                <Input
-                                    name="phones"
-                                    defaultValue={canteen.notificationPhones?.join(',') ?? ''}
-                                    placeholder="Notification Phones"
-                                    className="w-48 text-xs h-8"
-                                />
-                                <FormSubmitButton variant="secondary" size="sm" pendingLabel="..." className="h-8 px-3 text-xs">Save</FormSubmitButton>
-                            </form>
-
-                            <form action={async () => {
-                                'use server'
-                                const session = await requireRole(['ADMIN'])
-                                if (!session) return
-                                try {
-                                    const stored = await prisma.canteen.findUnique({ where: { id: canteen.id }, select: { id: true, name: true, notificationPhones: true } })
-                                    const phones: string[] = stored?.notificationPhones ?? []
-                                    if (phones.length) {
-                                        const text = `Test alert from ${stored?.name ?? 'canteen'} — this is a notification test.`
-                                        for (const p of phones) {
-                                            try { await sendWhatsApp(p, { text }) } catch (err) { console.error('Test WhatsApp send failed', p, err) }
-                                        }
-                                    }
-                                } catch (err) { console.error('Send test notification failed', err) }
-                                revalidatePath(`/admin/canteen/${canteen.id}`)
-                            }}>
-                                <FormSubmitButton variant="outline" size="sm" pendingLabel="Sending..." className="h-8 text-xs">Test Alert</FormSubmitButton>
-                            </form>
-                        </div>
-                    </div>
-
-                    {/* Edit Canteen Form */}
-                    <div className="mt-6 pt-4 border-t border-[rgb(var(--border))]">
-                        <form className="flex flex-col gap-3 sm:flex-row sm:items-end" action={async (formData: FormData) => {
-                            'use server'
-                            const session = await requireRole(['ADMIN'])
-                            if (!session) return
-                            const name = String(formData.get('name') || '').trim()
-                                const rawLoc = formData.get('location')
-                                const location = typeof rawLoc === 'string' ? rawLoc.trim() : ''
-                                const rawImg = formData.get('imageUrl')
-                                const imageUrl = typeof rawImg === 'string' ? rawImg.trim() : ''
-                            if (!name || !location) return
-                            await prisma.canteen.update({ where: { id: canteen.id }, data: { name, location, imageUrl: imageUrl || null } })
-                            revalidatePath(`/admin/canteen/${canteen.id}`)
-                        }}>
-                            <Input name="name" label="Edit Name" defaultValue={canteen.name} className="flex-1" required />
-                            <Input name="location" label="Edit Location" defaultValue={canteen.location} className="flex-1" required />
-                            <Input name="imageUrl" label="Image URL" defaultValue={canteen.imageUrl ?? ''} className="flex-[1.5]" />
-                            <FormSubmitButton pendingLabel="Saving..." className="w-full sm:w-auto">Update Details</FormSubmitButton>
-                        </form>
+                             {/* Edit Canteen Form */}
+                            <div className="mt-6 pt-6 border-t border-slate-100">
+                                <h3 className="text-sm font-semibold text-slate-900 mb-4">Edit Details</h3>
+                                <form className="space-y-4" action={async (formData: FormData) => {
+                                    'use server'
+                                    const session = await requireRole(['ADMIN'])
+                                    if (!session) return
+                                    const name = String(formData.get('name') || '').trim()
+                                    const rawLoc = formData.get('location')
+                                    const location = typeof rawLoc === 'string' ? rawLoc.trim() : ''
+                                    const rawImg = formData.get('imageUrl')
+                                    const imageUrl = typeof rawImg === 'string' ? rawImg.trim() : ''
+                                    if (!name || !location) return
+                                    await prisma.canteen.update({ where: { id: canteen.id }, data: { name, location, imageUrl: imageUrl || null } })
+                                    revalidatePath(`/admin/canteen/${canteen.id}`)
+                                }}>
+                                    <div className="space-y-3">
+                                        <Input name="name" label="Canteen Name" defaultValue={canteen.name} className="bg-slate-50 border-slate-200" required />
+                                        <Input name="location" label="Location" defaultValue={canteen.location} className="bg-slate-50 border-slate-200" required />
+                                        <Input name="imageUrl" label="Image URL" defaultValue={canteen.imageUrl ?? ''} className="bg-slate-50 border-slate-200" />
+                                    </div>
+                                    <FormSubmitButton pendingLabel="Saving..." className="w-full bg-slate-900 text-white hover:bg-slate-800">Update Details</FormSubmitButton>
+                                </form>
+                            </div>
 
                         <div className="mt-2 flex justify-end">
                             <form
@@ -159,152 +124,199 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                 </FormSubmitButton>
                             </form>
                         </div>
-                    </div>
+                        </div>
+                    </Card>
                 </div>
 
-                <div className="p-6">
-                    {/* Sections Management */}
-                    <div className="mb-6">
-                        <h3 className="font-semibold mb-3">Menu Sections</h3>
-                        <div className="flex flex-wrap gap-2">
-                            {(sections || []).map((s: MenuSectionShape, idx: number) => (
-                                <div key={s.id} className="group flex items-center gap-1 bg-[rgb(var(--surface-muted))] rounded-full pl-3 pr-1 py-1 border border-[rgb(var(--border))]">
-                                    <form action={async (formData: FormData) => {
-                                        'use server'
-                                        const session = await requireRole(['ADMIN'])
-                                        if (!session) return
-                                        const rawName = formData.get('name')
-                                const name = typeof rawName === 'string' ? rawName.trim() : ''
-                                        if (!name) return
-                                        await prisma.menuSection.update({ where: { id: s.id }, data: { name } })
-                                        revalidatePath(`/admin/canteen/${canteen.id}`)
-                                    }}>
-                                        <input name="name" defaultValue={s.name} className="bg-transparent border-none text-sm font-medium focus:ring-0 w-24" />
-                                    </form>
+                {/* Section 2: Menu Management */}
+                <div className="space-y-6">
+                    {/* Menu Sections */}
+                    <Card className="border-slate-200 shadow-sm p-6 bg-white">
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <h2 className="text-lg font-bold text-slate-900">Menu Management</h2>
+                                <p className="text-sm text-slate-500">Organize items into sections (Breakfast, Lunch, etc.)</p>
+                            </div>
+                        </div>
 
-                                    <div className="flex items-center opacity-50 group-hover:opacity-100 transition-opacity">
-                                        <form action={async () => {
+                         <div className="mb-8">
+                            <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Sections</h3>
+                            <div className="flex flex-wrap gap-3">
+                                {(sections || []).map((s: MenuSectionShape, idx: number) => (
+                                    <div key={s.id} className="group flex items-center gap-1 bg-slate-50 rounded-lg pl-3 pr-1 py-1.5 border border-slate-200 shadow-sm hover:border-purple-200 hover:bg-purple-50 transition-all">
+                                        <form action={async (formData: FormData) => {
                                             'use server'
                                             const session = await requireRole(['ADMIN'])
                                             if (!session) return
-                                            const swapWith = (idx - 1) >= 0 ? sections[idx - 1] : null
-                                            if (!swapWith) return
-                                            await prisma.$transaction([
-                                                prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
-                                                prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
-                                            ])
+                                            const rawName = formData.get('name')
+                                            const name = typeof rawName === 'string' ? rawName.trim() : ''
+                                            if (!name) return
+                                            await prisma.menuSection.update({ where: { id: s.id }, data: { name } })
                                             revalidatePath(`/admin/canteen/${canteen.id}`)
                                         }}>
-                                            <button className="p-1 hover:text-[rgb(var(--accent))]">←</button>
+                                            <input name="name" defaultValue={s.name} className="bg-transparent border-none text-sm font-semibold text-slate-700 hover:text-slate-900 focus:ring-0 w-24 p-0" />
                                         </form>
-                                        <form action={async () => {
-                                            'use server'
-                                            const session = await requireRole(['ADMIN'])
-                                            if (!session) return
-                                            const swapWith = (idx + 1) < (sections || []).length ? sections[idx + 1] : null
-                                            if (!swapWith) return
-                                            await prisma.$transaction([
-                                                prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
-                                                prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
-                                            ])
-                                            revalidatePath(`/admin/canteen/${canteen.id}`)
-                                        }}>
-                                            <button className="p-1 hover:text-[rgb(var(--accent))]">→</button>
-                                        </form>
-                                        <form action={async () => {
-                                            'use server'
-                                            const session = await requireRole(['ADMIN'])
-                                            if (!session) return
-                                            await prisma.$transaction(async (tx) => {
-                                                await tx.menuItem.updateMany({ where: { sectionId: s.id }, data: { sectionId: null } })
-                                                await tx.menuSection.delete({ where: { id: s.id } })
-                                            })
-                                            revalidatePath(`/admin/canteen/${canteen.id}`)
-                                        }}>
-                                            <button className="p-1 text-red-400 hover:text-red-600">×</button>
-                                        </form>
+
+                                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity pl-1 border-l border-slate-200/50 ml-1">
+                                            <form action={async () => {
+                                                'use server'
+                                                const session = await requireRole(['ADMIN'])
+                                                if (!session) return
+                                                const swapWith = (idx - 1) >= 0 ? sections[idx - 1] : null
+                                                if (!swapWith) return
+                                                await prisma.$transaction([
+                                                    prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
+                                                    prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
+                                                ])
+                                                revalidatePath(`/admin/canteen/${canteen.id}`)
+                                            }}>
+                                                <button className="p-1 text-slate-400 hover:text-slate-700 hover:bg-white rounded">←</button>
+                                            </form>
+                                            <form action={async () => {
+                                                'use server'
+                                                const session = await requireRole(['ADMIN'])
+                                                if (!session) return
+                                                const swapWith = (idx + 1) < (sections || []).length ? sections[idx + 1] : null
+                                                if (!swapWith) return
+                                                await prisma.$transaction([
+                                                    prisma.menuSection.update({ where: { id: s.id }, data: { sortOrder: swapWith.sortOrder } }),
+                                                    prisma.menuSection.update({ where: { id: swapWith.id }, data: { sortOrder: s.sortOrder } })
+                                                ])
+                                                revalidatePath(`/admin/canteen/${canteen.id}`)
+                                            }}>
+                                                <button className="p-1 text-slate-400 hover:text-slate-700 hover:bg-white rounded">→</button>
+                                            </form>
+                                            <form action={async () => {
+                                                'use server'
+                                                const session = await requireRole(['ADMIN'])
+                                                if (!session) return
+                                                await prisma.$transaction(async (tx) => {
+                                                    await tx.menuItem.updateMany({ where: { sectionId: s.id }, data: { sectionId: null } })
+                                                    await tx.menuSection.delete({ where: { id: s.id } })
+                                                })
+                                                revalidatePath(`/admin/canteen/${canteen.id}`)
+                                            }}>
+                                                <button className="p-1 text-red-300 hover:text-red-600 hover:bg-red-50 rounded ml-1">×</button>
+                                            </form>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
 
-                            <form className="flex items-center" action={async (formData: FormData) => {
+                                <form className="flex items-center" action={async (formData: FormData) => {
+                                    'use server'
+                                    const session = await requireRole(['ADMIN'])
+                                    if (!session) return
+                                    const rawName = formData.get('name')
+                                    const name = typeof rawName === 'string' ? rawName.trim() : ''
+                                    if (!name) return
+                                    const max = (sections || []).reduce((m: number, s: any) => Math.max(m, s.sortOrder ?? 0), 0)
+                                    await prisma.menuSection.create({ data: { canteenId: canteen.id, name, sortOrder: max + 1 } })
+                                    revalidatePath(`/admin/canteen/${canteen.id}`)
+                                }}>
+                                    <div className="flex items-center gap-1 pl-2">
+                                        <Input name="name" placeholder="New Section..." className="h-9 text-sm w-32 bg-slate-50 border-dashed border-slate-300 focus:border-solid focus:bg-white" />
+                                        <FormSubmitButton size="sm" className="h-9 w-9 p-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-900 hover:text-white transition-colors">
+                                            <span className="text-lg leading-none pb-0.5">+</span>
+                                        </FormSubmitButton>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        {/* Add Item Form */}
+                        <div className="mb-8 bg-slate-50 p-5 rounded-xl border border-slate-200/60 shadow-inner">
+                            <h3 className="text-sm font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                <span className="bg-green-100 text-green-700 p-1 rounded">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                                </span>
+                                Add New Item
+                            </h3>
+                            <form className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" action={async (formData: FormData) => {
                                 'use server'
                                 const session = await requireRole(['ADMIN'])
                                 if (!session) return
                                 const rawName = formData.get('name')
-                                const name = typeof rawName === 'string' ? rawName.trim() : ''
-                                if (!name) return
-                                const max = (sections || []).reduce((m: number, s: any) => Math.max(m, s.sortOrder ?? 0), 0)
-                                await prisma.menuSection.create({ data: { canteenId: canteen.id, name, sortOrder: max + 1 } })
+                                const name = typeof rawName === 'string' ? rawName : ''
+                                const rawPrice = formData.get('priceCents')
+                                const priceCents = Number(rawPrice || 0)
+                                const rawImg = formData.get('imageUrl')
+                                const imageUrl = typeof rawImg === 'string' ? rawImg : ''
+                                const rawSec = formData.get('sectionId')
+                                const sectionId = typeof rawSec === 'string' ? rawSec : null
+                                if (!name || !priceCents) return
+                                await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null, sectionId } })
                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                             }}>
-                                <div className="flex items-center gap-2">
-                                    <Input name="name" placeholder="New Section" className="h-8 text-sm w-32" />
-                                    <FormSubmitButton size="sm" className="h-8 w-8 p-0 flex items-center justify-center rounded-full">+</FormSubmitButton>
+                                <div className="md:col-span-4">
+                                     <Input name="name" placeholder="Item Name (e.g. Masala Dosa)" className="bg-white border-slate-200" required />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <div className="relative">
+                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">₹</span>
+                                        <Input name="priceCents" type="number" placeholder="0" className="pl-7 bg-white border-slate-200" required />
+                                    </div>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <select name="sectionId" className="w-full h-10 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-900 transition-all cursor-pointer">
+                                        <option value="">Uncategorized</option>
+                                        {(sections || []).map((s: MenuSectionShape) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                    </select>
+                                </div>
+                                <div className="md:col-span-2">
+                                    <Input name="imageUrl" placeholder="Image URL (optional)" className="bg-white border-slate-200" />
+                                </div>
+                                <div className="md:col-span-2">
+                                    <FormSubmitButton pendingLabel="Adding..." className="w-full h-10 bg-slate-900 text-white hover:bg-slate-800 font-medium">Add Item</FormSubmitButton>
                                 </div>
                             </form>
                         </div>
-                    </div>
+                    </Card>
 
-                    {/* Add Item Form */}
-                    <div className="mb-6 bg-[rgb(var(--surface-muted))]/20 p-4 rounded-lg border border-[rgb(var(--border))]">
-                        <h3 className="text-sm font-semibold mb-3">Add Menu Item</h3>
-                        <form className="flex flex-col gap-3 sm:flex-row sm:items-end" action={async (formData: FormData) => {
-                            'use server'
-                            const session = await requireRole(['ADMIN'])
-                            if (!session) return
-                            const rawName = formData.get('name')
-                            const name = typeof rawName === 'string' ? rawName : ''
-                            const rawPrice = formData.get('priceCents')
-                            const priceCents = Number(rawPrice || 0)
-                            const rawImg = formData.get('imageUrl')
-                            const imageUrl = typeof rawImg === 'string' ? rawImg : ''
-                            const rawSec = formData.get('sectionId')
-                            const sectionId = typeof rawSec === 'string' ? rawSec : null
-                            if (!name || !priceCents) return
-                            await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null, sectionId } })
-                            revalidatePath(`/admin/canteen/${canteen.id}`)
-                        }}>
-                            <Input name="name" placeholder="Item Name" className="flex-[2]" />
-                            <Input name="priceCents" placeholder="Price (cents)" className="flex-1" />
-                            <Input name="imageUrl" placeholder="Image URL" className="flex-[1.5]" />
-                            <select name="sectionId" className="input flex-1">
-                                <option value="">No Section</option>
-                                {(sections || []).map((s: MenuSectionShape) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                            <FormSubmitButton pendingLabel="Adding...">Add</FormSubmitButton>
-                        </form>
-                    </div>
+                </div>
+            </div>
 
-                    {/* Items Table */}
-                    <div className="overflow-hidden rounded-lg border border-[rgb(var(--border))]">
-                        <Table>
+            {/* Items Table */}
+                    <Card className="border-slate-200 shadow-sm overflow-hidden p-0">
+                        <div className="p-4 bg-white border-b border-slate-100 flex items-center justify-between">
+                             <h3 className="text-sm font-semibold text-slate-900">All Menu Items ({items.length})</h3>
+                        </div>
+                        <Table className="w-full">
                             <THead>
-                                <Tr>
-                                    <Th className="w-16">Img</Th>
-                                    <Th>Name</Th>
-                                    <Th className="w-24">Price</Th>
-                                    <Th className="w-32">Section</Th>
-                                    <Th className="w-24">Status</Th>
-                                    <Th className="w-12"></Th>
+                                <Tr className="bg-slate-50/50">
+                                    <Th className="w-16 pl-6 text-xs uppercase tracking-wider text-slate-500 font-semibold">Image</Th>
+                                    <Th className="text-xs uppercase tracking-wider text-slate-500 font-semibold">Name</Th>
+                                    <Th className="w-32 text-xs uppercase tracking-wider text-slate-500 font-semibold">Price</Th>
+                                    <Th className="w-40 text-xs uppercase tracking-wider text-slate-500 font-semibold">Section</Th>
+                                    <Th className="w-32 text-xs uppercase tracking-wider text-slate-500 font-semibold">Status</Th>
+                                    <Th className="w-16 pr-6"></Th>
                                 </Tr>
                             </THead>
                             <TBody>
-                                {items.map((it: MenuItemShape) => (
-                                    <Tr key={it.id}>
-                                        <Td className="py-2">
-                                            {it.imageUrl && (
+                                {items.length === 0 ? (
+                                    <Tr>
+                                        <Td colSpan={6} className="text-center py-12 text-slate-400 italic">
+                                            No items added to the menu yet.
+                                        </Td>
+                                    </Tr>
+                                ) : items.map((it: MenuItemShape) => (
+                                    <Tr key={it.id} className="hover:bg-slate-50 transition-colors group">
+                                        <Td className="py-3 pl-6 align-middle">
+                                            {it.imageUrl ? (
                                                 <Image
                                                     src={it.imageUrl}
                                                     alt={it.name}
                                                     width={40}
                                                     height={40}
                                                     unoptimized
-                                                    className="h-10 w-10 rounded object-cover bg-[rgb(var(--surface-muted))]"
+                                                    className="h-10 w-10 rounded-lg object-cover bg-slate-100 border border-slate-200"
                                                 />
+                                            ) : (
+                                                <div className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-300">
+                                                    <span className="text-[10px]">IMG</span>
+                                                </div>
                                             )}
                                         </Td>
-                                        <Td className="py-2 font-medium">
+                                        <Td className="py-3 align-middle font-medium text-slate-900">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
@@ -314,13 +326,13 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 await prisma.menuItem.update({ where: { id: it.id }, data: { name } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
-                                                <div className="flex items-center gap-1">
-                                                    <input name="name" defaultValue={it.name} className="bg-transparent w-full focus:outline-none focus:underline" />
-                                                    <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
+                                                <div className="flex items-center gap-2">
+                                                    <input name="name" defaultValue={it.name} className="bg-transparent w-full focus:outline-none focus:ring-0 font-medium text-slate-900 placeholder-slate-400" />
+                                                    <FormSubmitButton variant="ghost" size="sm" className="opacity-0 group-hover:opacity-100 h-6 w-6 p-0 text-green-600 hover:bg-green-50 rounded">✓</FormSubmitButton>
                                                 </div>
                                             </form>
                                         </Td>
-                                        <Td className="py-2">
+                                        <Td className="py-3 align-middle">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
@@ -329,14 +341,13 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 await prisma.menuItem.update({ where: { id: it.id }, data: { priceCents } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
-                                                <div className="flex items-center gap-1">
-                                                    <span className="text-[rgb(var(--text-muted))]">₹</span>
-                                                    <input name="priceCents" defaultValue={(it.priceCents / 100).toFixed(2)} className="bg-transparent w-16 focus:outline-none focus:underline" />
-                                                    <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
+                                                <div className="flex items-center gap-1 bg-slate-50 rounded-md px-2 py-1 w-24 border border-transparent hover:border-slate-200 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+                                                    <span className="text-slate-400 text-xs">₹</span>
+                                                    <input name="priceCents" defaultValue={(it.priceCents / 100).toFixed(2)} className="bg-transparent w-full text-sm font-mono text-slate-700 focus:outline-none" />
                                                 </div>
                                             </form>
                                         </Td>
-                                        <Td className="py-2">
+                                        <Td className="py-3 align-middle">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
@@ -346,16 +357,13 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 await prisma.menuItem.update({ where: { id: it.id }, data: { sectionId } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
-                                                <div className="flex items-center gap-1">
-                                                    <select name="sectionId" defaultValue={it.sectionId ?? ''} className="bg-transparent text-sm w-full focus:outline-none cursor-pointer">
-                                                        <option value="">—</option>
-                                                        {(sections || []).map((s: MenuSectionShape) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                                                    </select>
-                                                    <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
-                                                </div>
+                                                <select name="sectionId" defaultValue={it.sectionId ?? ''} className="bg-transparent text-sm w-full focus:outline-none cursor-pointer text-slate-600 hover:text-slate-900 py-1">
+                                                    <option value="">Uncategorized</option>
+                                                    {(sections || []).map((s: MenuSectionShape) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                                                </select>
                                             </form>
                                         </Td>
-                                        <Td className="py-2">
+                                        <Td className="py-3 align-middle">
                                             <form action={async (formData: FormData) => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
@@ -365,17 +373,27 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
                                                 <div className="flex items-center gap-2">
-                                                    <label className="cursor-pointer flex items-center">
-                                                        <input type="checkbox" name="available" defaultChecked={it.available} className="hidden" />
-                                                        <Badge variant={it.available ? 'success' : 'default'} className="cursor-pointer hover:opacity-80">
-                                                            {it.available ? 'Active' : 'Hidden'}
-                                                        </Badge>
+                                                    <label className="cursor-pointer inline-flex items-center relative">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            name="available" 
+                                                            defaultChecked={it.available} 
+                                                            className="peer sr-only" 
+                                                        />
+                                                        <div className={`
+                                                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-colors
+                                                            peer-checked:bg-green-100 peer-checked:text-green-800 bg-slate-100 text-slate-500
+                                                        `}>
+                                                            <span className="w-1.5 h-1.5 rounded-full mr-1.5 bg-current"></span>
+                                                            <span className="hidden peer-checked:inline">Active</span>
+                                                            <span className="inline peer-checked:hidden">Hidden</span>
+                                                        </div>
                                                     </label>
-                                                    <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600">✓</FormSubmitButton>
+                                                    <FormSubmitButton variant="ghost" size="sm" className="h-6 w-6 p-0 text-green-600 hover:bg-green-50 rounded">✓</FormSubmitButton>
                                                 </div>
                                             </form>
                                         </Td>
-                                        <Td className="py-2 text-right">
+                                        <Td className="py-3 pr-6 align-middle text-right">
                                             <form action={async () => {
                                                 'use server'
                                                 const session = await requireRole(['ADMIN'])
@@ -383,7 +401,7 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 await prisma.menuItem.delete({ where: { id: it.id } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>
-                                                <button className="text-[rgb(var(--text-muted))] hover:text-red-500 transition-colors" title="Delete Item">
+                                                <button className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete Item">
                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /></svg>
                                                 </button>
                                             </form>
@@ -392,9 +410,8 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                 ))}
                             </TBody>
                         </Table>
-                    </div>
-                </div>
-            </Card>
+                    </Card>
+
         </div>
     )
 }

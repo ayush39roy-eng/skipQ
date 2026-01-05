@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
 import { InventoryService } from './inventory-service'
 import { LedgerService } from './ledger-service'
+import { calculateDistance, determineOrderType, isLocationAccurate, OrderType } from '@/lib/geofencing'
 
 // Types
 export type OrderItemInput = {
@@ -21,6 +22,14 @@ export type PlaceOrderInput = {
     idempotencyKey: string
     staffId?: string
     guestName?: string
+    
+    // User Intent for Order Type (optional, defaults to SELF_ORDER for counter orders)
+    selectedOrderType?: 'SELF_ORDER' | 'PRE_ORDER'
+    
+    // Geofencing
+    userLatitude?: number
+    userLongitude?: number
+    locationAccuracy?: number
 }
 
 export const OrderService = {
@@ -108,12 +117,75 @@ export const OrderService = {
 
         const grandTotalCents = subtotalCents + totalTaxCents
 
-        // D. Commission & Vendor Take
-        // Hardcoded 0 for now or fetch from Vendor config
-        const commissionCents = 0 
-        const vendorTakeCents = grandTotalCents - commissionCents
+        // D. Platform Fee Calculation & Order Type Resolution
+        
+        // Parse user-selected order type (default to SELF_ORDER for counter orders)
+        const selectedOrderType = input.selectedOrderType === 'PRE_ORDER' 
+            ? OrderType.PRE_ORDER 
+            : OrderType.SELF_ORDER // Counter orders default to SELF_ORDER
+        
+        // Geofencing: Calculate Distance & Determine OrderType
+        let userLatitude = input.userLatitude
+        let userLongitude = input.userLongitude
+        let locationAccuracy = input.locationAccuracy
+        let distanceFromVendorMeters: number | null = null
+        let vendorLocationAvailable = false
 
-        // E. Create Order (Pending)
+        // Fetch vendor location
+        const vendor = await tx.vendor.findUnique({
+            where: { id: vendorId },
+            select: { latitude: true, longitude: true, geofenceRadiusMeters: true }
+        } as any)
+        
+        // Check if vendor location is available
+        if (vendor && vendor.latitude !== null && vendor.longitude !== null) {
+            vendorLocationAvailable = true
+            
+            // Calculate distance if user location is provided
+            if (userLatitude !== undefined && userLongitude !== undefined) {
+                distanceFromVendorMeters = Math.floor(
+                    calculateDistance(
+                        userLatitude,
+                        userLongitude,
+                        vendor.latitude,
+                        vendor.longitude
+                    )
+                )
+            }
+        }
+        
+        // Import and use resolveOrderType
+        const { resolveOrderType } = await import('@/lib/geofencing')
+        
+        const resolution = resolveOrderType({
+            selectedOrderType,
+            distanceMeters: distanceFromVendorMeters,
+            radiusMeters: vendor?.geofenceRadiusMeters || 5,
+            locationAccuracy,
+            vendorLocationAvailable
+        })
+        
+        console.log('[GEOFENCE] Vendor Order classification:', {
+            selectedOrderType,
+            finalOrderType: resolution.finalOrderType,
+            autoConverted: resolution.autoConverted,
+            reason: resolution.autoConversionReason,
+            distance: distanceFromVendorMeters
+        })
+        
+        // Calculate platform fee based on final order type
+        const { calculatePlatformFee } = await import('@/lib/billing')
+        const { platformFeeRate, platformFeeAmount } = calculatePlatformFee({
+            orderType: resolution.finalOrderType,
+            subtotalCents
+        })
+        
+        // Update totals with platform fee
+        const commissionCents = platformFeeAmount
+        const vendorTakeCents = subtotalCents + totalTaxCents
+        const finalGrandTotal = subtotalCents + totalTaxCents + platformFeeAmount
+        
+        // F. Create Order (Pending)
         const order = await tx.order.create({
             data: {
                 idempotencyKey,
@@ -129,27 +201,43 @@ export const OrderService = {
 
                 subtotalCents,
                 taxCents: totalTaxCents,
-                totalCents: grandTotalCents,
+                totalCents: finalGrandTotal,
                 commissionCents,
                 vendorTakeCents,
+                
+                // User Intent & Resolution
+                selectedOrderType: selectedOrderType as any,
+                orderType: resolution.finalOrderType,
+                autoConverted: resolution.autoConverted,
+                autoConversionReason: resolution.autoConversionReason,
+                
+                // Platform Fee Snapshot
+                platformFeeRate,
+                platformFeeAmount,
 
                 items: {
                     create: orderItemsData
                 },
                 payment: {
                     create: {
-                        amountCents: grandTotalCents,
+                        amountCents: finalGrandTotal,
                         provider: input.paymentMode,
                         status: input.paymentMode === 'CASH' ? 'SUCCESS' : 'PENDING' // Assuming cash is instant/verified by cashier
                     }
-                }
-            },
+                },
+                // Geofencing Data
+                userLatitude,
+                userLongitude,
+                locationAccuracy,
+                distanceFromVendorMeters
+            } as any,
             include: {
                 payment: true
             }
-        })
+        }) as any // Ensure payment relation is typed for subsequent checks
 
-        // F. Ledger Entry (Only if Confirmed/Cash)
+        // G. Ledger Entry
+        // Record sale for ANY order that is confirmed/paid (SELF or PRE order)
         if (order.status === 'ACCEPTED' || order.payment?.status === 'SUCCESS') {
             await LedgerService.recordSale(tx, {
                 id: order.id,
@@ -158,13 +246,16 @@ export const OrderService = {
                 taxCents: order.taxCents,
                 commissionCents: order.commissionCents,
                 vendorTakeCents: order.vendorTakeCents,
+                orderType: resolution.finalOrderType,
+                platformFeeRate,
+                platformFeeAmount,
                 payment: order.payment
             })
         }
 
-        // G. Inventory Decrement (GAP 4 Fix: Same TX)
-        // We only decrement if it's a confirmed order (or accepted).
-        if (order.status === 'ACCEPTED') {
+        // H. Inventory Decrement (ONLY for SELF_ORDER that are accepted)
+        // PRE_ORDER must NOT decrement inventory
+        if (resolution.finalOrderType === OrderType.SELF_ORDER && order.status === 'ACCEPTED') {
             await InventoryService.decrementStock(
                 tx, 
                 vendorId, 

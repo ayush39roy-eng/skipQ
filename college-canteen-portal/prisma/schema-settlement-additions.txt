@@ -1,0 +1,44 @@
+enum VendorMode {
+  ORDERS_ONLY
+  FULL_RMS
+}
+
+// --- SETTLEMENT & PAYOUTS ---
+
+model SettlementBatch {
+  id                  String   @id @default(auto()) @map("_id") @db.ObjectId
+  vendor              Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId            String   @db.ObjectId
+  
+  // Settlement Period
+  periodStartDate     DateTime
+  periodEndDate       DateTime
+  
+  // Calculated Totals (immutable after creation)
+  totalFoodAmount     Int      // Sum of food amounts (gross - tax - platformFee)
+  totalTaxAmount      Int      // Sum of tax amounts
+  totalPlatformFee    Int      // Sum of platform fees
+  totalVendorPayable  Int      // Sum of netAmount (what vendor receives)
+  totalOrders         Int      // Count of unique orders
+  
+  // Status
+  status              SettlementBatchStatus @default(CREATED)
+  
+  // Audit Trail
+  createdAt           DateTime @default(now())
+  createdByUserId     String?  // Admin who generated this
+  exportedAt          DateTime? // When CSV was exported
+  
+  // Relations
+  ledgerEntries       LedgerEntry[]
+}
+
+enum SettlementStatus {
+  UNSETTLED
+  SETTLED
+}
+
+enum SettlementBatchStatus {
+  CREATED
+  EXPORTED
+}

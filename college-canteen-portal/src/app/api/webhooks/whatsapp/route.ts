@@ -150,16 +150,6 @@ export async function POST(req: Request) {
             ip: req.headers.get('x-forwarded-for') || 'unknown'
           })
           
-          // Log unauthorized attempt to audit
-          void logAudit({
-            action: 'WEBHOOK_SIGNATURE_INVALID',
-            result: 'DENIED',
-            method: 'POST',
-            authType: 'ANONYMOUS',
-            ip: req.headers.get('x-forwarded-for') || undefined,
-            metadata: { provider: 'gupshup', endpoint: '/api/webhooks/whatsapp' }
-          })
-
           return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
             status: 401, 
             headers: { 'Content-Type': 'application/json' } 
@@ -169,15 +159,6 @@ export async function POST(req: Request) {
         // No secret configured - reject for security (fail-closed)
         console.error('[WhatsApp Webhook] GUPSHUP_WEBHOOK_SECRET not configured - rejecting request')
         
-        void logAudit({
-          action: 'WEBHOOK_SECRET_MISSING',
-          result: 'DENIED',
-          method: 'POST',
-          authType: 'ANONYMOUS',
-          ip: req.headers.get('x-forwarded-for') || undefined,
-          metadata: { provider: 'gupshup', endpoint: '/api/webhooks/whatsapp' }
-        })
-
         return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
           status: 401, 
           headers: { 'Content-Type': 'application/json' } 

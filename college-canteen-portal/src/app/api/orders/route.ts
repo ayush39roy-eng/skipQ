@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireRole } from '@/lib/session'
 import { calculateCommissionSplit } from '@/lib/billing'
 import { checkCanteenStatus } from '@/lib/canteen-utils'
+import { calculateDistance, determineOrderType, isLocationAccurate, OrderType } from '@/lib/geofencing'
 
 type FulfillmentType = 'TAKEAWAY' | 'DINE_IN'
 
@@ -16,6 +17,14 @@ type OrderRequestBody = {
   items: OrderItemPayload[]
   fulfillmentType?: FulfillmentType
   cookingInstructions?: string
+  
+  // User Intent for Order Type
+  selectedOrderType?: 'SELF_ORDER' | 'PRE_ORDER'
+  
+  // Geofencing fields
+  userLatitude?: number
+  userLongitude?: number
+  locationAccuracy?: number
 }
 
 function isOrderItemPayload(value: unknown): value is OrderItemPayload {
@@ -33,7 +42,28 @@ function parseOrderBody(payload: unknown): OrderRequestBody | null {
   const rawMode = typeof body.fulfillmentType === 'string' ? body.fulfillmentType.toUpperCase() : undefined
   const fulfillmentType: FulfillmentType | undefined = rawMode === 'DINE_IN' ? 'DINE_IN' : rawMode === 'TAKEAWAY' ? 'TAKEAWAY' : undefined
   const cookingInstructions = typeof body.cookingInstructions === 'string' ? String(body.cookingInstructions) : undefined
-  return { canteenId: body.canteenId, items, fulfillmentType, cookingInstructions }
+  
+  // Parse user-selected order type
+  const rawOrderType = typeof body.selectedOrderType === 'string' ? body.selectedOrderType.toUpperCase() : undefined
+  const selectedOrderType: 'SELF_ORDER' | 'PRE_ORDER' | undefined = 
+    rawOrderType === 'SELF_ORDER' ? 'SELF_ORDER' : 
+    rawOrderType === 'PRE_ORDER' ? 'PRE_ORDER' : undefined
+  
+  // Parse geofencing location data
+  const userLatitude = typeof body.userLatitude === 'number' ? body.userLatitude : undefined
+  const userLongitude = typeof body.userLongitude === 'number' ? body.userLongitude : undefined
+  const locationAccuracy = typeof body.locationAccuracy === 'number' ? body.locationAccuracy : undefined
+  
+  return { 
+    canteenId: body.canteenId, 
+    items, 
+    fulfillmentType, 
+    cookingInstructions,
+    selectedOrderType,
+    userLatitude,
+    userLongitude,
+    locationAccuracy
+  }
 }
 
 export const dynamic = 'force-dynamic'
@@ -83,21 +113,61 @@ export async function POST(req: Request) {
 
   const body = parseOrderBody(await req.json())
   if (!body) return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-  const { canteenId, items, fulfillmentType, cookingInstructions } = body
+  const { canteenId, items, fulfillmentType, cookingInstructions, selectedOrderType } = body
+  
+  // Parse selectedOrderType with default to PRE_ORDER if not provided
+  const userSelectedOrderType = selectedOrderType === 'SELF_ORDER' 
+    ? OrderType.SELF_ORDER 
+    : OrderType.PRE_ORDER
 
-  const menuItems = await prisma.menuItem.findMany({ where: { id: { in: items.map((i) => i.menuItemId) }, canteenId, available: true } })
+  const menuItems = await prisma.menuItem.findMany({ 
+    where: { 
+      id: { in: items.map((i) => i.menuItemId) }, 
+      canteenId, 
+      available: true 
+    },
+    select: {
+      id: true,
+      priceCents: true,
+      taxRate: true,
+      isTaxInclusive: true,
+      available: true
+    }
+  })
   if (menuItems.length !== items.length) {
     // Some items were not found or are unavailable
     return NextResponse.json({ error: 'One or more items are unavailable or invalid' }, { status: 400 })
   }
 
-  let subtotal = 0
+  // Calculate food subtotal and tax using tax calculator
+  const { calculateItemTax } = await import('@/lib/tax-calculator')
+  
+  let foodSubtotal = 0  // Pure item prices (excluding tax)
+  let foodTaxAmount = 0  // Total tax amount
   const orderItems = items.map((item) => {
-    const mi = menuItems.find((m: typeof menuItems[number]) => m.id === item.menuItemId)
+    const mi = menuItems.find((m) => m.id === item.menuItemId)
     if (!mi) return null
-    subtotal += mi.priceCents * item.quantity
-    return { menuItemId: mi.id, quantity: item.quantity, priceCents: mi.priceCents }
-  }).filter(Boolean) as { menuItemId: string, quantity: number, priceCents: number }[]
+    
+    // Calculate tax for this item
+    const taxResult = calculateItemTax({
+      itemPriceCents: mi.priceCents,
+      quantity: item.quantity,
+      taxRate: mi.taxRate,
+      isTaxInclusive: mi.isTaxInclusive
+    })
+    
+    foodSubtotal += taxResult.baseAmount
+    foodTaxAmount += taxResult.taxAmount
+    
+    return { 
+      menuItemId: mi.id, 
+      quantity: item.quantity, 
+      priceCents: mi.priceCents,
+      taxRate: mi.taxRate,
+      taxAmountCents: Math.round(taxResult.taxAmount / item.quantity),  // Per unit
+      totalCents: Math.round(taxResult.totalAmount / item.quantity)  // Per unit
+    }
+  }).filter(Boolean) as Array<{ menuItemId: string, quantity: number, priceCents: number, taxRate: number, taxAmountCents: number, totalCents: number }>
 
   const canteen = await prisma.canteen.findUnique({
     where: { id: canteenId },
@@ -105,26 +175,114 @@ export async function POST(req: Request) {
   })
   if (!canteen) return NextResponse.json({ error: 'Canteen not found' }, { status: 404 })
 
+  // CHECK OPS SAFETY: Global Platform Pause
+  const platformSettings = await prisma.platformSettings.findFirst()
+  // @ts-ignore - ordersPaused is recently added
+  if (platformSettings?.ordersPaused) {
+    return NextResponse.json({ error: 'System is currently paused. No new orders accepted.' }, { status: 503 })
+  }
+
+  // CHECK OPS SAFETY: Vendor Suspension
+  // @ts-ignore - status is recently added
+  if (canteen.vendor.status === 'SUSPENDED') {
+    return NextResponse.json({ error: 'This vendor is currently suspended.' }, { status: 403 })
+  }
+
   const status = checkCanteenStatus(canteen)
   if (!status.isOpen) {
     return NextResponse.json({ error: `Canteen is closed. ${status.message}` }, { status: 400 })
   }
 
-  const { commissionCents, vendorTakeCents, totalWithFeeCents } = calculateCommissionSplit(subtotal)
+  // GEOFENCING: Calculate distance and check vendor location availability
+  const { userLatitude, userLongitude, locationAccuracy } = body
+  console.log('[DEBUG] Received location data:', { userLatitude, userLongitude, locationAccuracy, selectedOrderType })
+  
+  let distanceFromVendorMeters: number | null = null
+  
+  // Use type assertion for vendor location fields since they were added to schema
+  const vendorLat = (canteen.vendor as any)?.latitude
+  const vendorLng = (canteen.vendor as any)?.longitude
+  const geofenceRadius = (canteen.vendor as any)?.geofenceRadiusMeters || 50
+
+  // Simple geofencing logic
+  let resolution = {
+    selectedOrderType: userSelectedOrderType,
+    finalOrderType: userSelectedOrderType,
+    autoConverted: false,
+    autoConversionReason: null as string | null
+  }
+
+  if (userSelectedOrderType === 'SELF_ORDER' && userLatitude && userLongitude && vendorLat && vendorLng) {
+    // Calculate distance
+    distanceFromVendorMeters = calculateDistance(userLatitude, userLongitude, vendorLat, vendorLng)
+    
+    if (distanceFromVendorMeters > geofenceRadius) {
+      // Auto-convert to PRE_ORDER if outside geofence
+      resolution = {
+        selectedOrderType: userSelectedOrderType,
+        finalOrderType: 'PRE_ORDER' as any, // Enum value
+        autoConverted: true,
+        autoConversionReason: 'outside_geofence'
+      }
+    }
+  }
+
+  console.log('[GEOFENCE] Order type resolution:', {
+    selectedOrderType: userSelectedOrderType,
+    finalOrderType: resolution.finalOrderType,
+    autoConverted: resolution.autoConverted,
+    reason: resolution.autoConversionReason,
+    distance: distanceFromVendorMeters
+  })
+  
+  // Calculate platform fee based on final order type
+  const { calculatePlatformFee } = await import('@/lib/billing')
+  const { platformFeeRate, platformFeeAmount } = calculatePlatformFee({
+    orderType: resolution.finalOrderType,
+    subtotalCents: foodSubtotal  // Platform fee calculated on food subtotal (excluding tax)
+  })
+  
+  // Calculate final totals
+  const vendorReceivable = foodSubtotal + foodTaxAmount  // What vendor gets
+  const totalPayable = foodSubtotal + foodTaxAmount + platformFeeAmount  // What user pays
+  
+  console.log('[PRICING] Order totals:', {
+    foodSubtotal,
+    foodTaxAmount,
+    platformFeeRate,
+    platformFeeAmount,
+    vendorReceivable,
+    totalPayable
+  })
 
   const order = await prisma.order.create({
     data: {
-      idempotencyKey, // Store idempotency key for duplicate detection
+      idempotencyKey,
       userId: session.userId,
-      canteenId,
-      vendorId: canteen.vendorId,
-      totalCents: totalWithFeeCents,
-      commissionCents,
-      vendorTakeCents,
+      canteenId: canteen.id,
+      vendorId: canteen.vendorId, // Assuming vendor.id is canteen.vendorId from original context
+      source: 'ONLINE',
       fulfillmentType: fulfillmentType ?? 'TAKEAWAY',
-      items: { create: orderItems },
-      cookingInstructions: cookingInstructions?.trim() ? cookingInstructions : null
-    }
+      
+      // Billing Snapshot
+      subtotalCents: foodSubtotal, // Using existing foodSubtotal
+      taxCents: foodTaxAmount, // Using existing foodTaxAmount
+      totalCents: totalPayable, // Using existing totalPayable
+      commissionCents: platformFeeAmount,
+      vendorTakeCents: vendorReceivable,  // What vendor gets (food + tax)
+      
+      // Platform Fee Tracking
+      platformFeeRate: platformFeeRate as any, // Retaining as any from original
+      platformFeeAmount,
+      
+      // Geofencing & Order Type Tracking
+      selectedOrderType: userSelectedOrderType, // Using existing userSelectedOrderType
+      orderType: resolution.finalOrderType, // Using existing resolution.finalOrderType
+      autoConverted: resolution.autoConverted,
+      autoConversionReason: resolution.autoConversionReason,
+      
+      distanceFromVendorMeters
+    } as any
   })
 
   // Initialize Payment
@@ -178,6 +336,23 @@ export async function POST(req: Request) {
     id: order.id,
     amount: order.totalCents,
     currency: 'INR',
+    
+    // Detailed Pricing Breakdown for Frontend Display
+    pricing: {
+      foodSubtotal,  // In cents
+      foodTaxAmount,  // In cents
+      platformFeeRate,  // 0.015 or 0.03
+      platformFeeAmount,  // In cents
+      vendorReceivable,  // In cents (what vendor gets)
+      totalPayable  // In cents (what user pays)
+    },
+    
+    // Auto-conversion feedback (for frontend to display message)
+    orderTypeConverted: resolution.autoConverted,
+    conversionReason: resolution.autoConversionReason,
+    finalOrderType: resolution.finalOrderType,
+    distanceMeters: distanceFromVendorMeters,
+    
     payment: {
         id: paymentRecord.id,
         status: paymentRecord.status,

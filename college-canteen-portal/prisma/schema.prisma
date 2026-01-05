@@ -19,33 +19,57 @@ model User {
   orders       Order[]
   createdAt    DateTime  @default(now())
   phone        String?
-  
+
   // Link to Customer profile if this user is a regular customer
   customer   Customer? @relation(fields: [customerId], references: [id])
   customerId String?   @db.ObjectId
 }
 
 model Vendor {
-  id        String    @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  phone     String?
-  whatsappEnabled Boolean @default(false)
-  users     User[]
-  canteens  Canteen[]
-  orders    Order[]
-  
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  name            String
+  phone           String?
+  whatsappEnabled Boolean   @default(false)
+  users           User[]
+  canteens        Canteen[]
+  orders          Order[]
+
   // RMS Relations
   inventory InventoryItem[]
   staff     Staff[]
-  
-  // Financials
-  ledgerEntries  LedgerEntry[]
-  ledgerClosures LedgerClosure[]
-  transactions   Transaction[] // Deprecated, keeping for temporary compat
 
-  createdAt DateTime  @default(now())
-  
-  mode      VendorMode @default(ORDERS_ONLY)
+  // Financials
+  ledgerEntries     LedgerEntry[]
+  ledgerClosures    LedgerClosure[]
+  settlementBatches SettlementBatch[]
+  transactions      Transaction[] // Deprecated, keeping for temporary compat
+
+  // Location & Geofencing
+  latitude              Float?
+  longitude             Float?
+  geofenceRadiusMeters  Int @default(50)
+
+  // Pricing & Fee Configuration
+  feePayer           FeePayer @default(USER_PAYS)
+  selfOrderFeeRate   Float    @default(0.015)  // 1.5%
+  preOrderFeeRate    Float    @default(0.03)   // 3%
+  feeConfigUpdatedAt DateTime?
+
+  // Feature Flags
+  enableScheduledOrders   Boolean @default(false)
+  enableVendorPaidFees    Boolean @default(false)
+  enableAdvancedAnalytics Boolean @default(false)
+  enablePricingOverrides Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  mode VendorMode @default(ORDERS_ONLY)
+  status VendorStatus @default(ACTIVE)
+}
+
+enum VendorStatus {
+  ACTIVE
+  SUSPENDED
 }
 
 enum VendorMode {
@@ -53,166 +77,212 @@ enum VendorMode {
   FULL_POS
 }
 
+enum FeePayer {
+  USER_PAYS
+  VENDOR_PAYS
+}
+
+enum OrderType {
+  SELF_ORDER
+  PRE_ORDER
+}
+
+// Platform-level configuration settings
+model PlatformSettings {
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  // GST Configuration
+  platformGstRate    Float    @default(0.0)  // 18% GST on platform fees
+
+  // Ops Safety
+  ordersPaused       Boolean  @default(false) // Global Kill Switch
+
+  // Global Feature Flags
+  // stored as { key: string, enabled: boolean, description: string }[]
+  globalFlags        Json?    @default("[]") 
+  
+  // Other platform-wide settings can be added here
+  updatedAt          DateTime @updatedAt
+  updatedBy          String?  // Admin user ID who made the change
+  
+  @@map("platform_settings")
+}
+
 model AdminActionLog {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  adminId   String
-  vendorId  String   @db.ObjectId
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  adminId    String
+  vendorId   String   @db.ObjectId
   actionType String
-  oldMode   String?
-  newMode   String?
-  timestamp DateTime @default(now())
+  oldMode    String?
+  newMode    String?
+  timestamp  DateTime @default(now())
 }
 
 model Canteen {
-  id        String     @id @default(auto()) @map("_id") @db.ObjectId
-  name      String
-  location  String
-  vendor    Vendor     @relation(fields: [vendorId], references: [id])
-  vendorId  String     @db.ObjectId
+  id                 String   @id @default(auto()) @map("_id") @db.ObjectId
+  name               String
+  location           String
+  vendor             Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId           String   @db.ObjectId
   notificationPhones String[] @default([])
-  
-  // Timings and Status
-  openingTime   String?   
-  closingTime   String?   
-  
-  // Weekly schedule: JSON array of 7 objects
-  weeklySchedule Json?     @default("[{\"day\":\"Monday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Tuesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Wednesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Thursday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Friday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Saturday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Sunday\",\"isOpen\":false,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"}]")
-  
-  manualIsOpen  Boolean?  @default(true) 
-  autoMode      Boolean   @default(true) 
-  posMarkup     Float     @default(0.05) 
-  imageUrl      String?
 
-  menuItems MenuItem[]
+  // Timings and Status
+  openingTime String?
+  closingTime String?
+
+  // Weekly schedule: JSON array of 7 objects
+  weeklySchedule Json? @default("[{\"day\":\"Monday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Tuesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Wednesday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Thursday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Friday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Saturday\",\"isOpen\":true,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"},{\"day\":\"Sunday\",\"isOpen\":false,\"openingTime\":\"09:00\",\"closingTime\":\"21:00\"}]")
+
+  manualIsOpen Boolean? @default(true)
+  autoMode     Boolean  @default(true)
+  posMarkup    Float    @default(0.05)
+  imageUrl     String?
+
+  menuItems    MenuItem[]
   menuSections MenuSection[]
-  orders    Order[]
-  
-  shifts    Shift[]
+  orders       Order[]
+
+  shifts Shift[]
 }
 
 model MenuSection {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  canteen   Canteen  @relation(fields: [canteenId], references: [id])
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  canteen   Canteen    @relation(fields: [canteenId], references: [id])
   canteenId String     @db.ObjectId
   name      String
-  sortOrder Int      @default(0)
+  sortOrder Int        @default(0)
   items     MenuItem[]
 }
 
 model MenuItem {
-  id         String      @id @default(auto()) @map("_id") @db.ObjectId
-  canteen    Canteen     @relation(fields: [canteenId], references: [id])
-  canteenId  String      @db.ObjectId
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  canteen    Canteen      @relation(fields: [canteenId], references: [id])
+  canteenId  String       @db.ObjectId
   section    MenuSection? @relation(fields: [sectionId], references: [id])
-  sectionId  String?     @db.ObjectId
+  sectionId  String?      @db.ObjectId
   name       String
   priceCents Int
-  
+
   // Tax & Pricing Rules
   taxRate        Float   @default(0.0) // Percentage (e.g., 5.0 for 5%)
-  isTaxInclusive Boolean @default(true) 
-  
-  available  Boolean     @default(true)
-  isVegetarian Boolean   @default(true)
-  imageUrl   String?
-  description String?
-  sortOrder  Int?        @default(0)
-  
+  isTaxInclusive Boolean @default(true)
+
+  available    Boolean @default(true)
+  isVegetarian Boolean @default(true)
+  imageUrl     String?
+  description  String?
+  sortOrder    Int?    @default(0)
+
   orderItems OrderItem[]
   recipe     Recipe?
-  
+
   modifierGroups ModifierGroup[]
 }
 
 model ModifierGroup {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  menuItem MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
-  menuItemId String @db.ObjectId
-  
-  name String 
-  minSelection Int @default(0)
-  maxSelection Int @default(1)
-  
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id], onDelete: Cascade)
+  menuItemId String   @db.ObjectId
+
+  name         String
+  minSelection Int    @default(0)
+  maxSelection Int    @default(1)
+
   modifiers Modifier[]
 }
 
 model Modifier {
-  id String @id @default(auto()) @map("_id") @db.ObjectId
-  group ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  groupId String @db.ObjectId
-  
-  name String
-  priceCents Int @default(0)
-  available Boolean @default(true)
+  id      String        @id @default(auto()) @map("_id") @db.ObjectId
+  group   ModifierGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupId String        @db.ObjectId
+
+  name       String
+  priceCents Int     @default(0)
+  available  Boolean @default(true)
 }
 
 model Order {
-  id               String        @id @default(auto()) @map("_id") @db.ObjectId
-  idempotencyKey   String?       @unique // GAP 1: Enforce unique
-  
-  user             User?         @relation(fields: [userId], references: [id])
-  userId           String?       @db.ObjectId
-  guestName        String?
-  
-  canteen          Canteen       @relation(fields: [canteenId], references: [id])
-  canteenId        String        @db.ObjectId
-  vendor           Vendor?       @relation(fields: [vendorId], references: [id])
-  vendorId         String?       @db.ObjectId
-  
-  items            OrderItem[]
-  status           String        @default("PENDING")
-  source           String        @default("ONLINE") // "ONLINE" or "COUNTER"
-  fulfillmentType  String        @default("TAKEAWAY")
-  
+  id             String  @id @default(auto()) @map("_id") @db.ObjectId
+  idempotencyKey String? @unique // GAP 1: Enforce unique
+
+  user      User?   @relation(fields: [userId], references: [id])
+  userId    String? @db.ObjectId
+  guestName String?
+
+  canteen   Canteen @relation(fields: [canteenId], references: [id])
+  canteenId String  @db.ObjectId
+  vendor    Vendor? @relation(fields: [vendorId], references: [id])
+  vendorId  String? @db.ObjectId
+
+  items           OrderItem[]
+  status          String      @default("PENDING")
+  source          String      @default("ONLINE") // "ONLINE" or "COUNTER"
+  fulfillmentType String      @default("TAKEAWAY")
+
   // Snapshot Totals (Calculated Backend Side)
-  subtotalCents    Int           @default(0)
-  taxCents         Int           @default(0)
-  totalCents       Int           @default(0)
-  
-  commissionCents  Int           @default(0)
-  vendorTakeCents  Int           @default(0)
-  
-  prepMinutes      Int?
-  prepExtended     Boolean      @default(false)
+  subtotalCents Int @default(0)
+  taxCents      Int @default(0)
+  totalCents    Int @default(0)
+
+  commissionCents Int @default(0)
+  vendorTakeCents Int @default(0)
+
+  // Platform Fee Tracking
+  platformFeeRate   Float? // e.g., 0.015 for 1.5% or 0.03 for 3%
+  platformFeeAmount Int?   // Fee amount in cents (same as commissionCents)
+
+  // Geofencing & Order Type Tracking
+  selectedOrderType      OrderType? // What user selected: SELF_ORDER or PRE_ORDER
+  orderType              OrderType? // Final type after geofencing: SELF_ORDER or PRE_ORDER
+  autoConverted          Boolean @default(false) // Was it auto-converted?
+  autoConversionReason   String? // Why: "outside_geofence", etc.
+
+  // Location Data (for audit & analytics)
+  userLatitude              Float? // User's location when ordering
+  userLongitude             Float?
+  locationAccuracy          Float? // GPS accuracy in meters
+  distanceFromVendorMeters  Float? // Calculated distance
+
+  prepMinutes         Int?
+  prepExtended        Boolean @default(false)
   cookingInstructions String?
-  
-  payment          Payment?
-  ledgerEntries    LedgerEntry[]
-  
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  
-  staff      Staff?        @relation(fields: [staffId], references: [id])
-  staffId    String?       @db.ObjectId
+
+  payment       Payment?
+  ledgerEntries LedgerEntry[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  staff   Staff?  @relation(fields: [staffId], references: [id])
+  staffId String? @db.ObjectId
 }
 
 model OrderItem {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  order       Order    @relation(fields: [orderId], references: [id])
-  orderId     String   @db.ObjectId
-  menuItem    MenuItem @relation(fields: [menuItemId], references: [id])
-  menuItemId  String   @db.ObjectId
-  
-  quantity    Int
-  priceCents  Int // Snapshot of Base Price
-  
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  order      Order    @relation(fields: [orderId], references: [id])
+  orderId    String   @db.ObjectId
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+  menuItemId String   @db.ObjectId
+
+  quantity   Int
+  priceCents Int // Snapshot of Base Price
+
   // Snapshot Data for Audit
-  taxRate        Float   @default(0)
-  taxAmountCents Int     @default(0)
-  totalCents     Int     @default(0) // (Base + Modifiers) * Qty
-  
+  taxRate        Float @default(0)
+  taxAmountCents Int   @default(0)
+  totalCents     Int   @default(0) // (Base + Modifiers) * Qty
+
   modifiersSnapshot Json? // Array of { name, priceCents, quantity }
 }
 
 model Payment {
-  id              String   @id @default(auto()) @map("_id") @db.ObjectId
-  order           Order    @relation(fields: [orderId], references: [id])
-  orderId         String   @unique @db.ObjectId
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  order           Order     @relation(fields: [orderId], references: [id])
+  orderId         String    @unique @db.ObjectId
   amountCents     Int
-  status          String   @default("PENDING")
-  provider        String   @default("stub") 
+  status          String    @default("PENDING")
+  provider        String    @default("stub")
   paymentLink     String?
-  externalOrderId String? 
+  externalOrderId String?
   paidAt          DateTime?
 }
 
@@ -228,27 +298,27 @@ model Session {
 
 model AiInsights {
   id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  type      String   
+  type      String
   vendorId  String?  @db.ObjectId
   isLatest  Boolean  @default(false)
-  data      Json     
+  data      Json
   createdAt DateTime @default(now())
 }
 
 // --- RMS & INVENTORY ---
 
 model InventoryItem {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId    String   @db.ObjectId
-  name        String
-  category    String   
-  unit        String   
-  quantity    Float    @default(0)
-  minThreshold Float   @default(5) 
-  costPerUnit Int?     
-  updatedAt   DateTime @updatedAt
-  
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  vendor       Vendor   @relation(fields: [vendorId], references: [id])
+  vendorId     String   @db.ObjectId
+  name         String
+  category     String
+  unit         String
+  quantity     Float    @default(0)
+  minThreshold Float    @default(5)
+  costPerUnit  Int?
+  updatedAt    DateTime @updatedAt
+
   recipeItems RecipeItem[]
   logs        InventoryLog[]
 }
@@ -257,20 +327,20 @@ model InventoryLog {
   id              String        @id @default(auto()) @map("_id") @db.ObjectId
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
   inventoryItemId String        @db.ObjectId
-  
-  changeAmount    Float
-  reason          String        // "ORDER", "WASTAGE", "MANUAL", "RESTOCK"
-  referenceId     String?       // Order ID or other ref
-  performedBy     String?       // User ID
-  
-  createdAt       DateTime      @default(now())
+
+  changeAmount Float
+  reason       String // "ORDER", "WASTAGE", "MANUAL", "RESTOCK"
+  referenceId  String? // Order ID or other ref
+  performedBy  String? // User ID
+
+  createdAt DateTime @default(now())
 }
 
 model Recipe {
-  id          String       @id @default(auto()) @map("_id") @db.ObjectId
-  menuItem    MenuItem     @relation(fields: [menuItemId], references: [id])
-  menuItemId  String       @unique @db.ObjectId
-  items       RecipeItem[]
+  id         String       @id @default(auto()) @map("_id") @db.ObjectId
+  menuItem   MenuItem     @relation(fields: [menuItemId], references: [id])
+  menuItemId String       @unique @db.ObjectId
+  items      RecipeItem[]
 }
 
 model RecipeItem {
@@ -279,73 +349,82 @@ model RecipeItem {
   recipeId        String        @db.ObjectId
   inventoryItem   InventoryItem @relation(fields: [inventoryItemId], references: [id])
   inventoryItemId String        @db.ObjectId
-  quantity        Float         
+  quantity        Float
 }
 
 model Staff {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  vendor    Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId  String   @db.ObjectId
-  name      String
-  role      String   
-  pinHash   String   
-  active    Boolean  @default(true)
-  shifts    Shift[]
-  orders    Order[]
+  id       String  @id @default(auto()) @map("_id") @db.ObjectId
+  vendor   Vendor  @relation(fields: [vendorId], references: [id])
+  vendorId String  @db.ObjectId
+  name     String
+  role     String
+  pinHash  String
+  active   Boolean @default(true)
+  shifts   Shift[]
+  orders   Order[]
 }
 
 model Shift {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  staff     Staff    @relation(fields: [staffId], references: [id])
-  staffId   String   @db.ObjectId
-  canteen   Canteen? @relation(fields: [canteenId], references: [id])
-  canteenId String?  @db.ObjectId
-  startTime DateTime @default(now())
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  staff     Staff     @relation(fields: [staffId], references: [id])
+  staffId   String    @db.ObjectId
+  canteen   Canteen?  @relation(fields: [canteenId], references: [id])
+  canteenId String?   @db.ObjectId
+  startTime DateTime  @default(now())
   endTime   DateTime?
-  cashStart Int      @default(0) 
-  cashEnd   Int?     
+  cashStart Int       @default(0)
+  cashEnd   Int?
 }
 
 // --- FINANCIAL LEDGER (AUDITABLE) ---
 
 model LedgerEntry {
-  id          String   @id @default(auto()) @map("_id") @db.ObjectId
-  vendor      Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId    String   @db.ObjectId
-  
-  order       Order?   @relation(fields: [orderId], references: [id])
-  orderId     String?  @db.ObjectId
-  
-  type        String   // "SALE", "REFUND", "FEE", "TAX_PAYMENT", "PAYOUT"
-  timestamp   DateTime @default(now())
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
+
+  order   Order?  @relation(fields: [orderId], references: [id])
+  orderId String? @db.ObjectId
+
+  type      String // "SALE", "REFUND", "FEE", "TAX_PAYMENT", "PAYOUT"
+  timestamp DateTime @default(now())
 
   // Double Entry accounting basics
   grossAmount Int // Input Money
   taxAmount   Int // Liability
   platformFee Int // Expense
   netAmount   Int // Receivable/Cash
-  
+
   paymentMode String // "CASH", "UPI", "RAZORPAY"
   description String?
-  
+
+  // Order Type & Fee Tracking (for audit trail)
+  orderType       String? // 'SELF_ORDER' or 'PRE_ORDER'
+  platformFeeRate Float? // Snapshot of rate used (0.015 or 0.03)
+
+  // Settlement Tracking
+  settlementStatus  SettlementStatus @default(UNSETTLED)
+  settlementBatch   SettlementBatch? @relation(fields: [settlementBatchId], references: [id])
+  settlementBatchId String?          @db.ObjectId
+
   // GAP 2: Linking refunds to original
-  referenceEntryId String? @db.ObjectId 
+  referenceEntryId String? @db.ObjectId
 }
 
 model LedgerClosure {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  vendor    Vendor   @relation(fields: [vendorId], references: [id])
-  vendorId  String   @db.ObjectId
-  
-  date        DateTime // Midnight timestamp
-  closedAt    DateTime @default(now())
-  closedBy    String?
-  
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
+
+  date     DateTime // Midnight timestamp
+  closedAt DateTime @default(now())
+  closedBy String?
+
   // Frozen Totals
   totalGrossCents Int
   totalNetCents   Int
   orderCount      Int
-  
+
   @@unique([vendorId, date])
 }
 
@@ -354,21 +433,21 @@ model Transaction {
   id          String   @id @default(auto()) @map("_id") @db.ObjectId
   vendor      Vendor   @relation(fields: [vendorId], references: [id])
   vendorId    String   @db.ObjectId
-  type        String   
+  type        String
   amountCents Int
   description String
   createdAt   DateTime @default(now())
 }
 
 model Customer {
-  id        String   @id @default(auto()) @map("_id") @db.ObjectId
-  phone     String   @unique
-  name      String?
-  notes     String?
-  totalSpendCents Int @default(0)
-  visitCount Int     @default(0)
-  lastVisit DateTime @default(now())
-  users     User[]
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  phone           String   @unique
+  name            String?
+  notes           String?
+  totalSpendCents Int      @default(0)
+  visitCount      Int      @default(0)
+  lastVisit       DateTime @default(now())
+  users           User[]
 }
 
 model AuditLog {
@@ -376,10 +455,19 @@ model AuditLog {
   timestamp DateTime @default(now())
   ip        String?
   method    String
-  authType  String   
-  authId    String?  
+  authType  String
+  authId    String?
   action    String
-  result    String   
+  result    String
+  
+  // Enhanced Audit Fields
+  severity   String   @default("INFO") // INFO, WARN, CRITICAL, SECURITY
+  entityType String?  // VENDOR, ORDER, SETTLEMENT, SYSTEM, USER
+  entityId   String?
+  reqId      String?  // Trace ID
+  before     Json?    // Snapshot before
+  after      Json?    // Snapshot after
+  
   metadata  Json?
 }
 
@@ -387,16 +475,16 @@ model TrainingJob {
   id          String    @id @default(auto()) @map("_id") @db.ObjectId
   startedAt   DateTime  @default(now())
   completedAt DateTime?
-  trigger     String    
-  status      String    
+  trigger     String
+  status      String
   error       String?
 }
 
 model JobLock {
-  id        String   @id @map("_id") 
-  isLocked  Boolean  @default(false)
-  lockedAt  DateTime @updatedAt
-  lockedBy  String?
+  id       String   @id @map("_id")
+  isLocked Boolean  @default(false)
+  lockedAt DateTime @updatedAt
+  lockedBy String?
 }
 
 model PasswordResetToken {
@@ -407,4 +495,46 @@ model PasswordResetToken {
   createdAt DateTime @default(now())
 
   @@unique([email, token])
+}
+
+// --- SETTLEMENT & PAYOUTS ---
+
+model SettlementBatch {
+  id       String @id @default(auto()) @map("_id") @db.ObjectId
+  vendor   Vendor @relation(fields: [vendorId], references: [id])
+  vendorId String @db.ObjectId
+
+  // Settlement Period
+  periodStartDate DateTime
+  periodEndDate   DateTime
+
+  @@unique([vendorId, periodStartDate, periodEndDate])
+
+  // Calculated Totals (immutable after creation)
+  totalFoodAmount    Int // Sum of food amounts (gross - tax - platformFee)
+  totalTaxAmount     Int // Sum of tax amounts
+  totalPlatformFee   Int // Sum of platform fees
+  totalVendorPayable Int // Sum of netAmount (what vendor receives)
+  totalOrders        Int // Count of unique orders
+
+  // Status
+  status SettlementBatchStatus @default(CREATED)
+
+  // Audit Trail
+  createdAt       DateTime  @default(now())
+  createdByUserId String? // Admin who generated this
+  exportedAt      DateTime? // When CSV was exported
+
+  // Relations
+  ledgerEntries LedgerEntry[]
+}
+
+enum SettlementStatus {
+  UNSETTLED
+  SETTLED
+}
+
+enum SettlementBatchStatus {
+  CREATED
+  EXPORTED
 }

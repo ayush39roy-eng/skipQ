@@ -1,15 +1,32 @@
 import { prisma } from './prisma';
 
-export type AuthType = 'API_KEY' | 'SESSION' | 'ANONYMOUS';
-export type AccessResult = 'ALLOWED' | 'DENIED' | 'RATE_LIMITED' | 'CONFLICT' | 'INTERNAL_ERROR';
+export type AuthType = 'API_KEY' | 'SESSION' | 'ANONYMOUS' | 'SYSTEM';
+export type AccessResult = 'ALLOWED' | 'DENIED' | 'RATE_LIMITED' | 'CONFLICT' | 'INTERNAL_ERROR' | 'SUCCESS' | 'FAILED' | 'PARTIAL';
+export type Severity = 'INFO' | 'WARN' | 'CRITICAL' | 'SECURITY';
+export type EntityType = 'VENDOR' | 'ORDER' | 'SETTLEMENT' | 'SYSTEM' | 'USER' | 'MENU_ITEM' | 'PAYMENT' | 'REFUND';
 
 interface AuditEntry {
     action: string;
     result: AccessResult;
+    severity: Severity;
+    
+    // Context
     ip?: string;
     method: string;
+    reqId?: string;
+    
+    // Who
     authType: AuthType;
     authId?: string;
+    
+    // target
+    entityType?: EntityType;
+    entityId?: string;
+    
+    // State Changes
+    before?: any;
+    after?: any;
+    
     metadata?: Record<string, any>;
 }
 
@@ -19,22 +36,34 @@ export async function logAudit(entry: AuditEntry) {
             data: {
                 action: entry.action,
                 result: entry.result,
+                // @ts-ignore - severity added to schema but client not regenerated due to lock
+                severity: entry.severity,
+                
                 ip: entry.ip,
                 method: entry.method,
+                reqId: entry.reqId,
+                
                 authType: entry.authType,
                 authId: entry.authId,
-                metadata: entry.metadata ? JSON.stringify(entry.metadata) : undefined,
+                
+                entityType: entry.entityType,
+                entityId: entry.entityId,
+                
+                before: entry.before ? JSON.parse(JSON.stringify(entry.before)) : undefined,
+                after: entry.after ? JSON.parse(JSON.stringify(entry.after)) : undefined,
+                
+                metadata: entry.metadata ? JSON.parse(JSON.stringify(entry.metadata)) : undefined,
             },
         });
         
-        // Also log to console for immediate visibility in standard logs
-        if (entry.result !== 'ALLOWED') {
-            console.warn(`[AUDIT] ${entry.result} - ${entry.action} by ${entry.authType}:${entry.authId || 'anonymous'}`);
+        // Console Fallback
+        const prefix = `[AUDIT:${entry.severity}]`;
+        if (entry.severity === 'CRITICAL' || entry.severity === 'SECURITY') {
+            console.warn(`${prefix} ${entry.action} (${entry.result}) by ${entry.authId || 'ANT'}`);
         } else {
-            console.log(`[AUDIT] ${entry.result} - ${entry.action} by ${entry.authType}:${entry.authId}`);
+            console.log(`${prefix} ${entry.action} (${entry.result})`);
         }
     } catch (error) {
-        // Fallback if DB logging fails - critical to not crash the request but still log
-        console.error('[AUDIT_FAILURE] Failed to write audit log:', error, entry);
+        console.error('[AUDIT_FAILURE] Failed to write audit log:', error);
     }
 }

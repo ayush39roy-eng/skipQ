@@ -252,6 +252,44 @@ export default function AdminDashboardClient({
                                                 </label>
                                             </div>
                                             
+                                            {/* Geofencing Configuration */}
+                                            <div className="border border-[rgb(var(--border))] rounded p-3 mt-3">
+                                                <label className="block text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-muted))] mb-3">Geofencing</label>
+                                                <div className="grid gap-3 sm:grid-cols-3">
+                                                    <Input 
+                                                        name="latitude" 
+                                                        label="Latitude" 
+                                                        type="number" 
+                                                        step="any"
+                                                        defaultValue={(v as any).latitude ?? ''} 
+                                                        placeholder="28.6139" 
+                                                        className="text-sm" 
+                                                    />
+                                                    <Input 
+                                                        name="longitude" 
+                                                        label="Longitude" 
+                                                        type="number" 
+                                                        step="any"
+                                                        defaultValue={(v as any).longitude ?? ''} 
+                                                        placeholder="77.2090" 
+                                                        className="text-sm" 
+                                                    />
+                                                    <Input 
+                                                        name="geofenceRadiusMeters" 
+                                                        label="Radius (meters)" 
+                                                        type="number" 
+                                                        min="1"
+                                                        max="1000"
+                                                        defaultValue={(v as any).geofenceRadiusMeters ?? 5} 
+                                                        placeholder="5" 
+                                                        className="text-sm" 
+                                                    />
+                                                </div>
+                                                <p className="text-xs text-[rgb(var(--text-muted))] mt-2">
+                                                    Orders placed within the radius will be SELF_ORDER, others will be PRE_ORDER (hidden from vendor).
+                                                </p>
+                                            </div>
+                                            
                                             <div className="border border-[rgb(var(--border))] rounded p-3">
                                                  <label className="block text-xs font-semibold uppercase tracking-wider text-[rgb(var(--text-muted))] mb-2">Vendor Mode</label>
                                                  <div className="flex gap-4">
@@ -331,7 +369,12 @@ export default function AdminDashboardClient({
                                         )}
                                         <div className="flex-1">
                                             <h3 className="text-xl font-bold">{canteen.name}</h3>
-                                            <p className="text-sm text-[rgb(var(--text-muted))] mb-4">📍 {canteen.location}</p>
+                                            <p className="text-sm text-[rgb(var(--text-muted))]">📍 {canteen.location}</p>
+                                            <div className="mt-2 mb-4">
+                                                <Badge variant="default" className="text-xs">
+                                                    {(canteen as any).vendor?.name || 'No Vendor'}
+                                                </Badge>
+                                            </div>
                                             <Link href={`/admin/canteen/${canteen.id}`}>
                                                 <FormSubmitButton size="sm" className="w-full sm:w-auto">
                                                     Manage Canteen →

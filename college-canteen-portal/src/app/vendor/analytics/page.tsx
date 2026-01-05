@@ -45,7 +45,8 @@ export default async function VendorAnalyticsPage() {
     const orders = await prisma.order.findMany({
         where: {
             vendorId,
-            status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] }
+            status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] },
+            orderType: 'SELF_ORDER' // GEOFENCING: Analytics only for on-site orders
         },
         select: {
             id: true,

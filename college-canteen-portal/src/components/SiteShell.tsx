@@ -27,7 +27,7 @@ export default function SiteShell({
   const pathname = usePathname()
   
   // HIDE Header/Footer on specific "App" routes like Terminal or Vendor Portal
-  const isAppRoute = pathname?.startsWith('/vendor') || pathname?.startsWith('/terminal')
+  const isAppRoute = pathname?.startsWith('/vendor') || pathname?.startsWith('/terminal') || pathname?.startsWith('/admin')
 
   if (isAppRoute) {
     return <main className="min-h-screen w-full bg-[#FFF8F0]">{children}</main>

@@ -16,7 +16,8 @@ export default async function KDSPage() {
       vendorId: session.user.vendorId,
       status: {
         in: ['ACCEPTED', 'PENDING', 'PREPARING', 'PAID', 'READY']
-      }
+      },
+      orderType: 'SELF_ORDER' // GEOFENCING: KDS only shows on-site orders
     },
     select: {
       id: true,

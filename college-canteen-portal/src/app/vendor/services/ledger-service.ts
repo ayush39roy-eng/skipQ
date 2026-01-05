@@ -14,6 +14,9 @@ export const LedgerService = {
       taxCents: number
       commissionCents: number
       vendorTakeCents: number
+      orderType: string // 'SELF_ORDER' or 'PRE_ORDER'
+      platformFeeRate: number // e.g., 0.015 or 0.03
+      platformFeeAmount: number // Fee amount in cents
       payment: {
         provider: string
       } | null
@@ -43,6 +46,10 @@ export const LedgerService = {
         platformFee: order.commissionCents,
         netAmount: order.vendorTakeCents,
         
+        // Order Type & Fee Tracking (Audit Trail)
+        orderType: order.orderType,
+        platformFeeRate: order.platformFeeRate,
+        
         description: `Order Sale #${order.id.slice(-4)}`
       }
     })
@@ -51,50 +58,91 @@ export const LedgerService = {
   },
 
   /**
-   * Records a REFUND as a new dictionary entry (Negative values).
+   * Records a REFUND as a new ledger entry (Negative values).
    * Does NOT modify the original entry.
+   * 
+   * Supports both full and partial refunds with proportional breakdown.
    */
   async recordRefund(
     tx: Prisma.TransactionClient,
-    originalOrderId: string,
-    refundAmountCents: number,
-    reason: string = 'REFUND'
+    params: {
+      originalOrderId: string
+      refundAmountCents: number  // Can be partial or full
+      reason: string
+      orderType?: string  // Track in refund entry for audit
+      platformFeeRate?: number  // Snapshot rate for audit
+    }
   ) {
-    // 1. Fetch Original Order to calculate pro-rata tax/fee reversals if partial
-    // For simplicity, assuming full refund or direct amount input.
-    // If partial refund, we must decide how much tax/fee to reverse.
-    
-    // FETCH ORIGINAL LEDGER ENTRY
+    // 1. Fetch Original Order to calculate pro-rata reversals
     const originalEntry = await tx.ledgerEntry.findFirst({
-        where: { orderId: originalOrderId, type: 'SALE' }
+        where: { orderId: params.originalOrderId, type: 'SALE' }
     })
     
-    if (!originalEntry) throw new Error('Original sale entry not found for refund')
+    if (!originalEntry) {
+      throw new Error('Original sale entry not found for refund')
+    }
 
-    // Ratio for partial usage
-    const ratio = refundAmountCents / originalEntry.grossAmount
+    // 2. Calculate proportional breakdown
+    const ratio = params.refundAmountCents / originalEntry.grossAmount
     
+    // Calculate each component proportionally
+    const refundFood = Math.round((originalEntry.grossAmount - originalEntry.taxAmount - originalEntry.platformFee) * ratio)
     const refundTax = Math.round(originalEntry.taxAmount * ratio)
-    const refundFee = Math.round(originalEntry.platformFee * ratio)
+    const refundPlatformFee = Math.round(originalEntry.platformFee * ratio)
     const refundNet = Math.round(originalEntry.netAmount * ratio)
+    
+    // 3. Handle rounding edge cases - ensure sum equals requested refund
+    const calculatedTotal = refundFood + refundTax + refundPlatformFee
+    const adjustment = params.refundAmountCents - calculatedTotal
+    
+    // Apply any rounding adjustment to food portion (most flexible component)
+    const adjustedRefundFood = refundFood + adjustment
+    
+    console.log('[LEDGER] Refund breakdown:', {
+      originalGross: originalEntry.grossAmount,
+      refundAmount: params.refundAmountCents,
+      ratio,
+      components: {
+        food: adjustedRefundFood,
+        tax: refundTax,
+        platformFee: refundPlatformFee,
+        net: refundNet
+      },
+      roundingAdjustment: adjustment
+    })
 
-    // 2. Create REFUND Entry (Negative)
+    // 4. Create REFUND Entry (Negative)
     await tx.ledgerEntry.create({
         data: {
             vendorId: originalEntry.vendorId,
-            orderId: originalOrderId,
-            referenceEntryId: originalEntry.id, // GAP 2 Fix
+            orderId: params.originalOrderId,
+            referenceEntryId: originalEntry.id, // Link to original sale
             type: 'REFUND',
             paymentMode: originalEntry.paymentMode,
             
-            grossAmount: -refundAmountCents,
+            // Negative values reverse the sale
+            grossAmount: -params.refundAmountCents,
             taxAmount: -refundTax,
-            platformFee: -refundFee,
+            platformFee: -refundPlatformFee,
             netAmount: -refundNet,
             
-            description: `Refund: ${reason}`
+            // Order Type & Fee Tracking (for audit trail)
+            orderType: params.orderType || originalEntry.orderType,
+            platformFeeRate: params.platformFeeRate || originalEntry.platformFeeRate,
+            
+            description: `Refund: ${params.reason} (${ratio === 1 ? 'Full' : 'Partial - ' + (ratio * 100).toFixed(1) + '%'})`
         }
     })
+    
+    return {
+      refundedAmount: params.refundAmountCents,
+      breakdown: {
+        food: adjustedRefundFood,
+        tax: refundTax,
+        platformFee: refundPlatformFee
+      },
+      ratio
+    }
   },
 
   /**

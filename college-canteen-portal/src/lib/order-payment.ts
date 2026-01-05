@@ -163,6 +163,25 @@ export async function markOrderAsPaid(orderId: string) {
       data: { status: 'PAID' }
     })
 
+    // Create ledger entry for this sale
+    if (order.vendorId && order.payment) {
+      await tx.ledgerEntry.create({
+        data: {
+          vendorId: order.vendorId,
+          orderId: order.id,
+          type: 'SALE',
+          paymentMode: order.payment.provider || 'razorpay',
+          grossAmount: order.totalCents,
+          taxAmount: order.taxCents,
+          platformFee: order.commissionCents,
+          netAmount: order.vendorTakeCents,
+          orderType: order.orderType || 'SELF_ORDER',
+          platformFeeRate: order.platformFeeRate || 0.015,
+          settlementStatus: 'UNSETTLED'
+        }
+      })
+    }
+
     // Fetch the updated order (within transaction to ensure consistency)
     const updatedOrder = await tx.order.findUnique({
       where: { id: orderId },

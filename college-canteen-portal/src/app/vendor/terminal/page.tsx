@@ -88,7 +88,8 @@ export default async function TerminalPage() {
     prisma.order.findMany({
       where: {
         vendorId: vendorId,
-        status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] }
+        status: { in: ['PENDING', 'ACCEPTED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'] },
+        orderType: 'SELF_ORDER' // GEOFENCING: Only show orders placed within geofence
       },
       select: {
         id: true,
@@ -130,7 +131,8 @@ export default async function TerminalPage() {
       where: {
         vendorId: vendorId,
         createdAt: { gte: new Date(new Date().setHours(0,0,0,0)) }, // Since Midnight
-        status: { not: 'CANCELLED' }
+        status: { not: 'CANCELLED' },
+        orderType: 'SELF_ORDER' // GEOFENCING: Only analytics for on-site orders
       },
       include: {
         items: { include: { menuItem: true } }

@@ -1,214 +1,219 @@
-import { prisma } from '@/lib/prisma'
-import { VendorMode } from '@/lib/vendor-mode'
-import { requireRole } from '@/lib/session'
-import { revalidatePath } from 'next/cache'
-import bcrypt from 'bcryptjs'
-import AdminDashboardClient from './AdminDashboardClient'
+'use client'
 
-export default async function AdminPage() {
-  const session = await requireRole(['ADMIN'])
-  if (!session) return <p>Unauthorized</p>
+import { useState, useEffect } from 'react'
+import { StatCard } from '@/components/admin/StatCard'
+import { StatusBadge } from '@/components/admin/StatusBadge'
+import { 
+  ShoppingBag, 
+  IndianRupee, 
+  CreditCard, 
+  AlertTriangle,
+  CheckCircle,
+  Info,
+  ArrowRight,
+  FileText,
+  Activity,
+  Banknote,
+  Search
+} from 'lucide-react'
+import Link from 'next/link'
+import { cn } from '@/lib/utils'
 
-  const [vendors, vendorUsers, stats, recentOrders, canteens, allOrders] = await Promise.all([
-    // @ts-ignore
-    prisma.vendor.findMany({ select: { id: true, name: true, phone: true, whatsappEnabled: true, mode: true } }),
-    prisma.user.findMany({
-      where: { role: 'VENDOR' },
-      select: { id: true, name: true, email: true, vendor: { select: { id: true, name: true } } }
-    }),
-    prisma.order.aggregate({
-      where: { status: { notIn: ['PENDING', 'CANCELLED'] } },
-      _sum: { totalCents: true, commissionCents: true, vendorTakeCents: true },
-      _count: true
-    }),
-    prisma.order.findMany({ take: 10, orderBy: { createdAt: 'desc' }, include: { canteen: true, user: true } }),
-    prisma.canteen.findMany({ select: { id: true, name: true, location: true, imageUrl: true } }),
-    // Fetch all completed orders for charts and top canteens calculation
-    prisma.order.findMany({
-      where: { status: { in: ['PAID', 'CONFIRMED', 'COMPLETED'] } },
-      select: { id: true, totalCents: true, canteenId: true, createdAt: true }
-    })
-  ])
+/**
+ * Admin Overview Dashboard
+ * 
+ * Cockpit view: System health, alerts, and key metrics.
+ * Focus on alerts, not visuals.
+ */
 
-  // Calculate Top Canteens
-  const canteenStats = new Map<string, { revenue: number; orders: number }>()
-  allOrders.forEach(o => {
-    const current = canteenStats.get(o.canteenId) || { revenue: 0, orders: 0 }
-    canteenStats.set(o.canteenId, {
-      revenue: current.revenue + o.totalCents,
-      orders: current.orders + 1
-    })
-  })
+type DashboardMetrics = {
+  ordersToday: number
+  revenueToday: number
+  pendingLiabilities: number
+  failedPayments: number
+  pendingRefunds: number
+  pendingSettlements: number
+}
 
-  const topCanteens = canteens
-    .map(c => ({
-      ...c,
-      stats: canteenStats.get(c.id) || { revenue: 0, orders: 0 }
-    }))
-    .sort((a, b) => b.stats.revenue - a.stats.revenue)
-    .slice(0, 5)
+type Alert = {
+  id: string
+  type: 'error' | 'warning' | 'info'
+  message: string
+  timestamp: string
+}
 
-  // Server Actions
-  async function createVendor(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const name = String(formData.get('vendorName') || '').trim()
-    if (!name) return
-    const phone = String(formData.get('vendorPhone') || '').trim()
-    const whatsappEnabled = Boolean(formData.get('vendorWhatsApp'))
-    await prisma.vendor.create({ data: { name, phone: phone || null, whatsappEnabled } })
-    revalidatePath('/admin')
-  }
+export default function AdminOverview() {
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [alerts, setAlerts] = useState<Alert[]>([])
+  const [loading, setLoading] = useState(true)
 
-  async function updateVendor(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const id = String(formData.get('id'))
-    const phone = String(formData.get('phone') || '')
-    const whatsappEnabled = formData.get('whatsappEnabled') ? true : false
-    await prisma.vendor.update({ where: { id }, data: { phone: phone || null, whatsappEnabled } })
-    revalidatePath('/admin')
-  }
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
 
-  async function updateVendorCredentials(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const vendorId = String(formData.get('vendorAccountVendorId') || '')
-    const name = String(formData.get('vendorAccountName') || '').trim()
-    const email = String(formData.get('vendorAccountEmail') || '').trim().toLowerCase()
-    const password = String(formData.get('vendorAccountPassword') || '')
-    if (!vendorId || !name || !email || !password) return
-    const existing = await prisma.user.findUnique({ where: { email } })
-    if (existing && existing.role !== 'VENDOR') return
-    const passwordHash = await bcrypt.hash(password, 10)
-    if (existing) {
-      await prisma.user.update({ where: { id: existing.id }, data: { name, passwordHash, vendorId, role: 'VENDOR' } })
-    } else {
-      await prisma.user.create({ data: { name, email, passwordHash, role: 'VENDOR', vendorId } })
-    }
-    revalidatePath('/admin')
-  }
-
-  async function createCanteen(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const name = String(formData.get('name') || '')
-    const location = String(formData.get('location') || '')
-    const vendorId = String(formData.get('vendorId') || '')
-    if (!name || !location || !vendorId) return
-    await prisma.canteen.create({ data: { name, location, vendorId } })
-    revalidatePath('/admin')
-  }
-
-  async function updateVendorMode(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const vendorId = String(formData.get('vendorId'))
-    const mode = String(formData.get('mode')) as VendorMode
-    
-    if (!vendorId || !mode) return
-    
-    // Get old mode for logging
-    // @ts-ignore
-    // @ts-ignore
-    const vendor = (await prisma.vendor.findUnique({ where: { id: vendorId }, select: { mode: true } })) as any
-    if (!vendor) return
-
-    if (vendor.mode === mode) return
-
-    await prisma.$transaction([
-        // @ts-ignore
-        prisma.vendor.update({
-            where: { id: vendorId },
-            data: { mode }
-        }),
-        // @ts-ignore
-        prisma.adminActionLog.create({
-            data: {
-                adminId: session.user.id,
-                vendorId: vendorId,
-                actionType: 'VENDOR_MODE_CHANGE',
-                oldMode: vendor.mode,
-                newMode: mode
-            }
-        })
-    ])
-
-    revalidatePath('/admin')
-    revalidatePath('/vendor')
-    revalidatePath('/vendor/terminal')
-    console.log(`[ADMIN] Updated Vendor ${vendorId} to mode ${mode}`)
-  }
-
-  async function deleteVendor(formData: FormData) {
-    'use server'
-    const session = await requireRole(['ADMIN'])
-    if (!session) return
-    const vendorId = String(formData.get('vendorId'))
-    if (!vendorId) return
-
+  const fetchDashboardData = async () => {
     try {
-        await prisma.$transaction(async (tx) => {
-            // 1. Delete Linked Users
-            await tx.user.deleteMany({ where: { vendorId } })
-            
-            // 2. Delete Inventory & Staff
-            await tx.inventoryItem.deleteMany({ where: { vendorId } })
-            await tx.staff.deleteMany({ where: { vendorId } })
-            // @ts-ignore
-            await tx.ledgerEntry.deleteMany({ where: { vendorId } })
-            
-            // 3. Delete Canteens (and Cascade)
-            const canteens = await tx.canteen.findMany({ where: { vendorId } })
-            for (const c of canteens) {
-                await tx.menuItem.deleteMany({ where: { canteenId: c.id } })
-                await tx.menuSection.deleteMany({ where: { canteenId: c.id } })
-                await tx.shift.deleteMany({ where: { canteenId: c.id } })
-                // Orders? If we want full cleanup.
-                await tx.order.deleteMany({ where: { canteenId: c.id } })
-            }
-            await tx.canteen.deleteMany({ where: { vendorId } })
-
-            // 4. Delete Vendor
-            await tx.vendor.delete({ where: { id: vendorId } })
-        })
-        revalidatePath('/admin')
+      const response = await fetch('/api/admin/dashboard')
+      const data = await response.json()
+      
+      if (response.ok) {
+        setMetrics(data.metrics)
+        setAlerts(data.alerts || [])
+      } else {
+        console.error('Failed to fetch dashboard:', data)
+      }
     } catch (error) {
-        console.error('Delete Vendor Error:', error)
+      console.error('Failed to fetch dashboard:', error)
+    } finally {
+      setLoading(false)
     }
+  }
+
+  if (loading || !metrics) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-900"></div>
+      </div>
+    )
   }
 
   return (
-    <AdminDashboardClient
-      stats={{
-        totalSales: stats._sum.totalCents ?? 0,
-        commission: stats._sum.commissionCents ?? 0,
-        totalOrders: stats._count
-      }}
-      activeCanteensCount={canteens.length}
-      orders={allOrders.map(o => ({
-        id: o.id,
-        totalCents: o.totalCents,
-        createdAt: o.createdAt.toISOString()
-      }))}
-      recentOrders={recentOrders}
-      topCanteens={topCanteens}
-      vendors={vendors}
-      vendorUsers={vendorUsers}
-      canteens={canteens}
-      actions={{
-        createVendor,
-        updateVendor,
-        updateVendorCredentials,
-        createCanteen,
-        updateVendorMode,
-        deleteVendor
-      }}
-    />
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Overview</h1>
+        <p className="text-sm text-slate-500 mt-1">System health and key metrics</p>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatCard
+          title="Orders Today"
+          value={metrics.ordersToday}
+          subtitle="Total volume"
+          icon={<ShoppingBag className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Revenue Today"
+          value={`₹${(metrics.revenueToday / 100).toFixed(2)}`}
+          subtitle="Platform fees collected"
+          icon={<IndianRupee className="h-5 w-5" />}
+          trend={{ value: 'Real-time', positive: true, neutral: true }}
+        />
+        <StatCard
+          title="Pending Liabilities"
+          value={`₹${(metrics.pendingLiabilities / 100).toFixed(2)}`}
+          subtitle="Unsettled vendor balance"
+          icon={<CreditCard className="h-5 w-5" />}
+        />
+        <StatCard
+          title="Failed Payments"
+          value={metrics.failedPayments}
+          subtitle="Last 24 hours"
+          alert={metrics.failedPayments > 0}
+          icon={<AlertTriangle className="h-5 w-5" />}
+          trend={metrics.failedPayments > 0 ? { value: 'Attention needed', positive: false } : undefined}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Alerts Section */}
+        <div className="lg:col-span-2">
+          <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <Activity className="h-4 w-4 text-slate-500" />
+            Alerts & Action Items
+          </h2>
+          
+          <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+            {alerts.length === 0 ? (
+              <div className="p-12 text-center text-slate-500 flex flex-col items-center">
+                <CheckCircle className="h-8 w-8 text-emerald-500 mb-3" />
+                <p>No active alerts. System is healthy.</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100">
+                {alerts.map((alert) => (
+                  <div key={alert.id} className="p-4 flex items-start gap-4 hover:bg-slate-50 transition-colors">
+                    <div className={cn(
+                      "mt-0.5 rounded-full p-1",
+                      alert.type === 'error' ? "text-rose-600 bg-rose-50" :
+                      alert.type === 'warning' ? "text-amber-600 bg-amber-50" :
+                      "text-blue-600 bg-blue-50"
+                    )}>
+                      {alert.type === 'error' ? <AlertTriangle className="h-4 w-4" /> :
+                       alert.type === 'warning' ? <AlertTriangle className="h-4 w-4" /> :
+                       <Info className="h-4 w-4" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-slate-900">{alert.message}</p>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {new Date(alert.timestamp).toLocaleString()}
+                      </p>
+                    </div>
+                    <StatusBadge status={alert.type} variant={alert.type as any} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div>
+          <h2 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+             <Search className="h-4 w-4 text-slate-500" />
+             Quick Actions
+          </h2>
+          <div className="grid gap-3">
+            <Link 
+              href="/admin/settlements" 
+              className="group flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
+                  <Banknote className="h-5 w-5 text-slate-600" />
+                </div>
+                <div>
+                  <div className="font-medium text-slate-900">Generate Settlement</div>
+                  <div className="text-xs text-slate-500">Run payouts for vendors</div>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            <Link 
+              href="/admin/reports" 
+              className="group flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
+                  <FileText className="h-5 w-5 text-slate-600" />
+                </div>
+                <div>
+                  <div className="font-medium text-slate-900">Financial Reports</div>
+                  <div className="text-xs text-slate-500">View revenue & liablities</div>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+
+            <Link 
+              href="/admin/reconciliation" 
+              className="group flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:shadow-sm transition-all"
+            >
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-slate-100 rounded-lg group-hover:bg-slate-200 transition-colors">
+                  <Activity className="h-5 w-5 text-slate-600" />
+                </div>
+                <div>
+                  <div className="font-medium text-slate-900">Run Reconciliation</div>
+                  <div className="text-xs text-slate-500">Verify ledger integrity</div>
+                </div>
+              </div>
+              <ArrowRight className="h-4 w-4 text-slate-400 group-hover:text-slate-600 group-hover:translate-x-0.5 transition-all" />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }

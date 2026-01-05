@@ -47,7 +47,11 @@ export default async function VendorHistoryPage() {
   }
 
   const orders = await prisma.order.findMany({
-    where: { vendorId, status: { in: ['COMPLETED', 'CANCELLED'] } },
+    where: { 
+      vendorId, 
+      status: { in: ['COMPLETED', 'CANCELLED'] },
+      orderType: 'SELF_ORDER' // GEOFENCING: History only shows on-site orders
+    },
     include: {
       canteen: true,
       user: true,
