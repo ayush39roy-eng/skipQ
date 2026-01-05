@@ -75,6 +75,7 @@ async function notifyPaid(order: OrderWithRelations) {
       void logAudit({
         action: 'WHATSAPP_NOTIFICATION_SENT',
         result: 'ALLOWED',
+        severity: 'INFO',
         method: 'INTERNAL',
         authType: 'ANONYMOUS',
         metadata: { orderId: order.id, to, event: 'order-paid' }
@@ -89,6 +90,7 @@ async function notifyPaid(order: OrderWithRelations) {
       void logAudit({
         action: 'WHATSAPP_NOTIFICATION_FAILED',
         result: 'INTERNAL_ERROR',
+        severity: 'WARN',
         method: 'INTERNAL',
         authType: 'ANONYMOUS',
         metadata: { 
@@ -207,6 +209,7 @@ export async function markOrderAsPaid(orderId: string) {
       void logAudit({
         action: 'PAYMENT_NOTIFICATION_FAILED',
         result: 'INTERNAL_ERROR',
+        severity: 'WARN',
         method: 'INTERNAL',
         authType: 'ANONYMOUS',
         metadata: { orderId, error: err instanceof Error ? err.message : String(err) }
