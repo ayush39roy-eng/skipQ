@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         }
 
         if (!isAuthenticated) {
-            await logAudit({ action: 'TRIGGER_TRAINING', result: 'DENIED', ip, method, authType, authId });
+            await logAudit({ action: 'TRIGGER_TRAINING', result: 'DENIED', severity: 'SECURITY', ip, method, authType, authId });
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         }
 
@@ -63,12 +63,12 @@ export async function POST(req: Request) {
             const status = lock.reason === 'CONFLICT' ? 409 : 429;
             const msg = lock.reason === 'CONFLICT' ? 'Training already in progress' : 'Rate limit exceeded (60s cooldown)';
             
-            await logAudit({ action: 'TRIGGER_TRAINING', result, ip, method, authType, authId });
+            await logAudit({ action: 'TRIGGER_TRAINING', result, severity: 'WARN', ip, method, authType, authId });
             return NextResponse.json({ error: msg }, { status });
         }
 
         // --- 3. EXECUTION ---
-        await logAudit({ action: 'TRIGGER_TRAINING', result: 'ALLOWED', ip, method, authType, authId, metadata: { jobId: lock.jobId } });
+        await logAudit({ action: 'TRIGGER_TRAINING', result: 'ALLOWED', severity: 'INFO', ip, method, authType, authId, metadata: { jobId: lock.jobId } });
 
         // We run this *synchronously* for now as Next.js serverless limits bg tasks, 
         // but in a real worker setup this would push to a queue.
