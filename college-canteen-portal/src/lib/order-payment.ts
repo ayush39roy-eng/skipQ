@@ -178,7 +178,11 @@ export async function markOrderAsPaid(orderId: string) {
           platformFee: order.commissionCents,
           netAmount: order.vendorTakeCents,
           orderType: order.orderType || 'SELF_ORDER',
-          platformFeeRate: order.platformFeeRate || 0.015,
+          platformFeeRate: order.platformFeeRate ?? (
+            order.orderType === 'PRE_ORDER' 
+              ? (order.canteen?.vendor?.preOrderFeeRate ?? 0.03) 
+              : (order.canteen?.vendor?.selfOrderFeeRate ?? 0.015)
+          ),
           settlementStatus: 'UNSETTLED'
         }
       })

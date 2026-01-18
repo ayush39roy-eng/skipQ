@@ -7,8 +7,8 @@ import SiteShell from '@/components/SiteShell'
 export const metadata = {
     title: 'SkipQ',
     icons: {
-        icon: '/skipq-logo.png',
-        apple: '/skipq-logo.png',
+        icon: '/brand-logo.png',
+        apple: '/brand-logo.png',
     },
 }
 

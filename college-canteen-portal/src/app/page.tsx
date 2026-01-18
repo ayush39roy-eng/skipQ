@@ -45,9 +45,9 @@ export default async function HomePage() {
   ].filter(link => !link.requireRole || link.requireRole === session?.role)
 
   return (
-    <div className="space-y-16 py-8">
+    <div className="space-y-8 py-4 sm:space-y-16 sm:py-8">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[2rem] border-4 border-black bg-[#FF9F1C] px-6 py-16 shadow-[8px_8px_0px_0px_#000000] sm:px-12 sm:py-20 relative text-black group">
+      <section className="relative overflow-hidden rounded-[1.5rem] sm:rounded-[2rem] border-4 border-black bg-[#FF9F1C] px-4 py-10 shadow-[4px_4px_0px_0px_#000000] sm:shadow-[8px_8px_0px_0px_#000000] sm:px-12 sm:py-20 relative text-black group">
         
         {/* Abstract Shapes & "Spark" Elements */}
         {/* Retro Grid Background */}
@@ -72,12 +72,12 @@ export default async function HomePage() {
         <div className="relative flex flex-col items-center gap-8 text-center z-10">
           <div className="max-w-4xl space-y-6">
             <div className="space-y-4">
-              <div className="inline-block bg-black text-white px-6 py-2 text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[4px_4px_0px_white] animate-pulse-slow border-2 border-white">
+              <div className="inline-block bg-black text-white px-3 py-1 text-[10px] sm:px-6 sm:py-2 sm:text-sm font-black uppercase tracking-[0.2em] transform -rotate-2 shadow-[2px_2px_0px_white] sm:shadow-[4px_4px_0px_white] animate-pulse-slow border-2 border-white">
                 Level 1: The Canteen
               </div>
-              <h1 className="text-6xl font-black tracking-tighter sm:text-8xl uppercase leading-none drop-shadow-[4px_4px_0px_rgba(255,255,255,0.5)]">
+              <h1 className="text-4xl sm:text-6xl md:text-8xl font-black tracking-tighter uppercase leading-none drop-shadow-[2px_2px_0px_rgba(255,255,255,0.5)] sm:drop-shadow-[4px_4px_0px_rgba(255,255,255,0.5)]">
                 Hungry?<br/>
-                <span className="text-white text-stroke-3 drop-shadow-[4px_4px_0px_#000] relative inline-block">
+                <span className="text-white text-stroke-1 sm:text-stroke-3 drop-shadow-[2px_2px_0px_#000] sm:drop-shadow-[4px_4px_0px_#000] relative inline-block">
                     Skip The Queue.
                     {/* Underline Squiggle */}
                     <svg className="absolute -bottom-4 left-0 w-full h-4 text-black" viewBox="0 0 100 10" preserveAspectRatio="none">
@@ -86,17 +86,17 @@ export default async function HomePage() {
                 </span>
               </h1>
             </div>
-            <p className="text-2xl font-bold max-w-2xl mx-auto opacity-90 bg-white/20 p-2 rounded-lg border-2 border-black/10 backdrop-blur-sm">
+            <p className="text-lg sm:text-2xl font-bold max-w-2xl mx-auto opacity-90 bg-white/20 p-2 rounded-lg border-2 border-black/10 backdrop-blur-sm">
               Pre-order from your phone, beat the rush, and <span className="text-[#EF476F] underline decoration-wavy decoration-2 underline-offset-8 font-black [text-decoration-skip-ink:none]">level up</span> your lunch break.
             </p>
 
             <div className="flex flex-wrap justify-center gap-6 pt-6">
-              <Link href="/canteens" className="text-xl px-10 py-5 bg-white border-4 border-black font-black uppercase tracking-wide shadow-[8px_8px_0px_0px_#000000] hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[8px] active:translate-y-[8px] active:shadow-none transition-all rounded-2xl flex items-center gap-2 group/btn">
+              <Link href="/canteens" className="text-base px-6 py-3 sm:text-xl sm:px-10 sm:py-5 bg-white border-4 border-black font-black uppercase tracking-wide shadow-[4px_4px_0px_0px_#000000] sm:shadow-[8px_8px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] sm:hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] sm:hover:translate-x-[4px] sm:hover:translate-y-[4px] active:translate-x-[4px] active:translate-y-[4px] sm:active:translate-x-[8px] sm:active:translate-y-[8px] active:shadow-none transition-all rounded-xl sm:rounded-2xl flex items-center gap-2 group/btn">
                 <span>Start Ordering</span>
-                <Zap className="w-6 h-6 group-hover/btn:fill-black transition-colors" />
+                <Zap className="w-5 h-5 sm:w-6 sm:h-6 group-hover/btn:fill-black transition-colors" />
               </Link>
               {!session?.role && (
-                 <Link href="/register" className="text-xl px-10 py-5 bg-[#06D6A0] text-black border-4 border-black font-black uppercase tracking-wide shadow-[8px_8px_0px_0px_#000000] hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[4px] hover:translate-y-[4px] active:translate-x-[8px] active:translate-y-[8px] active:shadow-none transition-all rounded-2xl">
+                 <Link href="/register" className="text-base px-6 py-3 sm:text-xl sm:px-10 sm:py-5 bg-[#06D6A0] text-black border-4 border-black font-black uppercase tracking-wide shadow-[4px_4px_0px_0px_#000000] sm:shadow-[8px_8px_0px_0px_#000000] hover:shadow-[2px_2px_0px_0px_#000000] sm:hover:shadow-[4px_4px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] sm:hover:translate-x-[4px] sm:hover:translate-y-[4px] active:translate-x-[4px] active:translate-y-[4px] sm:active:translate-x-[8px] sm:active:translate-y-[8px] active:shadow-none transition-all rounded-xl sm:rounded-2xl">
                   Join Game
                 </Link>
               )}

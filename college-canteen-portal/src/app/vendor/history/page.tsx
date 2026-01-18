@@ -1,117 +1,147 @@
-import { prisma } from '@/lib/prisma'
-import { requireRole } from '@/lib/session'
-import { Card } from '@/components/ui/Card'
-import { Badge } from '@/components/ui/Badge'
+'use client'
+
+import { useEffect, useState } from 'react'
+import Link from 'next/link'
+import { ArrowLeft, RefreshCw, Calendar, Clock, Receipt, MoreHorizontal } from 'lucide-react'
 import { getTicketNumber } from '@/lib/order-ticket'
 
-const formatCurrency = (cents: number) => `₹${(cents / 100).toFixed(2)}`
-
-const formatRelativeTime = (date: Date) => {
-  const diffMs = Date.now() - date.getTime()
-  const minutes = Math.round(diffMs / 60000)
-  if (minutes < 1) return 'just now'
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.round(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.round(hours / 24)
-  return `${days}d ago`
-}
-
-const statusVariant = (status: string): 'default' | 'success' | 'warning' | 'danger' | 'info' => {
-  switch (status) {
-    case 'CONFIRMED':
-    case 'COMPLETED':
-    case 'PAID':
-      return 'success'
-    case 'PENDING':
-      return 'warning'
-    case 'CANCELLED':
-      return 'danger'
-    default:
-      return 'info'
-  }
-}
-
-
-export default async function VendorHistoryPage() {
-  const session = await requireRole(['VENDOR'])
-  if (!session) return <p>Unauthorized</p>
-  const vendorId = session.user.vendorId
-  if (!vendorId) {
+// Reusing VendorBadge from Dashboard (inline for simplicity or import if refactored)
+function HistoryBadge({ status }: { status: string }) {
+    const styles = {
+        COMPLETED: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+        READY: 'bg-blue-50 text-blue-700 border-blue-100',
+        CONFIRMED: 'bg-amber-50 text-amber-700 border-amber-100',
+        CANCELLED: 'bg-rose-50 text-rose-700 border-rose-100',
+        PENDING: 'bg-gray-50 text-gray-600 border-gray-100'
+    }
+    const style = styles[status as keyof typeof styles] || styles.PENDING
     return (
-      <Card className="mt-10 text-center text-[rgb(var(--text))]">
-        <h1 className="text-2xl font-semibold">No vendor linked</h1>
-        <p className="mt-2 text-muted">Ask an admin to associate your account with a vendor profile to view orders.</p>
-      </Card>
+        <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-medium border ${style}`}>
+            {status}
+        </span>
     )
-  }
+}
 
-  const orders = await prisma.order.findMany({
-    where: { 
-      vendorId, 
-      status: { in: ['COMPLETED', 'CANCELLED'] },
-      orderType: 'SELF_ORDER' // GEOFENCING: History only shows on-site orders
-    },
-    include: {
-      canteen: true,
-      user: true,
-      items: { include: { menuItem: true } }
-    },
-    orderBy: { createdAt: 'desc' },
-    take: 100
-  })
+type HistoryOrder = {
+    id: string
+    date: string
+    status: string
+    totalValue: number
+    items: Array<{ name: string; quantity: number; unitPrice: number }>
+}
 
-  return (
-    <div className="space-y-6 text-[rgb(var(--text))]">
-      <div className="space-y-1">
-        <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">Vendor history</p>
-        <h1 className="text-3xl font-semibold">Last {orders.length} orders</h1>
-        <p className="text-sm text-[rgb(var(--text-muted))]">Download payouts or audit prep promises here.</p>
-      </div>
-      <div className="space-y-4">
-        {orders.length === 0 && (
-          <Card className="text-center text-sm text-[rgb(var(--text-muted))]">
-            No completed or cancelled tickets yet. Wrap a few orders to see them here.
-          </Card>
-        )}
-        {orders.map((order) => (
-          <Card key={order.id} className="flex flex-col gap-4 border border-[rgb(var(--border))] bg-[rgb(var(--surface))] p-4">
-            <div className="flex items-start justify-between gap-4">
-              <div className="min-w-0">
-                <p className="text-xs uppercase tracking-[0.3em] text-[rgb(var(--text-muted))]">{order.canteen.name}</p>
-                <p className="text-base font-semibold">#{getTicketNumber(order.id)}</p>
-                <p className="text-xs text-[rgb(var(--text-muted))]">Placed {formatRelativeTime(order.createdAt)}</p>
-                {order.user?.name && <p className="text-sm text-[rgb(var(--text-muted))] mt-1">Customer: {order.user.name}</p>}
-              </div>
-              <div className="text-left sm:ml-auto sm:text-right">
-                <Badge variant={statusVariant(order.status)} className="mb-2">{order.status}</Badge>
-                <p className="text-lg font-semibold">{formatCurrency(order.totalCents)}</p>
-                <p className="text-xs text-[rgb(var(--text-muted))]">Updated {formatRelativeTime(order.updatedAt)}</p>
-              </div>
-            </div>
+export default function VendorHistoryPage() {
+    const [orders, setOrders] = useState<HistoryOrder[]>([])
+    const [loading, setLoading] = useState(true)
+    const [expandedId, setExpandedId] = useState<string | null>(null)
 
-            {/* Items list */}
-            <div className="mt-2">
-              <h4 className="text-sm font-semibold">Items</h4>
-              <ul className="mt-2 space-y-2">
-                {order.items.map((it) => (
-                  <li key={it.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium">{it.menuItem?.name || 'Unknown item'}</p>
-                      <p className="text-xs text-[rgb(var(--text-muted))]">₹{(it.priceCents / 100).toFixed(2)} × {it.quantity}</p>
+    const fetchHistory = async () => {
+        setLoading(true)
+        try {
+            const res = await fetch('/api/vendor/history')
+            if (res.ok) {
+                const data = await res.json()
+                setOrders(data.orders || [])
+            }
+        } catch (err) {
+            console.error(err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    useEffect(() => {
+        fetchHistory()
+    }, [])
+
+    const formatCurrency = (cents: number) => `₹${(cents / 100).toFixed(2)}`
+    const formatDate = (iso: string) => new Date(iso).toLocaleDateString('en-IN', {
+        day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
+    })
+
+    return (
+        <div className="min-h-screen bg-slate-50/50 pb-20 font-sans text-slate-900">
+            {/* Header */}
+            <nav className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200 shadow-sm">
+                <div className="max-w-4xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <Link href="/vendor" className="p-2 -ml-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full transition-colors">
+                            <ArrowLeft className="h-5 w-5" />
+                        </Link>
+                        <h1 className="text-lg font-bold leading-none">Order History</h1>
                     </div>
-                    <div className="text-sm font-semibold">₹{((it.priceCents * it.quantity) / 100).toFixed(2)}</div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                    <button onClick={fetchHistory} className="p-2 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-full">
+                        <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                    </button>
+                </div>
+            </nav>
 
-            {order.cookingInstructions && (
-              <p className="mt-3 text-sm text-[rgb(var(--text-muted))]">Instructions: {order.cookingInstructions}</p>
-            )}
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
+            <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
+                {orders.length === 0 && !loading && (
+                    <div className="text-center py-12">
+                        <div className="bg-slate-100 h-12 w-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <Receipt className="h-6 w-6 text-slate-400" />
+                        </div>
+                        <p className="text-slate-500 font-medium">No order history found</p>
+                    </div>
+                )}
+
+                <div className="space-y-4">
+                    {orders.map(order => (
+                        <div key={order.id} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden transition-all hover:border-slate-300">
+                            <div 
+                                className="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50"
+                                onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                            >
+                                <div className="flex items-center gap-4">
+                                     <div className="w-12 h-12 rounded-lg bg-slate-100 flex items-col flex-col items-center justify-center text-center">
+                                         <span className="text-[10px] bg-slate-200 text-slate-600 font-bold px-1 rounded-sm uppercase tracking-wide">
+                                            {getTicketNumber(order.id)}
+                                         </span>
+                                     </div>
+                                     <div>
+                                         <div className="flex items-center gap-2 mb-1">
+                                             <HistoryBadge status={order.status} />
+                                             <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                <Clock className="w-3 h-3" /> {formatDate(order.date)}
+                                             </span>
+                                         </div>
+                                         <p className="text-sm text-slate-600">
+                                             {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                                         </p>
+                                     </div>
+                                </div>
+                                
+                                <div className="text-right">
+                                    <p className="text-lg font-bold text-slate-900">{formatCurrency(order.totalValue)}</p>
+                                    <p className="text-xs text-emerald-600 font-medium">Earnings</p>
+                                </div>
+                            </div>
+
+                            {/* Details Expanded */}
+                            {expandedId === order.id && (
+                                <div className="border-t border-slate-100 bg-slate-50 p-4 animate-in slide-in-from-top-2 duration-200">
+                                    <div className="space-y-2">
+                                        {order.items.map((item, idx) => (
+                                            <div key={idx} className="flex justify-between text-sm">
+                                                <div className="flex items-center gap-3">
+                                                    <span className="font-bold text-slate-700">{item.quantity}x</span>
+                                                    <span className="text-slate-600">{item.name}</span>
+                                                </div>
+                                                <span className="text-slate-500">{formatCurrency(item.unitPrice * item.quantity)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center">
+                                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Earnings</span>
+                                       <span className="font-bold text-slate-900">{formatCurrency(order.totalValue)}</span>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </main>
+        </div>
+    )
 }

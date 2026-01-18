@@ -247,6 +247,9 @@ model Order {
   cookingInstructions String?
 
   payment       Payment?
+
+  paymentIntent PaymentIntent? @relation(fields: [paymentIntentId], references: [id])
+  paymentIntentId String?      @unique @db.ObjectId
   ledgerEntries LedgerEntry[]
 
   createdAt DateTime @default(now())
@@ -284,6 +287,30 @@ model Payment {
   paymentLink     String?
   externalOrderId String?
   paidAt          DateTime?
+}
+
+model PaymentIntent {
+  id             String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId         String   @db.ObjectId
+  canteenId      String   @db.ObjectId
+  
+  // Snapshot of what user intends to buy
+  itemsSnapshot  Json     // Array of items { menuItemId, quantity }
+  fulfillmentType String  // 'TAKEAWAY' | 'DINE_IN'
+  locationData   Json?    // { lat, lng, etc }
+  
+  status         String   @default("PENDING") // PENDING, SUCCEEDED, FAILED
+  
+  amountCents    Int      // Calculated amount to pay
+  currency       String   @default("INR")
+  paymentProviderOrderId String? // Store Razorpay Order ID for verification
+
+  // Link to resulting order (once succeeded)
+  // Link to resulting order (once succeeded)
+  order          Order?
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model Session {

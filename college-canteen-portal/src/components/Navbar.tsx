@@ -30,14 +30,15 @@ export function Navbar({ session }: NavbarProps) {
                 <div className="flex items-center gap-4">
                     <Link href="/" className="group flex items-center gap-3 transition-transform active:scale-95">
                         {/* Logo Cartridge */}
-                        <div className="flex h-12 w-12 items-center justify-center rounded-xl border-2 border-black bg-brand-primary shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all group-hover:translate-x-[-2px] group-hover:translate-y-[-2px] group-hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]">
+                        {/* Logo Cartridge - styles removed for clean look */}
+                        <div className="relative transform transition-transform group-hover:scale-105">
                             <Image
-                                src="/skipq-logo.png"
+                                src="/brand-logo.png"
                                 alt="SkipQ"
-                                width={24}
-                                height={24}
+                                width={64}
+                                height={64}
                                 priority
-                                className="h-6 w-6 object-contain brightness-0 invert" 
+                                className="h-16 w-16 object-contain" 
                             />
                         </div>
                         <div className="hidden flex-col md:flex">

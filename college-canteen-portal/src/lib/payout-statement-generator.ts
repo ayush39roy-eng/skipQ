@@ -53,7 +53,7 @@ export class PayoutStatementGenerator {
         doc.setFontSize(24);
         doc.setTextColor(0, 150, 0); // Green
         doc.setFont('helvetica', 'bold');
-        doc.text(`₹${(settlement.totalVendorPayable / 100).toFixed(2)}`, 25, startY + 28);
+        doc.text(`Rs. ${(settlement.totalVendorPayable / 100).toFixed(2)}`, 25, startY + 28);
 
         // Secondary Metrics
         doc.setFontSize(10);
@@ -61,10 +61,10 @@ export class PayoutStatementGenerator {
         doc.setFont('helvetica', 'normal');
         
         const metricsX = 120;
-        doc.text(`Period Food Sales: ₹${(settlement.totalFoodAmount / 100).toFixed(2)}`, metricsX, startY + 12);
+        doc.text(`Period Food Sales: Rs. ${(settlement.totalFoodAmount / 100).toFixed(2)}`, metricsX, startY + 12);
         doc.text(`Total Orders: ${settlement.totalOrders}`, metricsX, startY + 20);
         doc.setTextColor(150);
-        doc.text('Platform Fees Deducted: ₹0.00', metricsX, startY + 28);
+        doc.text('Platform Fees Deducted: Rs. 0.00', metricsX, startY + 28);
         
         doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
@@ -100,22 +100,47 @@ export class PayoutStatementGenerator {
                 entry.orderId?.substring(18) || '-', // Short ID
                 entry.description || 'Order',
                 entry.paymentMode || 'ONLINE',
-                `₹${displayAmount.toFixed(2)}`
+                `Rs. ${displayAmount.toFixed(2)}`
             ];
         });
 
+        // Use 'headStyles' and 'columnStyles' effectively for alignment
         autoTable(doc, {
             startY: noticeY + 40,
             head: [['Date', 'Order ID', 'Items/Description', 'Mode', 'Food Amount']],
             body: tableData,
-            theme: 'striped',
-            headStyles: { fillColor: [50, 50, 50], textColor: 255 },
-            styles: { fontSize: 8, cellPadding: 3 },
-            columnStyles: {
-                4: { halign: 'right', fontStyle: 'bold' } // Amount column
+            theme: 'grid', // Cleaner than 'striped' for finance
+            styles: { 
+                fontSize: 9, 
+                cellPadding: 4,
+                valign: 'middle'
             },
-            foot: [['', '', 'TOTAL', '', `₹${(settlement.totalVendorPayable / 100).toFixed(2)}`]],
-            footStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold', halign: 'right' }
+            headStyles: { 
+                fillColor: [30, 30, 30], 
+                textColor: 255, 
+                fontStyle: 'bold',
+                halign: 'left'
+            },
+            columnStyles: {
+                0: { cellWidth: 30 },
+                1: { cellWidth: 25 },
+                2: { cellWidth: 'auto' },
+                3: { cellWidth: 20, halign: 'center' },
+                4: { cellWidth: 35, halign: 'right', fontStyle: 'bold' } // Explicit width and alignment for Money
+            },
+            foot: [['', '', 'TOTAL', '', `Rs. ${(settlement.totalVendorPayable / 100).toFixed(2)}`]],
+            footStyles: { 
+                fillColor: [240, 240, 240], 
+                textColor: 0, 
+                fontStyle: 'bold', 
+                halign: 'right' 
+            },
+            // Ensure footer total aligns with the amount column (index 4)
+            didParseCell: (data) => {
+                if (data.section === 'foot' && data.column.index === 4) {
+                    data.cell.styles.halign = 'right';
+                }
+            }
         });
 
         // --- 5. Footer ---

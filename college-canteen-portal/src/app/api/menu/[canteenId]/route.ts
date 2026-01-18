@@ -13,7 +13,16 @@ export async function GET(_: Request, props: { params: Promise<{ canteenId: stri
         openingTime: true,
         closingTime: true,
         autoMode: true,
-        manualIsOpen: true
+        manualIsOpen: true,
+        vendor: {
+          select: {
+            selfOrderFeeRate: true,
+            preOrderFeeRate: true,
+            latitude: true,
+            longitude: true,
+            geofenceRadiusMeters: true
+          }
+        }
       }
     }),
     prisma.menuItem.findMany({ where: { canteenId }, select: { id: true, name: true, priceCents: true, imageUrl: true, description: true, sectionId: true, sortOrder: true, available: true } }),

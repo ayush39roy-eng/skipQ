@@ -281,7 +281,11 @@ export async function POST(req: Request) {
       autoConverted: resolution.autoConverted,
       autoConversionReason: resolution.autoConversionReason,
       
-      distanceFromVendorMeters
+      distanceFromVendorMeters,
+
+      items: {
+        create: orderItems
+      }
     } as any
   })
 

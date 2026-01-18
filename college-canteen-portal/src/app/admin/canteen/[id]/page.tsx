@@ -79,6 +79,7 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                     const location = typeof rawLoc === 'string' ? rawLoc.trim() : ''
                                     const rawImg = formData.get('imageUrl')
                                     const imageUrl = typeof rawImg === 'string' ? rawImg.trim() : ''
+
                                     if (!name || !location) return
                                     await prisma.canteen.update({ where: { id: canteen.id }, data: { name, location, imageUrl: imageUrl || null } })
                                     revalidatePath(`/admin/canteen/${canteen.id}`)
@@ -86,7 +87,7 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                     <div className="space-y-3">
                                         <Input name="name" label="Canteen Name" defaultValue={canteen.name} className="bg-slate-50 border-slate-200" required />
                                         <Input name="location" label="Location" defaultValue={canteen.location} className="bg-slate-50 border-slate-200" required />
-                                        <Input name="imageUrl" label="Image URL" defaultValue={canteen.imageUrl ?? ''} className="bg-slate-50 border-slate-200" />
+                                        <Input name="imageUrl" label="Image URL" defaultValue={canteen.imageUrl ?? ''} className="bg-slate-50 border-slate-200" placeholder="https://raw.githubusercontent.com/..." />
                                     </div>
                                     <FormSubmitButton pendingLabel="Saving..." className="w-full bg-slate-900 text-white hover:bg-slate-800">Update Details</FormSubmitButton>
                                 </form>
@@ -242,7 +243,7 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                 const rawImg = formData.get('imageUrl')
                                 const imageUrl = typeof rawImg === 'string' ? rawImg : ''
                                 const rawSec = formData.get('sectionId')
-                                const sectionId = typeof rawSec === 'string' ? rawSec : null
+                                const sectionId = (typeof rawSec === 'string' && rawSec) ? rawSec : null
                                 if (!name || !priceCents) return
                                 await prisma.menuItem.create({ data: { canteenId: canteen.id, name, priceCents, imageUrl: imageUrl || null, sectionId } })
                                 revalidatePath(`/admin/canteen/${canteen.id}`)
@@ -353,7 +354,7 @@ export default async function CanteenPage(props: { params: Promise<{ id: string 
                                                 const session = await requireRole(['ADMIN'])
                                                 if (!session) return
                                                 const rawSec = formData.get('sectionId')
-                                                const sectionId = typeof rawSec === 'string' ? rawSec : null
+                                                const sectionId = (typeof rawSec === 'string' && rawSec) ? rawSec : null
                                                 await prisma.menuItem.update({ where: { id: it.id }, data: { sectionId } })
                                                 revalidatePath(`/admin/canteen/${canteen.id}`)
                                             }}>

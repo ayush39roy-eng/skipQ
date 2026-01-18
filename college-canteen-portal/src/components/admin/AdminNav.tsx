@@ -92,7 +92,10 @@ export function AdminNav() {
       </div>
 
       <div className="p-4 border-t border-gray-100">
-        <button className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors">
+        <button 
+          onClick={() => window.location.href = '/api/auth/logout'}
+          className="flex items-center gap-3 px-3 py-2 w-full rounded-lg text-sm font-medium text-rose-600 hover:bg-rose-50 transition-colors"
+        >
           <LogOut className="h-4 w-4" />
           <span>Sign Out</span>
         </button>

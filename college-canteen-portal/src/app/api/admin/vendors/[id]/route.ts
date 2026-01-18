@@ -90,7 +90,8 @@ export async function PATCH(
       enableScheduledOrders,
       enableVendorPaidFees,
       enableAdvancedAnalytics,
-      enablePricingOverrides
+      enablePricingOverrides,
+      mode
     } = body
 
     // Validate fee rates if provided
@@ -122,6 +123,7 @@ export async function PATCH(
         ...(name !== undefined && { name }),
         ...(phone !== undefined && { phone }),
         ...(whatsappEnabled !== undefined && { whatsappEnabled }),
+        ...(mode !== undefined && { mode }),
         // Location
         ...(latitude !== undefined && { latitude }),
         ...(longitude !== undefined && { longitude }),
@@ -146,7 +148,7 @@ export async function PATCH(
     const { getRequestId, getClientIp } = await import('@/lib/request-context')
     
     // Determine severity based on what changed
-    const isCritical = pricingUpdated || enableVendorPaidFees !== undefined || feePayer !== undefined
+    const isCritical = pricingUpdated || enableVendorPaidFees !== undefined || feePayer !== undefined || mode !== undefined
     const severity = isCritical ? 'CRITICAL' : 'INFO'
 
     await logAudit({

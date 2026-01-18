@@ -30,56 +30,65 @@ export default function SiteShell({
   const isAppRoute = pathname?.startsWith('/vendor') || pathname?.startsWith('/terminal') || pathname?.startsWith('/admin')
 
   if (isAppRoute) {
+    // Vendor specific background override
+    if (pathname?.startsWith('/vendor')) {
+        return <main className="min-h-screen w-full bg-[rgb(var(--vendor-bg))]">{children}</main>
+    }
     return <main className="min-h-screen w-full bg-[#FFF8F0]">{children}</main>
   }
 
   return (
     <div className="flex min-h-screen flex-col bg-[#FFF8F0]">
         <header className="sticky top-0 z-40 w-full border-b-4 border-black bg-white shadow-[0px_4px_0px_#000000]">
-            <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center justify-between gap-3 px-4 py-3 sm:flex-nowrap sm:gap-6 sm:px-6">
+            <div className="mx-auto flex w-full max-w-[1400px] items-center justify-between gap-1 px-2 py-2 sm:gap-6 sm:px-6">
                 <div className="flex flex-1 items-center gap-3">
                     <Link href="/" className="flex items-center gap-2 group">
-                       <div className="relative transform transition-transform group-hover:scale-110"> 
-                        <div className="absolute inset-0 bg-black rounded-full translate-x-1 translate-y-1"></div>
+                       <div className="relative transform transition-transform group-hover:scale-105"> 
                         <Image
-                            src="/skipq-logo.png"
+                            src="/brand-logo.png"
                             alt="SkipQ"
-                            width={40}
-                            height={40}
+                            width={64}
+                            height={64}
                             priority
-                            className="h-10 w-10 object-contain relative z-10 bg-white rounded-full border-2 border-black"
+                            className="h-16 w-16 object-contain"
                         />
                        </div>
                        <span className="hidden text-xl font-black tracking-black text-black uppercase sm:inline drop-shadow-[2px_2px_0px_rgba(0,0,0,0.2)]">SkipQ</span>
                     </Link>
                 </div>
-                <nav className="flex flex-1 flex-wrap items-center justify-end gap-3 text-sm font-bold sm:justify-end">
+                <nav className="flex flex-1 items-center justify-end gap-1.5 text-sm font-bold sm:gap-3">
                     {userRole !== 'VENDOR' && (
-                        <Link className="px-4 py-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs" href="/canteens">
-                            Canteens
+                        <Link className="px-2.5 py-2 sm:px-4 sm:py-2 bg-white border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none flex items-center font-black" href="/canteens">
+                            <span className="sm:hidden">Menu</span><span className="hidden sm:inline">Canteens</span>
                         </Link>
                     )}
                     {userRole === 'USER' && (
-                        <Link className="px-4 py-2 bg-white border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs" href="/order">
+                        <Link className="px-2.5 py-2 sm:px-4 sm:py-2 bg-white border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black" href="/order">
                             <span className="sm:hidden">Orders</span><span className="hidden sm:inline">My Orders</span>
                         </Link>
                     )}
                     {userRole === 'VENDOR' && (
-                        <Link className="px-4 py-2 bg-[#FFD166] border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs" href="/vendor">
-                            Vendor Hub
+                        <Link className="px-2.5 py-2 sm:px-4 sm:py-2 bg-[#FFD166] border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black" href="/vendor">
+                            <span className="sm:hidden">Hub</span><span className="hidden sm:inline">Vendor Hub</span>
                         </Link>
                     )}
                     {userRole === 'ADMIN' && (
-                         <Link className="px-4 py-2 bg-[#EF476F] text-white border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs" href="/admin">
-                            Admin
+                         <Link className="px-2.5 py-2 sm:px-4 sm:py-2 bg-[#EF476F] text-white border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black" href="/admin">
+                            <span className="sm:hidden">Admin</span><span className="hidden sm:inline">Admin</span>
                         </Link>
                     )}
                     {!userRole ? (
-                        <Link href="/login" className="px-4 py-2 bg-[#06D6A0] border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs">
-                            Login
-                        </Link>
+                        pathname === '/login' ? (
+                             <Link href="/register" className="px-2.5 py-2 sm:px-4 sm:py-2 bg-[#06D6A0] border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black">
+                                Signup
+                            </Link>
+                        ) : (
+                            <Link href="/login" className="px-2.5 py-2 sm:px-4 sm:py-2 bg-[#06D6A0] border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black">
+                                Login
+                            </Link>
+                        )
                     ) : (
-                        <a href="/api/auth/logout" className="px-4 py-2 bg-slate-200 border-2 border-black shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-xs">
+                        <a href="/api/auth/logout" className="px-2.5 py-2 sm:px-4 sm:py-2 bg-slate-200 border border-black sm:border-2 shadow-[2px_2px_0px_0px_#000000] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all rounded-lg uppercase tracking-wider text-[11px] sm:text-xs leading-none font-black">
                             Logout
                         </a>
                     )}

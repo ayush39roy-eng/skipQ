@@ -41,8 +41,7 @@ async function main() {
     }
 
     // 3. Concurrent Create Attempts
-    // We simulate the race condition by firing two Promises that try to create usage the same Key
-    console.log('Firing 2 concurrent Create Order requests...')
+    // We simulate the race condition by firing two Promises that try to create using the same Key    console.log('Firing 2 concurrent Create Order requests...')
     
     const createOrder = async (i: number) => {
         try {

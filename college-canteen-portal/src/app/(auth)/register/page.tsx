@@ -52,7 +52,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-[#FFF8F0] text-black font-sans">
+    <div className="min-h-[calc(100vh-160px)] grid lg:grid-cols-2 bg-[#FFF8F0] text-black font-sans">
       {/* Left Side - Game Art / Branding */}
       <div className="hidden lg:flex flex-col justify-center items-center relative p-12 bg-[#FF9F1C]/10 border-r-4 border-black border-dashed">
          
