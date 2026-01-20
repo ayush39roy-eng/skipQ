@@ -1,10 +1,20 @@
-import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable, TextInput } from 'react-native';
+import { useState } from 'react';
 import { BlurView } from 'expo-blur';
 import { Search, MapPin, ChevronDown, Zap } from 'lucide-react-native';
 import { COLORS, RADIUS, SPACING, GAME_UI } from '../../constants/theme';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 
-export const HomeHeader = () => {
+interface HomeHeaderProps {
+    onSearch?: (query: string) => void;
+}
+
+export const HomeHeader = ({ onSearch }: HomeHeaderProps) => {
+    const [searchQuery, setSearchQuery] = useState('');
+
+    const handleSearch = () => {
+        onSearch?.(searchQuery);
+    };
     return (
         <Animated.View entering={FadeInDown.duration(600).springify()} style={styles.container}>
 
@@ -17,7 +27,7 @@ export const HomeHeader = () => {
                         <Text style={styles.badgeText}>LEVEL 5 FOODIE</Text>
                     </View>
                     
-                    <Pressable style={styles.locationBtn}>
+                    <Pressable style={styles.locationBtn} onPress={() => {/* Handle location selection */}}>
                         <View style={styles.locationIcon}>
                             <MapPin size={12} color={GAME_UI.ink} />
                         </View>
@@ -39,7 +49,19 @@ export const HomeHeader = () => {
             <View style={styles.searchContainer}>
                 <BlurView intensity={20} tint="dark" style={styles.searchBlur}>
                     <Search size={20} color={COLORS.textMutedDark} />
-                    <Text style={styles.placeholder}>Search "Cappuccino"...</Text>
+                    <TextInput 
+                        value={searchQuery}
+                        onChangeText={setSearchQuery}
+                        onSubmitEditing={handleSearch}
+                        placeholder='Search "Cappuccino"...'
+                        placeholderTextColor={COLORS.textMuted}
+                        style={styles.searchInput}
+                        autoCorrect={false}
+                        autoCapitalize="none"
+                        returnKeyType="search"
+                        accessibilityLabel="Search canteens or items"
+                        accessibilityRole="search"
+                    />
                 </BlurView>
             </View>
 
@@ -105,5 +127,10 @@ const styles = StyleSheet.create({
         gap: 12, 
         backgroundColor: GAME_UI.white 
     },
-    placeholder: { color: 'rgba(0,0,0,0.4)', fontSize: 16, fontWeight: '600', fontFamily: 'System' },
-});
+    searchInput: { 
+        flex: 1, 
+        color: GAME_UI.ink, 
+        fontSize: 16, 
+        fontWeight: '600', 
+        height: '100%' 
+    },});

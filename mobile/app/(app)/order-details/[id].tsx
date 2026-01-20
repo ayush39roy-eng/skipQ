@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, ScrollView, Pressable, Image, ActivityIndicator, Alert } from 'react-native';
+import { OrderDetailsSkeleton } from '../../components/orders/OrderDetailsSkeleton';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { COLORS, SPACING, RADIUS, SHADOWS, FONTS } from '../../constants/theme';
+import { SPACING, GAME_UI } from '../../constants/theme';
 import { ChevronLeft, Clock, MapPin, Receipt, CheckCircle2, Phone } from 'lucide-react-native';
 import { MotiView } from 'moti';
 import { BlurView } from 'expo-blur';
@@ -39,9 +40,7 @@ export default function OrderDetailsScreen() {
 
     if (loading) {
         return (
-            <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-                <ActivityIndicator size="large" color={COLORS.primary} />
-            </View>
+            <OrderDetailsSkeleton />
         );
     }
 
@@ -50,7 +49,7 @@ export default function OrderDetailsScreen() {
     // Helper to determine active step
     const status = order.fulfillmentStatus || 'PENDING';
     const isPlaced = true;
-    const isAccepted = ['PREPARING', 'READY', 'COMPLETED', 'DELIVERED'].includes(status);
+    const isAccepted = ['ACCEPTED', 'PREPARING', 'READY', 'COMPLETED', 'DELIVERED'].includes(status);
     const isPreparing = ['PREPARING', 'READY', 'COMPLETED', 'DELIVERED'].includes(status);
     const isReady = ['READY', 'COMPLETED', 'DELIVERED'].includes(status);
     const isCompleted = ['COMPLETED', 'DELIVERED'].includes(status);
@@ -62,8 +61,7 @@ export default function OrderDetailsScreen() {
         { status: 'Ready for Pickup', time: isReady ? 'Counter' : 'Pending', done: isReady }
     ];
 
-    const subtotal = order.totalCents / 100; // backend total includes fees usually, but let's assume raw sum here
-    // In a real app we'd parse the items price breakdown better
+    const subtotal = order.totalCents / 100;
 
     return (
         <View style={styles.container}>
@@ -71,10 +69,15 @@ export default function OrderDetailsScreen() {
 
             {/* Header */}
             <View style={styles.header}>
-                <Pressable onPress={() => router.back()} style={styles.backBtn}>
-                    <ChevronLeft color={COLORS.textDark} size={24} />
+                <Pressable 
+                    onPress={() => router.back()} 
+                    style={styles.backBtn}
+                    accessibilityLabel="Go back"
+                    accessibilityRole="button"
+                >
+                    <ChevronLeft color={GAME_UI.ink} size={28} strokeWidth={3} />
                 </Pressable>
-                <Text style={styles.headerTitle}>Order #{String(id).slice(-4)}</Text>
+                <Text style={styles.headerTitle}>ORDER #{String(id).slice(-4)}</Text>
                 <View style={{ width: 40 }} />
             </View>
 
@@ -87,10 +90,10 @@ export default function OrderDetailsScreen() {
                     style={styles.heroCard}
                 >
                     <View style={styles.heroIconWrapper}>
-                        <Clock size={32} color={COLORS.primary} />
+                        <Clock size={36} color={GAME_UI.ink} strokeWidth={3} />
                     </View>
                     <Text style={styles.heroStatus}>
-                        {isCompleted ? "Order Completed" : isReady ? "Ready for Pickup!" : "Preparing your food"}
+                        {isCompleted ? "ORDER COMPLETE!" : isReady ? "READY FOR PICKUP!" : "PREPARING..."}
                     </Text>
                     <Text style={styles.heroSubtext}>
                         {order.canteen?.name || "Canteen"}
@@ -109,7 +112,7 @@ export default function OrderDetailsScreen() {
 
                 {/* Timeline */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Order Status</Text>
+                    <Text style={styles.sectionTitle}>ORDER STATUS</Text>
                     <View style={styles.timelineContainer}>
                         {timeline.map((step, index) => (
                             <View key={index} style={styles.timelineRow}>
@@ -117,26 +120,26 @@ export default function OrderDetailsScreen() {
                                 {index !== timeline.length - 1 && (
                                     <View style={[
                                         styles.connectorLine,
-                                        { backgroundColor: step.done ? COLORS.primary : COLORS.lightBg }
+                                        { backgroundColor: step.done ? GAME_UI.ink : GAME_UI.background }
                                     ]} />
                                 )}
 
                                 <View style={[
                                     styles.dot,
                                     {
-                                        backgroundColor: step.done ? COLORS.primary : COLORS.white,
-                                        borderColor: step.done ? COLORS.primary : COLORS.textMutedLight
+                                        backgroundColor: step.done ? GAME_UI.primaryBtn : GAME_UI.white,
+                                        borderColor: GAME_UI.ink
                                     }
                                 ]}>
-                                    {step.done && <CheckCircle2 size={12} color="#fff" />}
+                                    {step.done && <CheckCircle2 size={12} color={GAME_UI.ink} strokeWidth={3} />}
                                 </View>
 
                                 <View style={styles.timelineContent}>
                                     <Text style={[
                                         styles.timelineStatus,
-                                        { color: step.done ? COLORS.textDark : COLORS.textMutedDark }
+                                        { color: GAME_UI.ink, opacity: step.done ? 1 : 0.5 }
                                     ]}>
-                                        {step.status}
+                                        {step.status.toUpperCase()}
                                     </Text>
                                     <Text style={styles.timelineTime}>{step.time}</Text>
                                 </View>
@@ -147,7 +150,7 @@ export default function OrderDetailsScreen() {
 
                 {/* Item List */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Items Ordered</Text>
+                    <Text style={styles.sectionTitle}>ITEMS ORDERED</Text>
                     <View style={styles.itemsCard}>
                         {order.items?.map((item: any, index: number) => (
                             <View key={index} style={styles.itemRow}>
@@ -155,7 +158,7 @@ export default function OrderDetailsScreen() {
                                     <Text style={styles.qtyText}>{item.quantity}x</Text>
                                 </View>
                                 <Text style={styles.itemName}>{item.menuItem?.name || "Item"}</Text>
-                                <Text style={styles.itemPrice}>₹{(item.menuItem?.priceCents || 0) / 100}</Text>
+                                <Text style={styles.itemPrice}>₹{((item.menuItem?.priceCents || 0) * item.quantity) / 100}</Text>
                             </View>
                         ))}
                     </View>
@@ -163,15 +166,10 @@ export default function OrderDetailsScreen() {
 
                 {/* Bill Details */}
                 <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>Bill Details</Text>
+                    <Text style={styles.sectionTitle}>BILL DETAILS</Text>
                     <View style={styles.billCard}>
-                        {/* <View style={styles.billRow}>
-                            <Text style={styles.billLabel}>Item Total</Text>
-                            <Text style={styles.billValue}>₹{subtotal}</Text>
-                        </View> */}
-                        {/* Simplified for demo since backend might not send breakdown */}
                         <View style={[styles.billRow, styles.totalRow]}>
-                            <Text style={styles.totalLabel}>Grand Total</Text>
+                            <Text style={styles.totalLabel}>GRAND TOTAL</Text>
                             <Text style={styles.totalValue}>₹{subtotal}</Text>
                         </View>
                     </View>
@@ -179,8 +177,8 @@ export default function OrderDetailsScreen() {
 
                 {/* Support Button */}
                 <Pressable style={styles.supportButton}>
-                    <Phone size={20} color={COLORS.primary} />
-                    <Text style={styles.supportText}>Call Canteen Support</Text>
+                    <Phone size={20} color={GAME_UI.ink} strokeWidth={3} />
+                    <Text style={styles.supportText}>CALL SUPPORT</Text>
                 </Pressable>
 
             </ScrollView>
@@ -191,7 +189,7 @@ export default function OrderDetailsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: COLORS.lightBg,
+        backgroundColor: GAME_UI.background,
     },
     header: {
         paddingTop: 60,
@@ -200,73 +198,85 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        backgroundColor: COLORS.white,
-        ...SHADOWS.light,
+        backgroundColor: GAME_UI.white,
+        ...GAME_UI.shadows.md,
         zIndex: 10,
     },
     backBtn: {
         padding: 8,
-        borderRadius: RADIUS.full,
-        backgroundColor: COLORS.lightBg,
     },
     headerTitle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: COLORS.textDark,
+        fontSize: 22,
+        fontWeight: '900',
+        color: GAME_UI.ink,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     scrollContent: {
         padding: SPACING.l,
         paddingBottom: 40,
     },
     heroCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: RADIUS.l,
+        backgroundColor: GAME_UI.white,
+        borderRadius: 12,
         padding: SPACING.xl,
         alignItems: 'center',
         marginBottom: SPACING.xl,
-        ...SHADOWS.medium,
+        ...GAME_UI.shadows.md,
+        borderWidth: 2.5,
+        borderColor: GAME_UI.ink,
     },
     heroIconWrapper: {
-        width: 64,
-        height: 64,
-        borderRadius: 32,
-        backgroundColor: COLORS.accent,
+        width: 72,
+        height: 72,
+        borderRadius: 12,
+        backgroundColor: GAME_UI.tertiary,
         justifyContent: 'center',
         alignItems: 'center',
         marginBottom: SPACING.m,
+        borderWidth: 2.5,
+        borderColor: GAME_UI.ink,
     },
     heroStatus: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: COLORS.textDark,
+        fontSize: 22,
+        fontWeight: '900',
+        color: GAME_UI.ink,
         marginBottom: 4,
+        textTransform: 'uppercase',
     },
     heroSubtext: {
         fontSize: 14,
-        color: COLORS.textMutedDark,
+        color: GAME_UI.ink,
         marginBottom: SPACING.l,
+        opacity: 0.6,
+        fontWeight: '700',
+        textTransform: 'uppercase',
     },
     progressBarBg: {
         width: '100%',
-        height: 6,
-        backgroundColor: COLORS.lightBg,
-        borderRadius: 3,
+        height: 8,
+        backgroundColor: GAME_UI.background,
+        borderRadius: 4,
         overflow: 'hidden',
+        borderWidth: 2,
+        borderColor: GAME_UI.ink,
     },
     progressBarFill: {
         height: '100%',
-        backgroundColor: COLORS.primary,
-        borderRadius: 3,
+        backgroundColor: GAME_UI.primaryBtn,
+        borderRadius: 2,
     },
     section: {
         marginBottom: SPACING.xl,
     },
     sectionTitle: {
-        fontSize: 16,
-        fontWeight: '700',
-        color: COLORS.textDark,
+        fontSize: 14,
+        fontWeight: '900',
+        color: GAME_UI.ink,
         marginBottom: SPACING.m,
         marginLeft: 4,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     },
     timelineContainer: {
         paddingLeft: 8,
@@ -278,10 +288,10 @@ const styles = StyleSheet.create({
         position: 'relative',
     },
     dot: {
-        width: 20,
-        height: 20,
-        borderRadius: 10,
-        borderWidth: 2,
+        width: 24,
+        height: 24,
+        borderRadius: 6,
+        borderWidth: 2.5,
         justifyContent: 'center',
         alignItems: 'center',
         zIndex: 2,
@@ -289,30 +299,33 @@ const styles = StyleSheet.create({
     },
     connectorLine: {
         position: 'absolute',
-        left: 9, // Center of dot (20/2 - 1)
-        top: 22,
+        left: 11,
+        top: 26,
         bottom: -15,
-        width: 2,
+        width: 2.5,
     },
     timelineContent: {
         marginLeft: SPACING.m,
         flex: 1,
     },
     timelineStatus: {
-        fontSize: 15,
-        fontWeight: '600',
+        fontSize: 14,
+        fontWeight: '800',
         marginBottom: 2,
+        textTransform: 'uppercase',
     },
     timelineTime: {
         fontSize: 12,
-        color: COLORS.textMutedLight,
+        color: GAME_UI.ink,
+        fontWeight: '600',
+        opacity: 0.5,
     },
     itemsCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: RADIUS.m,
+        backgroundColor: GAME_UI.white,
+        borderRadius: 12,
         padding: SPACING.m,
-        borderWidth: 1,
-        borderColor: COLORS.lightBg,
+
+        ...GAME_UI.shadows.sm,
     },
     itemRow: {
         flexDirection: 'row',
@@ -320,79 +333,79 @@ const styles = StyleSheet.create({
         marginBottom: SPACING.m,
     },
     qtyBadge: {
-        backgroundColor: COLORS.lightBg,
+        backgroundColor: GAME_UI.tertiary,
         paddingHorizontal: 8,
-        paddingVertical: 2,
+        paddingVertical: 4,
         borderRadius: 4,
         marginRight: SPACING.s,
+        borderWidth: 2,
+        borderColor: GAME_UI.ink,
     },
     qtyText: {
         fontSize: 12,
-        fontWeight: '700',
-        color: COLORS.textDark,
+        fontWeight: '900',
+        color: GAME_UI.ink,
+        textTransform: 'uppercase',
     },
     itemName: {
         flex: 1,
         fontSize: 14,
-        color: COLORS.textDark,
+        color: GAME_UI.ink,
+        fontWeight: '700',
     },
     itemPrice: {
         fontSize: 14,
-        fontWeight: '600',
-        color: COLORS.textDark,
+        fontWeight: '900',
+        color: GAME_UI.ink,
     },
     billCard: {
-        backgroundColor: COLORS.white,
-        borderRadius: RADIUS.m,
+        backgroundColor: GAME_UI.white,
+        borderRadius: 12,
         padding: SPACING.m,
-        ...SHADOWS.light,
+        ...GAME_UI.shadows.md,
+        borderWidth: 2.5,
+        borderColor: GAME_UI.ink,
     },
     billRow: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: SPACING.s,
     },
-    billLabel: {
-        fontSize: 14,
-        color: COLORS.textMutedDark,
-    },
-    billValue: {
-        fontSize: 14,
-        color: COLORS.textDark,
-        fontWeight: '500',
-    },
     totalRow: {
         marginTop: SPACING.s,
         paddingTop: SPACING.s,
-        borderTopWidth: 1,
-        borderTopColor: COLORS.lightBg,
+        borderTopWidth: 2.5,
+        borderTopColor: GAME_UI.ink,
         marginBottom: 0,
     },
     totalLabel: {
         fontSize: 16,
-        fontWeight: '800',
-        color: COLORS.textDark,
+        fontWeight: '900',
+        color: GAME_UI.ink,
+        textTransform: 'uppercase',
     },
     totalValue: {
-        fontSize: 16,
-        fontWeight: '800',
-        color: COLORS.primary,
+        fontSize: 18,
+        fontWeight: '900',
+        color: GAME_UI.ink,
     },
     supportButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         padding: SPACING.m,
-        borderRadius: RADIUS.m,
-        borderWidth: 1,
-        borderColor: COLORS.primary,
-        backgroundColor: COLORS.white,
+        borderRadius: 8,
+
+        backgroundColor: GAME_UI.white,
         gap: 8,
+        ...GAME_UI.shadows.sm,
     },
     supportText: {
-        color: COLORS.primary,
-        fontWeight: '700',
+        color: GAME_UI.ink,
+        fontWeight: '900',
         fontSize: 14,
+        textTransform: 'uppercase',
+        letterSpacing: 1,
     }
 
 });

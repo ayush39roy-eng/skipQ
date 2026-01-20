@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, FlatList, RefreshControl, ActivityIndicator } from 'react-native';
+import { OrdersSkeleton } from '../components/orders/OrdersSkeleton';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StatusBar } from 'expo-status-bar';
@@ -13,22 +14,35 @@ import { api } from '../services/api';
 export default function OrdersScreen() {
   const router = useRouter();
   const [activeFilter, setActiveFilter] = useState('All');
-  const { data: rawOrders = [], isLoading, refetch, isRefetching } = useQuery({
+  const { data: orders = [], isLoading, refetch, isRefetching } = useQuery({
     queryKey: ['my-orders'],
     queryFn: api.getMyOrders,
-    refetchInterval: 10000,
-  });
+    select: (data) => {
+      if (!data) return [];
+      return data
+        .map((o: any) => {
+          const created = new Date(o.createdAt);
+          const isValidDate = !isNaN(created.getTime());
+          const timestamp = isValidDate ? created.getTime() : 0;
+          const dateStr = isValidDate
+            ? created.toLocaleDateString() + ' ' + created.toLocaleTimeString()
+            : 'Unknown Date';
 
-  // Map API data to UI model
-  const orders = rawOrders.map((o: any) => ({
-    id: o.id,
-    canteen: o.canteen?.name || 'Unknown Canteen',
-    items: o.items.map((i: any) => `${i.quantity}x ${i.menuItem.name}`),
-    total: o.totalCents / 100,
-    status: o.fulfillmentStatus || 'PENDING',
-    date: new Date(o.createdAt).toLocaleDateString() + ' ' + new Date(o.createdAt).toLocaleTimeString(),
-    raw: o
-  })).sort((a: any, b: any) => new Date(b.raw.createdAt).getTime() - new Date(a.raw.createdAt).getTime());
+          return {
+            id: o.id,
+            canteen: o.canteen?.name || 'Unknown Canteen',
+            items: o.items?.map((i: any) => `${i.quantity}x ${i.menuItem.name}`) || [],
+            total: (o.totalCents ?? 0) / 100,
+            status: o.fulfillmentStatus || 'PENDING',
+            date: dateStr,
+            timestamp,
+            rating: o.rating ?? 0,
+            raw: o,
+          };
+        })
+        .sort((a: any, b: any) => b.timestamp - a.timestamp);
+    }
+  });
 
   const onRefresh = useCallback(() => {
     refetch();
@@ -62,9 +76,7 @@ export default function OrdersScreen() {
 
   if (isLoading && !isRefetching) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <ActivityIndicator size="large" color={COLORS.primary} />
-      </View>
+      <OrdersSkeleton />
     );
   }
 
@@ -74,7 +86,13 @@ export default function OrdersScreen() {
       <FlatList
         data={pastOrders}
         keyExtractor={(item) => item.id}
-        renderItem={({ item, index }) => <PastOrderCard order={item} isLast={index === pastOrders.length - 1} />}
+        renderItem={({ item, index }) => (
+          <PastOrderCard 
+            order={item} 
+            isLast={index === pastOrders.length - 1} 
+            onPress={() => router.push({ pathname: '/(app)/order-details/[id]', params: { id: item.id } })}
+          />
+        )}
         contentContainerStyle={styles.scrollContent}
         ListHeaderComponent={renderHeader}
         showsVerticalScrollIndicator={false}

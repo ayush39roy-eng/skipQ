@@ -1,11 +1,12 @@
 import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 // import { BlurView } from 'expo-blur';
 import { COLORS, SPACING, GAME_UI } from '../../constants/theme';
 import { MotiView } from 'moti';
 
 export const OrdersHeader = () => {
     return (
-        <View style={styles.container}>
+        <SafeAreaView style={styles.container} edges={['top']}>
             <View style={styles.content}>
                 <MotiView
                     from={{ opacity: 0, translateY: 10 }}
@@ -16,13 +17,13 @@ export const OrdersHeader = () => {
                     <Text style={styles.subtitle}>TRACK YOUR CRAVINGS & REVISIT FAVORITES.</Text>
                 </MotiView>
             </View>
-        </View>
+        </SafeAreaView>
     );
 };
 
 const styles = StyleSheet.create({
     container: {
-        paddingTop: 60, // Status bar space
+        // paddingTop removed, handled by SafeAreaView
         paddingBottom: SPACING.m,
         backgroundColor: GAME_UI.background,
         zIndex: 10,

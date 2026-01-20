@@ -15,7 +15,7 @@ import { MotiView } from 'moti';
 
 export default function CartScreen() {
     const router = useRouter();
-    const { items, addItem, removeItem, total } = useCart();
+    const { items, addItem, removeItem, total, totalTax } = useCart();
     const [fulfillmentType, setFulfillmentType] = useState<'TAKEAWAY' | 'DINE_IN'>('TAKEAWAY');
 
     // Handling Empty State
@@ -104,7 +104,7 @@ export default function CartScreen() {
                 <CartBill
                     subtotal={total}
                     deliveryFee={0}
-                    tax={total * 0.05}
+                    tax={totalTax}
                     discount={0}
                 />
 
@@ -113,7 +113,7 @@ export default function CartScreen() {
             </ScrollView>
 
             <CartFooter
-                total={total * 1.05} // Adding tax to visual total
+                total={total + totalTax}
                 onCheckout={() => router.push({ pathname: '/(app)/payment', params: { fulfillmentType } })}
             />
         </GestureHandlerRootView>

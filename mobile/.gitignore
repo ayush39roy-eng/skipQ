@@ -11,6 +11,7 @@ yarn-error.log*
 .env.local
 .env.development
 .env.production
+config.local.ts
 
 # IDE
 .idea/

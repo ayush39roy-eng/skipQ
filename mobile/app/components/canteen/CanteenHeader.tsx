@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Dimensions, Image, Platform } from 'react-native';
+import { View, Text, StyleSheet, Image, Platform, useWindowDimensions } from 'react-native';
 import Animated, {
     useAnimatedStyle,
     interpolate,
@@ -10,7 +10,7 @@ import { BlurView } from 'expo-blur';
 import { Star, MapPin, Clock } from 'lucide-react-native';
 import { COLORS, RADIUS, SPACING, GAME_UI } from '../../constants/theme';
 
-const { width } = Dimensions.get('window');
+// const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 280;
 
 interface CanteenHeaderProps {
@@ -19,6 +19,7 @@ interface CanteenHeaderProps {
 }
 
 export const CanteenHeader = ({ canteen, scrollY }: CanteenHeaderProps) => {
+    const { width } = useWindowDimensions();
 
     const imageAnimatedStyle = useAnimatedStyle(() => {
         const translateY = interpolate(
@@ -49,7 +50,7 @@ export const CanteenHeader = ({ canteen, scrollY }: CanteenHeaderProps) => {
     });
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { width }]}>
             {/* Parallax Image */}
             <Animated.View style={[styles.imageContainer, imageAnimatedStyle]}>
                 <Image
@@ -93,7 +94,7 @@ export const CanteenHeader = ({ canteen, scrollY }: CanteenHeaderProps) => {
 const styles = StyleSheet.create({
     container: {
         height: HEADER_HEIGHT,
-        width: width,
+        // width handled dynamically
         justifyContent: 'flex-end',
         overflow: 'hidden',
         backgroundColor: GAME_UI.white,

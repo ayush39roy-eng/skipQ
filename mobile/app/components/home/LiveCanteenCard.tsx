@@ -1,20 +1,24 @@
-import { View, Text, StyleSheet, Image, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 // Removed LinearGradient, we want that clean cut look
 import { COLORS, RADIUS, SHADOWS, SPACING, GAME_UI } from '../../constants/theme';
 import { Star, Clock } from 'lucide-react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 
-const { width } = Dimensions.get('window');
+// const { width } = Dimensions.get('window'); // Unused
+
+export interface CanteenItem {
+    id: string | number;
+    name: string;
+    manualIsOpen: boolean;
+}
 
 export const LiveCanteenCard = ({
     item,
     onPress,
-    index
 }: {
-    item: any,
+    item: CanteenItem,
     onPress: () => void,
-    index: number
 }) => {
 
     const scale = useSharedValue(1);
@@ -34,7 +38,7 @@ export const LiveCanteenCard = ({
             >
                 {/* Image Section */}
                 <View style={styles.imageContainer}>
-                    <Image source={{ uri: item.id.length % 2 === 0 ? 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80' : 'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&q=80' }} style={styles.image} />
+                    <Image source={{ uri: String(item.id).length % 2 === 0 ? 'https://images.unsplash.com/photo-1554118811-1e0d58224f24?w=600&q=80' : 'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=600&q=80' }} style={styles.image} />
                     <View style={styles.statusBadge}>
                          <View style={[styles.statusDot, { backgroundColor: item.manualIsOpen ? COLORS.success : COLORS.error }]} />
                          <Text style={styles.statusText}>{item.manualIsOpen ? 'OPEN' : 'CLOSED'}</Text>

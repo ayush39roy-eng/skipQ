@@ -86,8 +86,8 @@ export const SPACING = {
     l: 24,
     xl: 32,
     xxl: 48,
-    width,
-    height,
+    // width, // Removed for dynamic sizing
+    // height, // Removed for dynamic sizing
 };
 
 export const RADIUS = {

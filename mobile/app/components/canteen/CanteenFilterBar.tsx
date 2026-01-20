@@ -42,7 +42,14 @@ export const CanteenFilterBar = ({ filterType, setFilterType, sortOrder, setSort
                 contentContainerStyle={styles.scrollContent}
             >
                 {/* Veg Filter */}
-                <Pressable onPress={() => toggleFilter('veg')} style={styles.chipWrapper}>
+                <Pressable
+                    onPress={() => toggleFilter('veg')}
+                    style={styles.chipWrapper}
+                    accessibilityRole="button"
+                    accessibilityLabel="Veg filter"
+                    accessibilityState={{ selected: filterType === 'veg' }}
+                    accessibilityHint="Toggles veg filter"
+                >
                      <MotiView
                         animate={{
                             backgroundColor: filterType === 'veg' ? COLORS.success : GAME_UI.white,
@@ -56,7 +63,14 @@ export const CanteenFilterBar = ({ filterType, setFilterType, sortOrder, setSort
                 </Pressable>
 
                 {/* Non-Veg Filter */}
-                <Pressable onPress={() => toggleFilter('non-veg')} style={styles.chipWrapper}>
+                <Pressable
+                    onPress={() => toggleFilter('non-veg')}
+                    style={styles.chipWrapper}
+                    accessibilityRole="button"
+                    accessibilityLabel="Non-Veg filter"
+                    accessibilityState={{ selected: filterType === 'non-veg' }}
+                    accessibilityHint="Toggles non-veg filter"
+                >
                      <MotiView
                         animate={{
                             backgroundColor: filterType === 'non-veg' ? COLORS.error : GAME_UI.white,
@@ -70,7 +84,14 @@ export const CanteenFilterBar = ({ filterType, setFilterType, sortOrder, setSort
                 </Pressable>
 
                 {/* Price Sort */}
-                <Pressable onPress={toggleSort} style={styles.chipWrapper}>
+                <Pressable
+                    onPress={toggleSort}
+                    style={styles.chipWrapper}
+                    accessibilityRole="button"
+                    accessibilityLabel={sortOrder === 'asc' ? "Price sort, ascending" : sortOrder === 'desc' ? "Price sort, descending" : "Price sort, none"}
+                    accessibilityState={{ selected: !!sortOrder }}
+                    accessibilityHint="Cycles price sort order"
+                >
                      <MotiView
                         animate={{
                             backgroundColor: sortOrder ? GAME_UI.primaryBtn : GAME_UI.white,
@@ -110,7 +131,15 @@ const styles = StyleSheet.create({
         borderRadius: 8,
         gap: 8,
         backgroundColor: GAME_UI.white,
-        ...GAME_UI.shadows.sm, // Apply shadow by default
+        borderWidth: 1, 
+        borderColor: 'transparent', // Default transparent border
+        
+        // Manual shadow spread without border override
+        shadowColor: GAME_UI.shadows.sm.shadowColor,
+        shadowOffset: GAME_UI.shadows.sm.shadowOffset,
+        shadowOpacity: GAME_UI.shadows.sm.shadowOpacity,
+        shadowRadius: GAME_UI.shadows.sm.shadowRadius,
+        elevation: GAME_UI.shadows.sm.elevation,
     },
     text: {
         fontSize: 13,

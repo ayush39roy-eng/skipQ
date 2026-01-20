@@ -70,6 +70,9 @@ export const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarPro
                             key={route.key}
                             onPress={onPress}
                             style={styles.tabItem}
+                            accessibilityRole="tab"
+                            accessibilityState={{ selected: isFocused }}
+                            accessibilityLabel={LABELS[route.name] || route.name}
                         >
                             <MotiView
                                 animate={{

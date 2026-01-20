@@ -12,7 +12,11 @@ const CATEGORIES = [
     { id: 'dessert', label: '🍩 Sweet' },
 ];
 
-export const CategoryRail = () => {
+type CategoryRailProps = {
+    onSelect?: (id: string) => void;
+};
+
+export const CategoryRail = ({ onSelect }: CategoryRailProps = {}) => {
     const [selected, setSelected] = useState('all');
 
     return (
@@ -27,9 +31,15 @@ export const CategoryRail = () => {
                 return (
                     <Pressable
                         key={cat.id}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Category: ${cat.label}`}
+                        accessibilityHint="Double tap to select this category"
+                        accessibilityState={{ selected: isSelected }}
                         onPress={() => {
                             Haptics.selectionAsync();
                             setSelected(cat.id);
+                            if (onSelect) onSelect(cat.id);
                         }}
                         style={{ marginRight: SPACING.s }}
                     >

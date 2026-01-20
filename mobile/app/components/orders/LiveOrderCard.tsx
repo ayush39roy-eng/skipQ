@@ -1,11 +1,11 @@
 import React, { useEffect, memo } from 'react';
-import { View, Text, StyleSheet, Dimensions, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MotiView } from 'moti';
 import { Clock, CheckCircle2, ChefHat, ShoppingBag } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, GAME_UI } from '../../constants/theme';
 
-const { width } = Dimensions.get('window');
+// const { width } = Dimensions.get('window'); // Unused
 
 interface LiveOrderCardProps {
     order: {
@@ -29,8 +29,7 @@ export const LiveOrderCard = memo(({ order, onPress }: LiveOrderCardProps) => {
     // Calculate progress index
     const currentStepIndex = STEPS.findIndex(s => s.key === order.status);
     // If completed/unknown, default to max or 0
-    const activeIndex = currentStepIndex === -1 ? (order.status === 'COMPLETED' ? 3 : 0) : currentStepIndex;
-
+    const activeIndex = currentStepIndex === -1 ? (order.status === 'COMPLETED' ? STEPS.length - 1 : 0) : currentStepIndex;
     return (
         <Pressable onPress={() => {
             Haptics.selectionAsync();

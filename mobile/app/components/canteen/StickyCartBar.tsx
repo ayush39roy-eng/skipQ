@@ -26,12 +26,15 @@ export const StickyCartBar = ({ itemCount, total, hasTabBar = false }: StickyCar
             style={[styles.wrapper, { bottom: bottomOffset }]}
         >
             <Link href="/(app)/cart" asChild>
-                <Pressable>
+                <Pressable 
+                    accessibilityRole="button"
+                    accessibilityLabel={`View cart with ${itemCount} item${itemCount === 1 ? '' : 's'}, total ${total} rupees`}
+                    accessibilityHint="Double tap to view your cart">
                     <View style={styles.container}>
                         {/* Cart Info (Left) */}
                         <View style={styles.info}>
                             <View style={styles.countBadge}>
-                                <Text style={styles.countText}>{itemCount} ITEMS</Text>
+                                <Text style={styles.countText}>{itemCount} {itemCount === 1 ? 'ITEM' : 'ITEMS'}</Text>
                             </View>
                             <Text style={styles.totalText}>₹{total}</Text>
                         </View>

@@ -14,9 +14,10 @@ interface PastOrderCardProps {
         image?: string;
     };
     isLast: boolean;
+    onPress?: () => void;
 }
 
-export const PastOrderCard = memo(({ order, isLast }: PastOrderCardProps) => {
+export const PastOrderCard = memo(({ order, isLast, onPress }: PastOrderCardProps) => {
     return (
         <View style={styles.row}>
             {/* Timeline Left */}
@@ -26,7 +27,11 @@ export const PastOrderCard = memo(({ order, isLast }: PastOrderCardProps) => {
             </View>
 
             {/* Content Right */}
-            <Pressable style={({ pressed }) => [
+            <Pressable 
+                onPress={onPress}
+                accessibilityRole="button"
+                accessibilityLabel={`Open order from ${order.vendorName} on ${order.date}, total ₹${order.total}`}
+                style={({ pressed }) => [
                 styles.card,
                 pressed && { opacity: 0.8 }
             ]}>
@@ -41,6 +46,9 @@ export const PastOrderCard = memo(({ order, isLast }: PastOrderCardProps) => {
                         <Image
                             source={{ uri: order.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c' }}
                             style={styles.image}
+                            accessible={true}
+                            accessibilityRole="image"
+                            accessibilityLabel={order.image ? `${order.vendorName} thumbnail` : 'Order thumbnail'}
                         />
                     </View>
 
@@ -53,11 +61,18 @@ export const PastOrderCard = memo(({ order, isLast }: PastOrderCardProps) => {
                         <Text style={styles.items} numberOfLines={1}>{order.items.join(', ')}</Text>
 
                         {/* Reorder Button */}
-                        <Pressable style={styles.reorderBtn}>
+                        <Pressable 
+                            style={styles.reorderBtn}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Reorder button for order from ${order.vendorName}`}
+                            onPress={(e) => {
+                                e.stopPropagation();
+                                // TODO: Implement reorder logic
+                            }}
+                        >
                             <RotateCcw size={12} color={GAME_UI.ink} strokeWidth={3} />
                             <Text style={styles.reorderText}>Reorder</Text>
-                        </Pressable>
-                    </View>
+                        </Pressable>                    </View>
                 </MotiView>
             </Pressable>
         </View>

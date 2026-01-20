@@ -1,10 +1,10 @@
-import { View, Text, StyleSheet, Image, Dimensions, Pressable } from 'react-native';
-import Animated, { useAnimatedScrollHandler, useSharedValue, useAnimatedStyle, interpolate, Extrapolation } from 'react-native-reanimated';
+import { View, Text, StyleSheet, Image, Dimensions, Pressable, useWindowDimensions } from 'react-native';
+import Animated, { useAnimatedScrollHandler, useSharedValue, useAnimatedStyle, interpolate, Extrapolation, SharedValue } from 'react-native-reanimated';
 import { COLORS, RADIUS, SPACING, GAME_UI } from '../../constants/theme';
 // Removed Gradient for clean look
 
-const { width } = Dimensions.get('window');
-const ITEM_WIDTH = width * 0.65; // Smaller width to show next card
+// const { width } = Dimensions.get('window');
+// const ITEM_WIDTH = width * 0.65; // Smaller width to show next card
 const SPACING_WIDTH = 12;
 
 const DATA = [
@@ -12,8 +12,49 @@ const DATA = [
     { id: '2', title: 'Healthy?', subtitle: 'Fresh Salad Bowls', bg: GAME_UI.white, img: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&q=80' },
     { id: '3', title: 'Coffee Time', subtitle: 'Buy 1 Get 1', bg: GAME_UI.white, img: 'https://images.unsplash.com/photo-1497935586351-b67a49e012bf?w=400&q=80' },
 ];
+    
+const DealCard = ({ item, index, scrollX, ITEM_WIDTH }: { item: typeof DATA[0], index: number, scrollX: SharedValue<number>, ITEM_WIDTH: number }) => {
+    const inputRange = [
+        (index - 1) * (ITEM_WIDTH + SPACING_WIDTH),
+        index * (ITEM_WIDTH + SPACING_WIDTH),
+        (index + 1) * (ITEM_WIDTH + SPACING_WIDTH),
+    ];
+
+    const rStyle = useAnimatedStyle(() => {
+        const scale = interpolate(
+            scrollX.value,
+            inputRange,
+            [0.92, 1, 0.92],
+            Extrapolation.CLAMP
+        );
+        return { transform: [{ scale }] };
+    });
+
+    return (
+        <Animated.View style={[styles.itemContainer, { width: ITEM_WIDTH }, rStyle]}>
+                <View style={[styles.card, { backgroundColor: item.bg }]}>
+                <View style={styles.content}>
+                    <View style={styles.badge}>
+                        <Text style={styles.badgeText}>LIMITED</Text>
+                    </View>
+                    <Text style={styles.title}>{item.title}</Text>
+                    <Text style={styles.subtitle}>{item.subtitle}</Text>
+                    <View style={styles.btn}>
+                        <Text style={styles.btnText}>CLAIM</Text>
+                    </View>
+                </View>
+                
+                <View style={styles.imageWrapper}>
+                    <Image source={{ uri: item.img }} style={styles.image} />
+                </View>
+                </View>
+        </Animated.View>
+    );
+};
 
 export const DealsCarousel = () => {
+    const { width } = useWindowDimensions();
+    const ITEM_WIDTH = width * 0.65;
     const scrollX = useSharedValue(0);
 
     const onScroll = useAnimatedScrollHandler((event) => {
@@ -31,44 +72,15 @@ export const DealsCarousel = () => {
                 onScroll={onScroll}
                 scrollEventThrottle={16}
             >
-                {DATA.map((item, index) => {
-                    const inputRange = [
-                        (index - 1) * (ITEM_WIDTH + SPACING_WIDTH),
-                        index * (ITEM_WIDTH + SPACING_WIDTH),
-                        (index + 1) * (ITEM_WIDTH + SPACING_WIDTH),
-                    ];
-
-                    const rStyle = useAnimatedStyle(() => {
-                        const scale = interpolate(
-                            scrollX.value,
-                            inputRange,
-                            [0.92, 1, 0.92],
-                            Extrapolation.CLAMP
-                        );
-                        return { transform: [{ scale }] };
-                    });
-
-                    return (
-                        <Animated.View key={item.id} style={[styles.itemContainer, rStyle]}>
-                             <View style={[styles.card, { backgroundColor: item.bg }]}>
-                                <View style={styles.content}>
-                                    <View style={styles.badge}>
-                                        <Text style={styles.badgeText}>LIMITED</Text>
-                                    </View>
-                                    <Text style={styles.title}>{item.title}</Text>
-                                    <Text style={styles.subtitle}>{item.subtitle}</Text>
-                                    <View style={styles.btn}>
-                                        <Text style={styles.btnText}>CLAIM</Text>
-                                    </View>
-                                </View>
-                                
-                                <View style={styles.imageWrapper}>
-                                    <Image source={{ uri: item.img }} style={styles.image} />
-                                </View>
-                             </View>
-                        </Animated.View>
-                    );
-                })}
+                {DATA.map((item, index) => (
+                    <DealCard 
+                        key={item.id} 
+                        item={item} 
+                        index={index} 
+                        scrollX={scrollX} 
+                        ITEM_WIDTH={ITEM_WIDTH} 
+                    />
+                ))}
             </Animated.ScrollView>
         </View>
     );
@@ -77,7 +89,7 @@ export const DealsCarousel = () => {
 const styles = StyleSheet.create({
     container: { paddingVertical: SPACING.m },
     scrollContent: { paddingHorizontal: SPACING.m },
-    itemContainer: { width: ITEM_WIDTH, marginRight: SPACING_WIDTH },
+    itemContainer: { marginRight: SPACING_WIDTH },
     card: {
         height: 140,
         borderRadius: 12,

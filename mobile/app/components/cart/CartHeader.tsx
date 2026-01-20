@@ -1,9 +1,9 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useRef, useEffect } from 'react';
 import { useRouter } from 'expo-router';
 import { ChevronLeft } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
 import { MotiView } from 'moti';
+import { COLORS, SPACING, RADIUS, FONTS } from '../../constants/theme';
 
 interface CartHeaderProps {
     step?: number; // 1: Cart, 2: Review, 3: Pay
@@ -11,6 +11,19 @@ interface CartHeaderProps {
 
 export const CartHeader = ({ step = 1 }: CartHeaderProps) => {
     const router = useRouter();
+    
+    // Validate and clamp step to [1, 3]
+    const clampedStep = Math.min(Math.max(step, 1), 3);
+    
+    // Store previous step to animate from
+    const prevStep = useRef(clampedStep);
+    
+    useEffect(() => {
+        prevStep.current = clampedStep;
+    }, [clampedStep]);
+
+    const percentWidth = (clampedStep / 3) * 100;
+    const prevPercentWidth = (prevStep.current / 3) * 100;
 
     return (
         <View style={styles.container}>
@@ -26,8 +39,8 @@ export const CartHeader = ({ step = 1 }: CartHeaderProps) => {
             <View style={styles.progressContainer}>
                 <View style={styles.progressTrack}>
                     <MotiView
-                        from={{ width: '10%' }}
-                        animate={{ width: `${(step / 3) * 100}%` }}
+                        from={{ width: `${prevPercentWidth}%` }}
+                        animate={{ width: `${percentWidth}%` }}
                         transition={{ type: 'spring', damping: 20 }}
                         style={styles.progressBar}
                     />

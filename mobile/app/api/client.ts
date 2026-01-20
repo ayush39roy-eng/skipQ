@@ -13,9 +13,16 @@ export const client = axios.create({
 });
 
 client.interceptors.request.use(async (config) => {
-    const token = await AsyncStorage.getItem('session_token');
-    if (token) {
-        config.headers['Authorization'] = `Bearer ${token}`;
+    try {
+        const token = await AsyncStorage.getItem('session_token');
+        if (token) {
+            config.headers['Authorization'] = `Bearer ${token}`;
+        }
+    } catch (error) {
+        console.warn('Failed to read session token from AsyncStorage:', error);
+        // Continue without token rather than failing the request
     }
     return config;
+}, (error) => {
+    return Promise.reject(error);
 });

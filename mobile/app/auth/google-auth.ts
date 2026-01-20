@@ -9,12 +9,16 @@ WebBrowser.maybeCompleteAuthSession();
 // For Expo Go, you might need a specific client ID, or use the web client ID with a proxy.
 // Ideally, use environment variables.
 const CONFIG = {
-    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_ANDROID_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_IOS_CLIENT_ID,
 };
 
 export const useGoogleAuth = () => {
+    if (!CONFIG.webClientId) {
+        throw new Error('EXPO_PUBLIC_GOOGLE_CLIENT_ID is required but not set');
+    }
+
     const [request, response, promptAsync] = Google.useAuthRequest({
         clientId: CONFIG.webClientId,
         androidClientId: CONFIG.androidClientId,

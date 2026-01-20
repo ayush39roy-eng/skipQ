@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 // import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, SPACING, RADIUS, GAME_UI } from '../../constants/theme';
 import { MotiView } from 'moti';
@@ -8,16 +9,26 @@ import * as Haptics from 'expo-haptics';
 interface CartFooterProps {
     total: number;
     onCheckout: () => void;
+    onViewBill?: () => void;
 }
 
-export const CartFooter = ({ total, onCheckout }: CartFooterProps) => {
+export const CartFooter = ({ total, onCheckout, onViewBill }: CartFooterProps) => {
+    const insets = useSafeAreaInsets();
     return (
-        <View style={styles.wrapper}>
+        <View style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 30) }]}>
             <View style={styles.container}>
                 <View style={styles.totalInfo}>
                     <Text style={styles.totalLabel}>Grand Total</Text>
                     <Text style={styles.totalValue}>₹{total.toFixed(2)}</Text>
-                    <Text style={styles.microcopy}>View detailed bill</Text>
+                    <Pressable 
+                        onPress={onViewBill}
+                        accessible={true}
+                        accessibilityRole="button"
+                        accessibilityLabel="View detailed bill"
+                        style={({ pressed }) => ({ opacity: pressed ? 0.5 : 1 })}
+                    >
+                        <Text style={styles.microcopy}>View detailed bill</Text>
+                    </Pressable>
                 </View>
 
                 <Pressable onPress={() => {
@@ -47,7 +58,6 @@ const styles = StyleSheet.create({
         left: 0,
         right: 0,
         backgroundColor: GAME_UI.white,
-        paddingBottom: 30, // Safe area
         paddingTop: SPACING.m,
         borderTopWidth: 3,
         borderTopColor: GAME_UI.ink,

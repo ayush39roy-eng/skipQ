@@ -5,13 +5,22 @@ import { Plus, Minus } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, GAME_UI } from '../../constants/theme';
 
-interface MenuItemCardProps {
-    item: any;
-    quantity: number;
-    onAdd: (item: any) => void;
-    onRemove: (id: string) => void;
+interface MenuItem {
+  id: string;
+  name: string;
+  priceCents: number;
+  description?: string;
+  image?: string;
+  isVeg: boolean;
+  isPopular?: boolean;
 }
 
+interface MenuItemCardProps {
+    item: MenuItem;
+    quantity: number;
+    onAdd: (item: MenuItem) => void;
+    onRemove: (id: string) => void;
+}
 const MenuItemCardComponent = ({ item, quantity, onAdd, onRemove }: MenuItemCardProps) => {
 
     const handleAdd = () => {
@@ -26,6 +35,7 @@ const MenuItemCardComponent = ({ item, quantity, onAdd, onRemove }: MenuItemCard
 
     return (
         <Pressable
+            onPress={() => {/* Navigate to item details or trigger action */}}
             style={({ pressed }) => [
                 styles.container,
                 pressed && { transform: [{ scale: 0.98 }] }
@@ -54,9 +64,7 @@ const MenuItemCardComponent = ({ item, quantity, onAdd, onRemove }: MenuItemCard
                         <Text style={styles.popularText}>Popular</Text>
                     </View>
                 )}
-            </View>
-
-            <View style={styles.imageWrapper}>
+            </View><View style={styles.imageWrapper}>
                 <Image
                     source={{ uri: item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80' }}
                     style={styles.image}

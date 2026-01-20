@@ -52,7 +52,6 @@ export default function ProfileScreen() {
                 </MotiView>
 
                 {/* Menu Options */}
-                {/* Menu Options */}
                 <View style={styles.menuContainer}>
                     {menuItems.map((item, index) => {
                         const Icon = item.icon;

@@ -20,7 +20,11 @@ export const CartItem = memo(({ item, onIncrement, onDecrement, onRemove }: Cart
             <Pressable onPress={() => {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                 onRemove();
-            }} style={styles.deleteAction}>
+            }}
+                style={styles.deleteAction}
+                accessibilityRole="button"
+                accessibilityLabel="Delete item from cart"
+                accessibilityHint="Removes this item from your cart">
                 <Trash2 color={GAME_UI.white} size={24} strokeWidth={3} />
             </Pressable>
         );
@@ -59,6 +63,8 @@ export const CartItem = memo(({ item, onIncrement, onDecrement, onRemove }: Cart
                                         onDecrement();
                                     }}
                                     style={styles.counterBtn}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Decrease quantity"
                                 >
                                     <Minus size={14} color={GAME_UI.ink} strokeWidth={3} />
                                 </Pressable>
@@ -71,6 +77,8 @@ export const CartItem = memo(({ item, onIncrement, onDecrement, onRemove }: Cart
                                         onIncrement();
                                     }}
                                     style={styles.counterBtn}
+                                    accessibilityRole="button"
+                                    accessibilityLabel="Increase quantity"
                                 >
                                     <Plus size={14} color={GAME_UI.ink} strokeWidth={3} />
                                 </Pressable>

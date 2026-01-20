@@ -21,7 +21,13 @@ export const OrderFilters = ({ selected, onSelect }: OrderFiltersProps) => {
             {FILTERS.map((filter) => {
                 const isSelected = selected === filter;
                 return (
-                    <Pressable key={filter} onPress={() => onSelect(filter)}>
+                    <Pressable 
+                        key={filter} 
+                        onPress={() => onSelect(filter)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Filter by ${filter}`}
+                        accessibilityState={{ selected: isSelected }}
+                    >
                         <MotiView
                             animate={{
                                 backgroundColor: isSelected ? COLORS.primary : COLORS.white,
@@ -37,8 +43,7 @@ export const OrderFilters = ({ selected, onSelect }: OrderFiltersProps) => {
                                 {filter}
                             </Text>
                         </MotiView>
-                    </Pressable>
-                );
+                    </Pressable>                );
             })}
         </ScrollView>
     );

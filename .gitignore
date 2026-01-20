@@ -38,4 +38,11 @@ dist/
 
 Antigravity.exe
 
-.agent/
+
+
+# IDE
+.idea/
+**/.idea/
+*.iml
+*.iws
+*.ipr

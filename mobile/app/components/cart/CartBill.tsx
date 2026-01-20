@@ -12,9 +12,14 @@ interface CartBillProps {
 }
 
 export const CartBill = ({ subtotal, tax = 0, deliveryFee = 0, discount = 0 }: CartBillProps) => {
-    const total = subtotal + tax + deliveryFee - discount;
+    // Validate inputs
+    const validSubtotal = Math.max(0, subtotal);
+    const validTax = Math.max(0, tax);
+    const validDeliveryFee = Math.max(0, deliveryFee);
+    const validDiscount = Math.max(0, discount);
+    
+    const total = Math.max(0, validSubtotal + validTax + validDeliveryFee - validDiscount);
     const [expanded, setExpanded] = useState(false);
-
     return (
         <MotiView
             from={{ opacity: 0, scale: 0.95 }}
@@ -80,8 +85,7 @@ const styles = StyleSheet.create({
         padding: SPACING.m,
         marginVertical: SPACING.m,
         marginHorizontal: SPACING.m,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.03)',
+
         ...GAME_UI.shadows.sm, // Adding shadow for better lift
     },
     headerRow: {

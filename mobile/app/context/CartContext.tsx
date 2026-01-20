@@ -7,6 +7,9 @@ export interface CartItem {
     quantity: number;
     canteenId: string;
     canteenName: string;
+    // Fee Rates from Vendor
+    selfOrderFeeRate?: number;
+    preOrderFeeRate?: number;
 }
 
 interface CartContextType {
@@ -15,6 +18,7 @@ interface CartContextType {
     removeItem: (id: string) => void;
     clearCart: () => void;
     total: number;
+    totalTax: number;
 }
 
 const CartContext = createContext<CartContextType>({} as CartContextType);
@@ -52,8 +56,13 @@ export const CartProvider = ({ children }: { children: React.ReactNode }) => {
 
     const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
+    // Calculate Tax/Fee: Default to Pre-Order Rate (usually higher) if location not yet verified
+    // We take the rate from the first item since all items must be from same canteen
+    const activeFeeRate = items.length > 0 ? (items[0].preOrderFeeRate ?? 0.03) : 0.03;
+    const totalTax = total * activeFeeRate;
+
     return (
-        <CartContext.Provider value={{ items, addItem, removeItem, clearCart, total }}>
+        <CartContext.Provider value={{ items, addItem, removeItem, clearCart, total, totalTax }}>
             {children}
         </CartContext.Provider>
     );

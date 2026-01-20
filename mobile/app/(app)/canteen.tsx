@@ -1,9 +1,10 @@
-import { View, Text, StyleSheet, SectionList, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, SectionList } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getMenu } from '../api/canteens';
 import { useCart } from '../context/CartContext';
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import Animated, {
   useAnimatedScrollHandler,
   useSharedValue,
@@ -22,6 +23,7 @@ import { ChevronLeft } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { Pressable } from 'react-native';
 import { CanteenFilterBar } from '../components/canteen/CanteenFilterBar';
+import { MenuSkeleton } from '../components/canteen/MenuSkeleton';
 
 const AnimatedSectionList = Animated.createAnimatedComponent(SectionList);
 const HEADER_HEIGHT = 280;
@@ -29,6 +31,7 @@ const HEADER_HEIGHT = 280;
 export default function CanteenScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { addItem, removeItem, items: cartItems, total } = useCart();
   const scrollY = useSharedValue(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('');
@@ -65,7 +68,16 @@ export default function CanteenScreen() {
 
   const handleAddItem = useCallback((item: any) => {
     if (!data?.canteen) return;
-    addItem({ id: item.id, name: item.name, price: item.priceCents / 100, canteenId: data.canteen.id, canteenName: data.canteen.name });
+    const vendorSettings = data.canteen.vendor || {};
+    addItem({ 
+      id: item.id, 
+      name: item.name, 
+      price: item.priceCents / 100, 
+      canteenId: data.canteen.id, 
+      canteenName: data.canteen.name,
+      selfOrderFeeRate: vendorSettings.selfOrderFeeRate ?? 0.015,
+      preOrderFeeRate: vendorSettings.preOrderFeeRate ?? 0.03
+    });
   }, [addItem, data]);
 
   const handleRemoveItem = useCallback((itemId: string) => {
@@ -92,34 +104,57 @@ export default function CanteenScreen() {
     return result;
   }, [data, filterType, sortOrder]);
 
-  if (isLoading || !data) {
+  // 3. Prepare Sections Data Safe Calculation
+  const sectionsData = useMemo(() => {
+    if (!data?.sections || !processedItems) return [];
+    
+    // validSectionIds
+    const validSectionIds = new Set(data.sections.map((s: any) => s.id));
+    
+    // Main sections
+    let result = data.sections.map((section: any) => ({
+      id: section.id,
+      title: section.name,
+      data: processedItems.filter((item: any) => item.sectionId === section.id)
+    })).filter((s: any) => s.data.length > 0);
+
+    // Other items
+    const otherItems = processedItems.filter((item: any) => !item.sectionId || !validSectionIds.has(item.sectionId));
+    if (otherItems.length > 0) {
+      result.push({ id: 'other', title: 'Other Items', data: otherItems });
+    }
+    
+    return result;
+  }, [data, processedItems]);
+
+  // Initialize selected category if empty
+  useEffect(() => {
+    if (!selectedCategory && sectionsData.length > 0) {
+      setSelectedCategory(sectionsData[0].id);
+    }
+  }, [selectedCategory, sectionsData]);
+
+  if (isLoading) {
     return (
-      <View style={styles.center}>
-        <StatusBar style="dark" />
-        <Text style={styles.loadingText}>Curating menu...</Text>
-      </View>
+      <MenuSkeleton />
     );
   }
 
-  const { items, sections, canteen } = data;
-
-  // Prepare Data using processedItems
-  const validSectionIds = new Set(sections.map((s: any) => s.id));
-  let sectionsData = sections.map((section: any) => ({
-    id: section.id,
-    title: section.name,
-    data: processedItems.filter((item: any) => item.sectionId === section.id)
-  })).filter((s: any) => s.data.length > 0);
-
-  const otherItems = processedItems.filter((item: any) => !item.sectionId || !validSectionIds.has(item.sectionId));
-  if (otherItems.length > 0) {
-    sectionsData.push({ id: 'other', title: 'Other Items', data: otherItems });
+  if (error || !data) {
+    return (
+      <View style={styles.center}>
+        <StatusBar style="dark" />
+        <Text style={[styles.loadingText, { color: '#ef4444' }]}>
+          {error ? `Error: ${(error as Error).message}` : 'Canteen not found'}
+        </Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 20 }}>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: GAME_UI.ink }}>Go Back</Text>
+        </Pressable>
+      </View>
+    );
   }
-
-  // Initialize selected category if empty
-  if (!selectedCategory && sectionsData.length > 0) {
-    setSelectedCategory(sectionsData[0].id);
-  }
+  
+  const { canteen } = data; // sectionsData is already calculated above
 
   const getItemQuantity = (itemId: string) => {
     const item = cartItems.find(i => i.id === itemId);
@@ -153,7 +188,11 @@ export default function CanteenScreen() {
       </Pressable>
 
       {/* Sticky Header Overlay */}
-      <Animated.View style={[styles.stickyNavContainer, stickyNavStyle]}>
+      <Animated.View style={[
+        styles.stickyNavContainer, 
+        stickyNavStyle,
+        { paddingTop: Math.max(insets.top, 20) }
+      ]}>
           <View style={styles.stickyNavBg}>
             <CanteenFilterBar
               filterType={filterType}

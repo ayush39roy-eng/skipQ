@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, Pressable, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Image, Pressable } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { COLORS, RADIUS, SHADOWS, SPACING, GAME_UI } from '../../constants/theme';
 import { Clock, ArrowRight, Trophy } from 'lucide-react-native';
@@ -52,6 +52,9 @@ export const HeroSection = ({ onPress }: { onPress: () => void }) => {
     return (
         <Animated.View entering={FadeInUp.delay(200).springify()} style={{ paddingHorizontal: SPACING.m, marginTop: SPACING.s }}>
             <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Reorder ${LAST_ORDER.name} from ${LAST_ORDER.canteen} for ${LAST_ORDER.price}`}
+                accessibilityHint="Places a reorder for this item"
                 onPress={() => {
                     Haptics.selectionAsync();
                     onPress();
@@ -60,7 +63,11 @@ export const HeroSection = ({ onPress }: { onPress: () => void }) => {
                 onPressOut={handlePressOut}
             >
                 <Animated.View style={[styles.container, rStyle]}>
-                    <Image source={{ uri: LAST_ORDER.image }} style={styles.image} />
+                    <Image 
+                        source={{ uri: LAST_ORDER.image }} 
+                        style={styles.image}
+                        accessibilityLabel={`Image of ${LAST_ORDER.name}`}
+                    />
                     <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.gradient} />
 
                     <View style={styles.content}>

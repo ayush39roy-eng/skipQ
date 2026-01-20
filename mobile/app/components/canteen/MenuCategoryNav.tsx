@@ -5,12 +5,16 @@ import * as Haptics from 'expo-haptics';
 import { COLORS, SPACING, RADIUS, SHADOWS } from '../../constants/theme';
 import { MotiView } from 'moti';
 
+interface Category {
+    id: string;
+    name: string;
+}
+
 interface MenuCategoryNavProps {
-    categories: any[];
+    categories: Category[];
     selectedCategory: string;
     onSelect: (id: string) => void;
 }
-
 export const MenuCategoryNav = ({ categories, selectedCategory, onSelect }: MenuCategoryNavProps) => {
     return (
         <View style={styles.container}>
@@ -19,9 +23,8 @@ export const MenuCategoryNav = ({ categories, selectedCategory, onSelect }: Menu
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
             >
-                {categories.map((cat, index) => {
+                {categories.map((cat) => {
                     const isSelected = selectedCategory === cat.id;
-
                     return (
                         <Pressable
                             key={cat.id}
@@ -30,6 +33,10 @@ export const MenuCategoryNav = ({ categories, selectedCategory, onSelect }: Menu
                                 onSelect(cat.id);
                             }}
                             style={{ marginRight: SPACING.s }}
+                            accessibilityRole="button"
+                            accessibilityLabel={cat.name}
+                            accessibilityState={{ selected: isSelected }}
+                            accessibilityHint={`Select ${cat.name} category`}
                         >
                             <MotiView
                                 animate={{

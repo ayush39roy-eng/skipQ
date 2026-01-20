@@ -5,8 +5,8 @@ export default function Index() {
   return (
     <View style={styles.container}>
       <Text style={styles.text}>Welcome to SkipQ Mobile</Text>
-      <Link href="/(app)/home" style={styles.link}>
-        <Text style={styles.linkText}>Go to Home</Text>
+      <Link href="/(auth)/login" style={styles.link}>
+        <Text style={styles.linkText}>Go to Login</Text>
       </Link>
     </View>
   );

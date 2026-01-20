@@ -1,4 +1,5 @@
 import { View, StyleSheet, FlatList, ActivityIndicator, Text, Pressable, RefreshControl } from 'react-native';
+import { HomeSkeleton } from '../components/home/HomeSkeleton';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getCanteens } from '../api/canteens';
@@ -33,10 +34,7 @@ export default function HomeScreen() {
   }, [refetch]);
 
   if (isLoading) return (
-    <View style={styles.center}>
-      <ActivityIndicator size="large" color={COLORS.primary} />
-      <Text style={styles.loadingText}>Curating your menu...</Text>
-    </View>
+    <HomeSkeleton />
   );
 
   if (error) return (

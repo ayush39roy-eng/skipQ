@@ -2,7 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle, withTiming, withSpring, useSharedValue, withRepeat, withSequence } from 'react-native-reanimated';
 import { CheckCircle2, ChefHat, Receipt, ShoppingBag } from 'lucide-react-native';
 import { COLORS, GAME_UI } from '../../constants/theme';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const STEPS = [
     { id: 'PLACED', label: 'Placed', icon: Receipt },
@@ -16,15 +16,28 @@ const STATUS_ORDER = ['PLACED', 'PREPARING', 'READY', 'COMPLETED', 'CANCELLED'];
 export const OrderTracker = ({ status }: { status: string }) => {
     const currentIndex = STATUS_ORDER.indexOf(status);
     const progress = useSharedValue(0);
+    const isCancelled = status === 'CANCELLED';
+    const lastValidIndex = useRef(0);
+
+    // Track the last valid progress before cancellation
+    if (currentIndex >= 0 && !isCancelled) {
+        lastValidIndex.current = currentIndex;
+    }
+
+    // If cancelled, show the last valid step instead of resetting
+    const effectiveIndex = isCancelled ? lastValidIndex.current : currentIndex;
 
     useEffect(() => {
-        if (currentIndex >= 0) {
-            progress.value = withSpring(currentIndex / (STEPS.length - 1));
+        if (effectiveIndex >= 0) {
+            const clampedIndex = Math.min(effectiveIndex, STEPS.length - 1);
+            progress.value = withSpring(clampedIndex / (STEPS.length - 1));
         }
-    }, [currentIndex]);
+    }, [effectiveIndex]);
+
 
     const progressStyle = useAnimatedStyle(() => ({
-        width: `${progress.value * 100}%`
+        width: `${progress.value * 100}%`,
+        backgroundColor: isCancelled ? COLORS.error : GAME_UI.tertiary
     }));
 
     return (
@@ -37,26 +50,29 @@ export const OrderTracker = ({ status }: { status: string }) => {
             {/* Steps */}
             <View style={styles.stepsContainer}>
                 {STEPS.map((step, index) => {
-                    const isActive = index === currentIndex;
-                    const isCompleted = index <= currentIndex;
+                    const isCompleted = index <= effectiveIndex;
+                    const isActive = index === effectiveIndex;
+                    const showCancelledState = isCancelled && isCompleted;
                     
                     return (
                         <View key={step.id} style={styles.stepWrapper}>
                             <View style={[
                                 styles.iconContainer,
-                                isCompleted && styles.iconCompleted,
-                                isActive && styles.iconActive
+                                isCompleted && !isCancelled && styles.iconCompleted,
+                                isActive && !isCancelled && styles.iconActive,
+                                showCancelledState && styles.iconCancelled
                             ]}>
                                 <step.icon 
                                     size={16} 
-                                    color={isCompleted ? GAME_UI.white : GAME_UI.ink} 
+                                    color={showCancelledState ? COLORS.error : (isCompleted ? GAME_UI.white : GAME_UI.ink)} 
                                     strokeWidth={isCompleted ? 3 : 2}
                                 />
                             </View>
                             <Text style={[
                                 styles.label,
-                                isCompleted && styles.labelCompleted,
-                                isActive && styles.labelActive
+                                isCompleted && !isCancelled && styles.labelCompleted,
+                                isActive && !isCancelled && styles.labelActive,
+                                showCancelledState && styles.labelCancelled
                             ]}>
                                 {step.label}
                             </Text>
@@ -130,4 +146,12 @@ const styles = StyleSheet.create({
         color: GAME_UI.ink,
         fontWeight: '900',
     },
+    iconCancelled: {
+        borderColor: COLORS.error,
+        backgroundColor: COLORS.lightBg,
+    },
+    labelCancelled: {
+        color: COLORS.error,
+        fontWeight: '700',
+    }
 });

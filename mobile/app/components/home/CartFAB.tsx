@@ -11,38 +11,42 @@ export const CartFAB = () => {
     const { total, items } = useCart();
     const count = items.reduce((sum, item) => sum + item.quantity, 0);
 
-    // Only show if cart has items
-    if (count === 0) return null;
+
 
     return (
         <AnimatePresence>
-            <MotiView
-                from={{ opacity: 0, scale: 0.5, translateY: 100 }}
-                animate={{ opacity: 1, scale: 1, translateY: 0 }}
-                exit={{ opacity: 0, scale: 0.5, translateY: 100 }}
-                transition={{ type: 'spring', damping: 15 }}
-                style={styles.container}
-            >
-                <Pressable
-                    onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        router.push('/(app)/cart');
-                    }}
-                    style={styles.btn}
+            {count > 0 && (
+                <MotiView
+                    key="cart-fab"
+                    from={{ opacity: 0, scale: 0.5, translateY: 100 }}
+                    animate={{ opacity: 1, scale: 1, translateY: 0 }}
+                    exit={{ opacity: 0, scale: 0.5, translateY: 100 }}
+                    transition={{ type: 'spring', damping: 15 }}
+                    style={styles.container}
                 >
-                    <View style={styles.iconContainer}>
-                        <ShoppingBag size={24} color={COLORS.white} />
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{count}</Text>
+                    <Pressable
+                        accessibilityRole="button"
+                        accessibilityLabel={`View cart with ${count} items, total ₹${total}`}
+                        accessibilityHint="Navigates to cart screen"
+                        onPress={() => {
+                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                            router.push('/(app)/cart');
+                        }}
+                        style={styles.btn}
+                    >                        <View style={styles.iconContainer}>
+                            <ShoppingBag size={24} color={COLORS.white} />
+                            <View style={styles.badge}>
+                                <Text style={styles.badgeText}>{count}</Text>
+                            </View>
                         </View>
-                    </View>
 
-                    <View style={styles.textContainer}>
-                        <Text style={styles.viewCart}>View Cart</Text>
-                        <Text style={styles.total}>₹{total}</Text>
-                    </View>
-                </Pressable>
-            </MotiView>
+                        <View style={styles.textContainer}>
+                            <Text style={styles.viewCart}>View Cart</Text>
+                            <Text style={styles.total}>₹{total}</Text>
+                        </View>
+                    </Pressable>
+                </MotiView>
+            )}
         </AnimatePresence>
     );
 };

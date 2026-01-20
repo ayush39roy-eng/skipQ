@@ -58,7 +58,7 @@ export default function OrderDetailsScreen() {
                 {/* Status Section */}
                 <View style={styles.section}>
                     <View style={styles.statusRow}>
-                        <Text style={styles.orderId}>Order #{order.id.slice(0, 8)}</Text>
+                        <Text style={styles.orderId}>Order #{String(order.id).slice(0, 8)}</Text>
                         <View style={[styles.statusBadge, { backgroundColor: statusColor }]}>
                             <Text style={styles.statusText}>
                                 {order.paymentStatus === 'PAID' && order.status === 'PLACED' ? 'PAID' : order.status}
@@ -94,7 +94,7 @@ export default function OrderDetailsScreen() {
                                 </View>
                                 <Text style={styles.itemName}>{item.menuItem?.name || 'Item Name'}</Text>
                             </View>
-                            <Text style={styles.itemPrice}>₹{(item.priceCents * item.quantity) / 100}</Text>
+                            <Text style={styles.itemPrice}>₹{((item.priceCents * item.quantity) / 100).toFixed(2)}</Text>
                         </View>
                     ))}
                 </View>
@@ -104,12 +104,12 @@ export default function OrderDetailsScreen() {
                     <Text style={styles.sectionTitle}>Bill Details</Text>
                     <View style={styles.billRow}>
                         <Text style={styles.billLabel}>Item Total</Text>
-                        <Text style={styles.billValue}>₹{order.totalCents / 100}</Text>
+                        <Text style={styles.billValue}>₹{(order.totalCents / 100).toFixed(2)}</Text>
                     </View>
                     <View style={styles.divider} />
                     <View style={styles.billRow}>
                         <Text style={styles.totalLabel}>Grand Total</Text>
-                        <Text style={styles.totalValue}>₹{order.totalCents / 100}</Text>
+                        <Text style={styles.totalValue}>₹{(order.totalCents / 100).toFixed(2)}</Text>
                     </View>
                 </View>
             </ScrollView>
