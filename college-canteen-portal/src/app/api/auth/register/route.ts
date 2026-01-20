@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import bcrypt from 'bcryptjs'
+import { createSession } from '@/lib/session'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,7 +20,8 @@ export async function POST(req: Request) {
     
     const passwordHash = await bcrypt.hash(password, 10)
     const user = await prisma.user.create({ data: { email, name, passwordHash, role: 'USER' } })
-    return NextResponse.json({ id: user.id })
+    const token = await createSession(user.id, 'USER')
+    return NextResponse.json({ ok: true, id: user.id, role: 'USER', token })
   } catch (error) {
     console.error('Registration failed', error)
     return NextResponse.json({ error: 'Failed to register' }, { status: 500 })
